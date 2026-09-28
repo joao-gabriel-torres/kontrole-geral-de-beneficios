@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { AvatarIniciais, RussoIcone } from '@kgb/ui'
+import { AvatarIniciais, MenuUsuario, RussoIcone } from '@kgb/ui'
 import type { ItemNavegacao } from '../navegacao'
 
 defineProps<{ itens: readonly ItemNavegacao[]; aprovacoes: number; usuario: string }>()
+const emit = defineEmits<{ sair: [] }>()
 </script>
 
 <template>
@@ -22,13 +23,15 @@ defineProps<{ itens: readonly ItemNavegacao[]; aprovacoes: number; usuario: stri
       }}</span>
     </RouterLink>
     <div class="espaco" />
-    <div class="usuario">
-      <AvatarIniciais :nome="usuario" :tamanho="36" cor="var(--kgb-tinta)" :tamanho-fonte="13" />
-      <div class="dados">
-        <div class="nome">{{ usuario }}</div>
-        <div class="papel">Gestora</div>
+    <MenuUsuario posicao="acima" @sair="emit('sair')">
+      <div class="usuario">
+        <AvatarIniciais :nome="usuario" :tamanho="36" cor="var(--kgb-tinta)" :tamanho-fonte="13" />
+        <div class="dados">
+          <div class="nome">{{ usuario }}</div>
+          <div class="papel">Gestora</div>
+        </div>
       </div>
-    </div>
+    </MenuUsuario>
   </nav>
 </template>
 

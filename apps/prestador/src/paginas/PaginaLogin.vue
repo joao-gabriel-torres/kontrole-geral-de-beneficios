@@ -3,12 +3,12 @@ import { FormularioLogin } from '@kgb/ui'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { destinoSeguro } from '../router'
-import { entrar, MENSAGENS } from '../sessao'
+import { entrar, mensagemDoMotivo } from '../sessao'
 
 const rota = useRoute()
 const router = useRouter()
 const enviando = ref(false)
-const erro = ref<string | null>(rota.query.motivo === 'papel' ? MENSAGENS.papel : null)
+const erro = ref<string | null>(mensagemDoMotivo(rota.query.motivo))
 
 async function enviar(email: string, senha: string) {
   enviando.value = true

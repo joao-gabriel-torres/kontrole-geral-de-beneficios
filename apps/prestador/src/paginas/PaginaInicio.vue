@@ -4,14 +4,22 @@ import {
   dataCurtaPorExtenso,
   EmConstrucao,
   marcaRusso,
+  MenuUsuario,
   primeiroNome,
   saudacao,
 } from '@kgb/ui'
 import { computed } from 'vue'
-import { sessao } from '../sessao'
+import { useRouter } from 'vue-router'
+import { sair, sessao } from '../sessao'
 
 const agora = new Date()
 const nome = computed(() => sessao.usuario?.nome ?? '')
+const router = useRouter()
+
+async function encerrarSessao() {
+  await sair()
+  await router.replace({ name: 'login' })
+}
 </script>
 
 <template>
@@ -22,7 +30,9 @@ const nome = computed(() => sessao.usuario?.nome ?? '')
         <div class="data">{{ dataCurtaPorExtenso(agora) }}</div>
         <h1 class="ola">{{ saudacao(agora) }}, {{ primeiroNome(nome) }}</h1>
       </div>
-      <AvatarIniciais :nome="nome" :tamanho="44" cor="var(--kgb-primaria)" :tamanho-fonte="14" />
+      <MenuUsuario @sair="encerrarSessao">
+        <AvatarIniciais :nome="nome" :tamanho="44" cor="var(--kgb-primaria)" :tamanho-fonte="14" />
+      </MenuUsuario>
     </div>
     <EmConstrucao fundo="var(--kgb-superficie1)" />
   </div>

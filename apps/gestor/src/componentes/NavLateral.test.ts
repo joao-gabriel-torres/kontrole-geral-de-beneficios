@@ -47,3 +47,12 @@ describe('NavLateral', () => {
     expect(nav.find('.usuario').text()).toContain('Gestora')
   })
 })
+
+describe('sair', () => {
+  it('o cartão do usuário abre o menu com "Sair" e avisa o layout', async () => {
+    const nav = await montar(0)
+    await nav.find('.gatilho').trigger('click')
+    await nav.find('[role="menuitem"]').trigger('click')
+    expect(nav.emitted('sair')).toHaveLength(1)
+  })
+})

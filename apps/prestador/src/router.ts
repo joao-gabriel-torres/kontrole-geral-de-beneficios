@@ -39,11 +39,14 @@ export type Decisao =
 export function decidirAcesso(
   usuario: Usuario | null,
   destino: { fullPath: string; meta: RouteMeta },
+  apiIndisponivel = false,
 ): Decisao {
   const publica = destino.meta.publica === true
   if (!usuario) {
     if (publica) return { tipo: 'seguir' }
-    const query = destino.fullPath === '/' ? {} : { voltar: destino.fullPath }
+    const query: Record<string, string> =
+      destino.fullPath === '/' ? {} : { voltar: destino.fullPath }
+    if (apiIndisponivel) query.motivo = 'conexao'
     return { tipo: 'redirecionar', para: { name: 'login', query } }
   }
   if (usuario.papel !== 'prestador') return { tipo: 'papel-errado' }
@@ -61,7 +64,7 @@ export function destinoSeguro(voltar: unknown): RouteLocationRaw {
 export function instalarGuarda(router: Router): void {
   router.beforeEach(async (destino) => {
     if (!sessao.carregada) await carregarSessao()
-    const decisao = decidirAcesso(sessao.usuario, destino)
+    const decisao = decidirAcesso(sessao.usuario, destino, sessao.indisponivel)
     if (decisao.tipo === 'seguir') return true
     if (decisao.tipo === 'redirecionar') return decisao.para
     await sair()

@@ -19,6 +19,12 @@ describe('decidirAcesso (prestador)', () => {
   it('manda para o login sem sessão', () => {
     expect(decidirAcesso(null, rota('/agenda'))).toMatchObject({ tipo: 'redirecionar' })
   })
+  it('com a API indisponível, manda para o login avisando da conexão', () => {
+    expect(decidirAcesso(null, rota('/agenda'), true)).toEqual({
+      tipo: 'redirecionar',
+      para: { name: 'login', query: { voltar: '/agenda', motivo: 'conexao' } },
+    })
+  })
   it('recusa o papel gestor', () => {
     expect(decidirAcesso({ ...carlos, papel: 'gestor' }, rota('/inicio'))).toEqual({
       tipo: 'papel-errado',

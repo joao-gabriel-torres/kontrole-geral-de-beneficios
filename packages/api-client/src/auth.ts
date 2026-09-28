@@ -6,9 +6,10 @@ export interface OpcoesClienteAuth {
   /** App do prestador: token guardado no aparelho, enviado como Bearer. */
   obterToken?: () => string | null
   salvarToken?: (token: string) => void
+  fetch?: typeof globalThis.fetch
 }
 
-export function criarClienteAuth({ baseURL, obterToken, salvarToken }: OpcoesClienteAuth) {
+export function criarClienteAuth({ baseURL, obterToken, salvarToken, fetch }: OpcoesClienteAuth) {
   return createAuthClient({
     baseURL,
     basePath: '/api/auth',
@@ -21,7 +22,9 @@ export function criarClienteAuth({ baseURL, obterToken, salvarToken }: OpcoesCli
       }),
     ],
     fetchOptions: {
-      credentials: 'include',
+      // Com token (prestador), a sessão vai só no Bearer: sem cookies, como no cliente da API.
+      credentials: obterToken ? 'omit' : 'include',
+      ...(fetch ? { customFetchImpl: fetch } : {}),
       ...(obterToken ? { auth: { type: 'Bearer' as const, token: () => obterToken() ?? '' } } : {}),
       onSuccess: (contexto) => {
         const token = contexto.response.headers.get('set-auth-token')

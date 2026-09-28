@@ -8,6 +8,8 @@ export default defineConfig({
     environment: 'jsdom',
     server: { deps: { inline: ['vuetify'] } },
     setupFiles: ['./test/configurar.ts'],
-    env: { TZ: 'America/Sao_Paulo' },
+    // Fuso diferente de São Paulo de propósito: os formatos precisam usar America/Sao_Paulo
+    // explicitamente, e não o fuso da máquina.
+    env: { TZ: 'Asia/Tokyo' },
   },
 })

@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { api } from '../api'
 import NavInferior from '../componentes/NavInferior.vue'
 import NavLateral from '../componentes/NavLateral.vue'
 import { ITENS_NAVEGACAO } from '../navegacao'
-import { sessao } from '../sessao'
+import { sair, sessao } from '../sessao'
 
 const { mdAndUp } = useDisplay()
 const rota = useRoute()
+const router = useRouter()
 const aprovacoes = ref(0)
 
 async function atualizarFila() {
@@ -19,6 +20,11 @@ async function atualizarFila() {
   } catch {
     aprovacoes.value = 0
   }
+}
+
+async function encerrarSessao() {
+  await sair()
+  await router.replace({ name: 'login' })
 }
 
 onMounted(atualizarFila)
@@ -32,6 +38,7 @@ watch(() => rota.name, atualizarFila)
       :itens="ITENS_NAVEGACAO"
       :aprovacoes="aprovacoes"
       :usuario="sessao.usuario?.nome ?? ''"
+      @sair="encerrarSessao"
     />
     <div class="coluna">
       <main class="conteudo"><RouterView /></main>

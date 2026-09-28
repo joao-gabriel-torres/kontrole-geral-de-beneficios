@@ -16,6 +16,12 @@ describe('decidirAcesso', () => {
       para: { name: 'login', query: { voltar: '/aprovacoes' } },
     })
   })
+  it('com a API indisponível, manda para o login avisando da conexão', () => {
+    expect(decidirAcesso(null, rota('/aprovacoes'), true)).toEqual({
+      tipo: 'redirecionar',
+      para: { name: 'login', query: { voltar: '/aprovacoes', motivo: 'conexao' } },
+    })
+  })
   it('deixa abrir o login sem sessão', () => {
     expect(decidirAcesso(null, rota('/login', true))).toEqual({ tipo: 'seguir' })
   })
