@@ -50,4 +50,19 @@ describe('LayoutPrestador', () => {
     await flushPromises()
     expect(wrapper.find('[role="status"]').exists()).toBe(false)
   })
+
+  it('abre cada tela no topo, mas trocar o filtro (query) não mexe na rolagem', async () => {
+    const { wrapper, router } = await montar(
+      { template: '<RouterView />' },
+      { rotas, rotaInicial: '/demandas' },
+    )
+    const conteudo = wrapper.find('.conteudo').element as HTMLElement
+    conteudo.scrollTop = 300
+    await router.push('/demandas?filtro=corrigir')
+    await flushPromises()
+    expect(conteudo.scrollTop).toBe(300)
+    await router.push('/demandas/a1')
+    await flushPromises()
+    expect(conteudo.scrollTop).toBe(0)
+  })
 })
