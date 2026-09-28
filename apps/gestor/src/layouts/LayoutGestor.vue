@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { AvisoToast } from '@kgb/ui'
-import { useQueryClient } from '@tanstack/vue-query'
 import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { usarContagem } from '../acionamentos/dados'
 import ModalNovoAcionamento from '../acionamentos/novo/ModalNovoAcionamento.vue'
@@ -10,13 +9,13 @@ import { novoAcionamento } from '../acionamentos/novo/estado'
 import NavInferior from '../componentes/NavInferior.vue'
 import NavLateral from '../componentes/NavLateral.vue'
 import { ITENS_NAVEGACAO } from '../navegacao'
-import { sair, sessao } from '../sessao'
+import { usarSaida } from '../saida'
+import { sessao } from '../sessao'
 import { toastGestor } from '../toast'
 
 const { mdAndUp } = useDisplay()
 const rota = useRoute()
-const router = useRouter()
-const consultas = useQueryClient()
+const encerrarSessao = usarSaida()
 const { data: contagem, refetch } = usarContagem()
 const aprovacoes = computed(() => contagem.value?.aguardando ?? 0)
 const { mensagem } = toastGestor
@@ -35,12 +34,6 @@ watch(
     if (conteudo.value) conteudo.value.scrollTop = 0
   },
 )
-
-async function encerrarSessao() {
-  await sair()
-  consultas.clear()
-  await router.replace({ name: 'login' })
-}
 </script>
 
 <template>
