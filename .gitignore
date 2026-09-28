@@ -13,3 +13,8 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Gerados
+**/src/generated/
+*.tsbuildinfo
+tools/visual/.saida/
