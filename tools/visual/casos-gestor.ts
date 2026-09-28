@@ -1,4 +1,4 @@
-import type { Caso, Regiao } from './tipos'
+import { telaInteira, type Caso, type Regiao } from './tipos'
 
 const sidebar: Regiao = { nome: 'sidebar', x: 0, y: 0, largura: 232, altura: 844 }
 const abasGestor: Regiao = { nome: 'abas', x: 0, y: 692, largura: 375, altura: 76 }
@@ -9,6 +9,8 @@ const cabecalhoWeb = (altura: number): Regiao => ({
   largura: 480,
   altura,
 })
+const telaWeb = telaInteira('gw')
+const telaMobile = telaInteira('gm')
 
 export const CASOS_GESTOR: Caso[] = [
   {
@@ -24,7 +26,16 @@ export const CASOS_GESTOR: Caso[] = [
     navegarPrototipo: 'Acionamentos',
     app: 'gestor',
     rota: '/acionamentos',
-    regioes: [sidebar, cabecalhoWeb(44)],
+    regioes: [telaWeb],
+  },
+  {
+    nome: 'gestor-web-acionamentos-aguardando',
+    modo: 'gw',
+    navegarPrototipo: 'Acionamentos',
+    app: 'gestor',
+    rota: '/acionamentos',
+    passos: [{ clicar: 'Aguardando 3' }],
+    regioes: [telaWeb],
   },
   {
     nome: 'gestor-web-aprovacoes',
@@ -65,5 +76,22 @@ export const CASOS_GESTOR: Caso[] = [
     app: 'gestor',
     rota: '/aprovacoes',
     regioes: [abasGestor],
+  },
+  {
+    nome: 'gestor-mobile-acionamentos',
+    modo: 'gm',
+    navegarPrototipo: 'Acionamentos',
+    app: 'gestor',
+    rota: '/acionamentos',
+    regioes: [telaMobile],
+  },
+  {
+    nome: 'gestor-mobile-acionamentos-aguardando',
+    modo: 'gm',
+    navegarPrototipo: 'Acionamentos',
+    app: 'gestor',
+    rota: '/acionamentos',
+    passos: [{ clicar: 'Aguardando 3' }],
+    regioes: [telaMobile],
   },
 ]
