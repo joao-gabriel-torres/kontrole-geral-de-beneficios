@@ -21,12 +21,18 @@ export const rotas: RouteRecordRaw[] = [
     component: () => import('./layouts/LayoutPrestador.vue'),
     children: [
       { path: '', redirect: { name: 'inicio' } },
-      { path: 'inicio', name: 'inicio', component: () => import('./paginas/PaginaInicio.vue') },
+      { path: 'inicio', name: 'inicio', component: () => import('./inicio/PaginaInicio.vue') },
       { path: 'agenda', name: 'agenda', component: () => import('./paginas/PaginaAgenda.vue') },
       {
         path: 'demandas',
         name: 'demandas',
-        component: () => import('./paginas/PaginaDemandas.vue'),
+        component: () => import('./demandas/PaginaDemandas.vue'),
+      },
+      {
+        path: 'demandas/:id',
+        name: 'detalhe',
+        component: () => import('./execucao/PaginaDetalhe.vue'),
+        meta: { semAbas: true },
       },
     ],
   },

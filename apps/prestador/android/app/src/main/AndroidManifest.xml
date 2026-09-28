@@ -38,4 +38,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Câmera para as fotos das etapas, da conclusão e da inviabilidade. A galeria usa o seletor de
+         fotos do sistema, que não pede permissão de leitura de mídia (@capacitor/camera 8). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>
