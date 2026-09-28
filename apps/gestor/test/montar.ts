@@ -39,13 +39,14 @@ export async function aguardar(): Promise<void> {
 
 export async function montar(
   componente: Component,
-  opcoes: { props?: Record<string, unknown>; rota?: string } = {},
+  opcoes: { props?: Record<string, unknown>; rota?: string; anexar?: boolean } = {},
 ) {
   const router = criarRouterDeTeste()
   await router.push(opcoes.rota ?? '/acionamentos')
   const consultas = criarClienteDeTeste()
   const tela = mount(componente, {
     props: opcoes.props,
+    attachTo: opcoes.anexar ? document.body : undefined,
     global: { plugins: [createVuetify(), router, [VueQueryPlugin, { queryClient: consultas }]] },
   })
   await aguardar()

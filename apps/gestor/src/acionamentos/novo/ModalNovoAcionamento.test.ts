@@ -149,4 +149,15 @@ describe('ModalNovoAcionamento', () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     expect(tela.emitted('fechar')).toHaveLength(3)
   })
+
+  it('ao fechar, devolve o foco para quem abriu o modal', async () => {
+    const gatilho = document.createElement('button')
+    document.body.appendChild(gatilho)
+    gatilho.focus()
+    const { tela } = await montar(ModalNovoAcionamento, { rota: '/painel', anexar: true })
+    expect(document.activeElement).toBe(tela.find('[role="dialog"]').element)
+    tela.unmount()
+    expect(document.activeElement).toBe(gatilho)
+    gatilho.remove()
+  })
 })

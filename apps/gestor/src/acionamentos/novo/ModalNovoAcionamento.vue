@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { dataISO, RussoIcone } from '@kgb/ui'
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { mensagemDeErro } from '../../erros'
 import { toastGestor } from '../../toast'
@@ -47,6 +47,8 @@ async function enviar() {
 }
 
 const painel = ref<HTMLElement>()
+// Quem abriu o modal (o botão "Novo acionamento") recebe o foco de volta ao fechar.
+const focoAnterior = document.activeElement instanceof HTMLElement ? document.activeElement : null
 function aoTeclar(e: KeyboardEvent) {
   if (e.key === 'Escape') emit('fechar')
 }
@@ -55,6 +57,7 @@ onMounted(() => {
   document.addEventListener('keydown', aoTeclar)
 })
 onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
+onUnmounted(() => focoAnterior?.focus())
 </script>
 
 <template>

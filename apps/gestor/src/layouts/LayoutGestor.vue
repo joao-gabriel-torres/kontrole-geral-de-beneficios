@@ -53,8 +53,14 @@ async function encerrarSessao() {
       @sair="encerrarSessao"
     />
     <div class="coluna">
-      <main ref="conteudo" class="conteudo"><RouterView /></main>
-      <NavInferior v-if="!mdAndUp" :itens="ITENS_NAVEGACAO" :aprovacoes="aprovacoes" />
+      <!-- Com o modal aberto, a tela por trás dele fica inerte: o Tab não chega nela. -->
+      <main ref="conteudo" class="conteudo" :inert="modalAberto || undefined"><RouterView /></main>
+      <NavInferior
+        v-if="!mdAndUp"
+        :itens="ITENS_NAVEGACAO"
+        :aprovacoes="aprovacoes"
+        :inert="modalAberto || undefined"
+      />
       <ModalNovoAcionamento v-if="modalAberto" @fechar="novoAcionamento.fechar()" />
       <AvisoToast :mensagem="mensagem" variante="gestor" />
     </div>

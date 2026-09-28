@@ -53,4 +53,20 @@ describe('LayoutGestor', () => {
     expect(tela.find('.coluna [role="dialog"]').exists()).toBe(true)
     novoAcionamento.fechar()
   })
+
+  it('com o modal aberto, a tela por trás fica inerte (o Tab não chega nela)', async () => {
+    simularApi(api, {
+      'GET /api/acionamentos/contagem': contagem(),
+      'GET /api/tipos': [],
+      'GET /api/prestadores': [],
+    })
+    const { tela } = await montar(LayoutGestor, { rota: '/painel' })
+    expect(tela.find('main.conteudo').attributes('inert')).toBeUndefined()
+    novoAcionamento.abrir()
+    await aguardar()
+    expect(tela.find('main.conteudo').attributes('inert')).toBeDefined()
+    novoAcionamento.fechar()
+    await aguardar()
+    expect(tela.find('main.conteudo').attributes('inert')).toBeUndefined()
+  })
 })
