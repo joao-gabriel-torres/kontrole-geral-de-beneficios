@@ -14,6 +14,7 @@ Sistema de acionamentos da Russo Assistência: gestor web (Vue + Vuetify), app d
 - `pnpm db:migrate` (depois de mudar `packages/db/prisma/schema.prisma`) e `pnpm db:seed`
 - `pnpm api:generate` depois de mudar qualquer rota ou schema da API (o CI falha se o cliente estiver desatualizado)
 - `pnpm visual`: compara o app com o protótipo pixel a pixel (API e apps rodando, seed do dia)
+- `pnpm e2e`: roteiro ponta a ponta do fluxo nos dois apps (API e apps rodando; cria dados, então rode `pnpm db:seed` antes do `pnpm visual`)
 
 ## Regras
 
