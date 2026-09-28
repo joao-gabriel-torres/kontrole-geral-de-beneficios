@@ -20,7 +20,8 @@
     "db:studio": "pnpm --filter @kgb/db studio",
     "postinstall": "pnpm --filter @kgb/db generate",
     "api:generate": "pnpm --filter @kgb/api gerar:openapi && pnpm --filter @kgb/api-client gerar:tipos",
-    "visual": "pnpm --filter @kgb/visual comparar"
+    "visual": "pnpm --filter @kgb/visual comparar",
+    "e2e": "pnpm --filter @kgb/visual ponta-a-ponta"
   },
   "devDependencies": {
     "@vitest/eslint-plugin": "^1.6.27",

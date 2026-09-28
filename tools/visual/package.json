@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "comparar": "tsx comparar.ts",
+    "ponta-a-ponta": "tsx ponta-a-ponta.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

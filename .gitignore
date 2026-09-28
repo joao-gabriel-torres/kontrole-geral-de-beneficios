@@ -21,3 +21,6 @@ tools/visual/.saida/
 
 # Fotos enviadas no desenvolvimento
 var/
+
+# worktrees do Claude Code
+.claude/worktrees/
