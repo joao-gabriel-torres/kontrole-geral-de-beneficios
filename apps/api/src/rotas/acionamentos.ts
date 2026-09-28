@@ -2,14 +2,21 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import type { Ambiente } from '../contexto'
 import { prisma } from '../db'
 import { respostaErro } from '../erros'
-import { exigeLogin, usuarioLogado } from '../middlewares/acesso'
+import { exigeLogin, exigePapel, usuarioLogado } from '../middlewares/acesso'
 import {
   DetalheAcionamentoSchema,
   FiltroListaSchema,
   IdParam,
+  NovoAcionamentoSchema,
   ResumoAcionamentoSchema,
+  RevisaoSchema,
 } from '../schemas'
-import { detalharAcionamento, listarAcionamentos } from '../servicos/acionamentos'
+import {
+  criarAcionamento,
+  detalharAcionamento,
+  listarAcionamentos,
+  revisarAcionamento,
+} from '../servicos/acionamentos'
 
 const ContagemSchema = z
   .object({
@@ -74,6 +81,51 @@ const rotaDetalhe = createRoute({
   },
 })
 
+const rotaCriar = createRoute({
+  method: 'post',
+  path: '/api/acionamentos',
+  tags: ['Acionamentos'],
+  summary: 'Cria o acionamento, copiando o checklist de cada tipo',
+  security: [{ Bearer: [] }],
+  middleware: [exigePapel('gestor')] as const,
+  request: {
+    body: { content: { 'application/json': { schema: NovoAcionamentoSchema } }, required: true },
+  },
+  responses: {
+    201: {
+      description: 'Criado',
+      content: { 'application/json': { schema: ResumoAcionamentoSchema } },
+    },
+    401: respostaErro('Sem sessão'),
+    403: respostaErro('Só para a gestão'),
+    422: respostaErro('Dados inválidos'),
+  },
+})
+
+const rotaRevisao = createRoute({
+  method: 'post',
+  path: '/api/acionamentos/{id}/revisao',
+  tags: ['Acionamentos'],
+  summary: 'Aprova ou reprova (reprovar exige motivo)',
+  security: [{ Bearer: [] }],
+  middleware: [exigePapel('gestor')] as const,
+  request: {
+    params: IdParam,
+    body: { content: { 'application/json': { schema: RevisaoSchema } }, required: true },
+  },
+  responses: {
+    200: {
+      description: 'Revisado',
+      content: { 'application/json': { schema: DetalheAcionamentoSchema } },
+    },
+    401: respostaErro('Sem sessão'),
+    403: respostaErro('Só para a gestão'),
+    404: respostaErro('Não encontrado'),
+    409: respostaErro('Não está aguardando aprovação'),
+    422: respostaErro('Motivo obrigatório'),
+  },
+})
+
 export const rotasAcionamentos = new OpenAPIHono<Ambiente>()
   .openapi(rotaContagem, async (c) => {
     const u = usuarioLogado(c)
@@ -98,4 +150,13 @@ export const rotasAcionamentos = new OpenAPIHono<Ambiente>()
   )
   .openapi(rotaDetalhe, async (c) =>
     c.json(await detalharAcionamento(usuarioLogado(c), c.req.valid('param').id), 200),
+  )
+  .openapi(rotaCriar, async (c) =>
+    c.json(await criarAcionamento(usuarioLogado(c), c.req.valid('json')), 201),
+  )
+  .openapi(rotaRevisao, async (c) =>
+    c.json(
+      await revisarAcionamento(usuarioLogado(c), c.req.valid('param').id, c.req.valid('json')),
+      200,
+    ),
   )
