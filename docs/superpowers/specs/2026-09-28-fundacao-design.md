@@ -50,9 +50,9 @@ packages/
   db/           schema.prisma, migrations, seed, client exportado
   api-client/   schema.d.ts gerado do OpenAPI + createApiClient() (openapi-fetch) + auth client (better-auth/vue)
   ui/           plugin Vuetify da Russo (tema, defaults), tokens TS/CSS, ícones do protótipo, status, componentes base, fonte
+  tsconfig/     bases de tsconfig
 tools/
   visual/       harness Playwright que compara o app com o protótipo pixel a pixel
-  tsconfig/     bases de tsconfig
 docs/
   design/       handoff (fonte da verdade de telas e regras)
   superpowers/  specs e planos
