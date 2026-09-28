@@ -77,3 +77,4 @@ export function comTempoLimite<T>(
     )
   })
 }
+export * from './arquivos'
