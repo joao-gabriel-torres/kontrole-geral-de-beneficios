@@ -22,7 +22,8 @@ watch(
 
 <template>
   <div class="layout">
-    <main ref="conteudo" class="conteudo"><RouterView /></main>
+    <!-- Uma instância por caminho: o Detalhe de outro acionamento não reaproveita o anterior. -->
+    <main ref="conteudo" class="conteudo"><RouterView :key="route.path" /></main>
     <AbasPrestador v-if="!route.meta.semAbas" :itens="ABAS" />
     <AvisoToast :mensagem="mensagem" variante="prestador" />
   </div>

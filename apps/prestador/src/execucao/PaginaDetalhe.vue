@@ -23,7 +23,9 @@ import { usarDetalhe } from './usarDetalhe'
 
 const route = useRoute()
 const router = useRouter()
-const id = computed(() => String(route.params.id))
+// Fixo durante a vida da página: ao sair, a rota já mudou quando o autosave pendente dispara.
+// O layout usa `:key` no RouterView, então outro acionamento monta outra instância.
+const id = ref(String(route.params.id))
 const acoes = usarDetalhe(id)
 const d = acoes.detalhe
 

@@ -51,6 +51,28 @@ describe('LayoutPrestador', () => {
     expect(wrapper.find('[role="status"]').exists()).toBe(false)
   })
 
+  it('cada acionamento aberto monta a própria página de detalhe', async () => {
+    let montagens = 0
+    const detalhe = { setup: () => void montagens++, template: '<div />' }
+    const comDetalhe = [
+      {
+        path: '/',
+        component: LayoutPrestador,
+        children: [
+          { path: 'demandas', name: 'demandas', component: vazio },
+          { path: 'demandas/:id', name: 'detalhe', component: detalhe, meta: { semAbas: true } },
+        ],
+      },
+    ]
+    const { router } = await montar(
+      { template: '<RouterView />' },
+      { rotas: comDetalhe, rotaInicial: '/demandas/a1' },
+    )
+    await router.push('/demandas/a2')
+    await flushPromises()
+    expect(montagens).toBe(2)
+  })
+
   it('abre cada tela no topo, mas trocar o filtro (query) não mexe na rolagem', async () => {
     const { wrapper, router } = await montar(
       { template: '<RouterView />' },

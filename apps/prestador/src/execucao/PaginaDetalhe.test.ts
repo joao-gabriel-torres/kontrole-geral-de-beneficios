@@ -297,6 +297,36 @@ describe('PaginaDetalhe', () => {
     })
   })
 
+  describe('comentários ainda não salvos', () => {
+    async function abrirNoRouter(d: DetalheAcionamento) {
+      api.GET.mockResolvedValue(ok(d))
+      const rotas = [
+        { path: '/demandas', name: 'demandas', component: { template: '<div />' } },
+        { path: '/demandas/:id', name: 'detalhe', component: PaginaDetalhe },
+      ]
+      return montar({ template: '<RouterView />' }, { rotas, rotaInicial: `/demandas/${d.id}` })
+    }
+
+    it('sair do detalhe antes dos 600 ms salva os comentários no acionamento certo', async () => {
+      const d = detalheExemplo({ status: 'em_andamento' })
+      const { wrapper, router } = await abrirNoRouter(d)
+      api.PATCH.mockResolvedValue(ok(d))
+      await wrapper.find('.chevron').trigger('click')
+      await wrapper.find('.expandido textarea').setValue('Ralo entupido')
+      await wrapper.find('.conclusao textarea').setValue('Tudo testado')
+      await router.push('/demandas')
+      await flushPromises()
+      expect(api.PATCH).toHaveBeenCalledWith('/api/acionamentos/{id}/etapas/{etapaId}', {
+        params: { path: { id: 'a1', etapaId: 'e1' } },
+        body: { comentario: 'Ralo entupido' },
+      })
+      expect(api.PATCH).toHaveBeenCalledWith('/api/acionamentos/{id}/conclusao', {
+        ...caminho(),
+        body: { comentario: 'Tudo testado' },
+      })
+    })
+  })
+
   describe('marcar como inviável', () => {
     it('envia motivo e fotos num único POST multipart, avisa e fecha o painel', async () => {
       URL.createObjectURL = vi.fn(() => 'blob:previa')
