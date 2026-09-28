@@ -22,10 +22,11 @@ Deixar o repositório pronto para desenvolver o sistema de acionamentos da Russo
 | Front gestor | Vue 3 + Vuetify + Vite + vue-router (SPA) |
 | App prestador | Vue 3 + Vuetify + Vite + vue-router, empacotado com Capacitor (iOS/Android), `appId` `br.com.russoassistencia.prestador` |
 | Visual | Tokens da marca Russo (README do handoff). A pasta `docs/design/_ds/` (Vitalize) é só base do protótipo e **não** é usada |
-| Ícones | Lucide (`@lucide/vue`; o antigo `lucide-vue-next` foi descontinuado) registrado como icon set do Vuetify |
+| Ícones | Os SVGs do próprio protótipo (`docs/design/assets/icons`, traço 1.5) via componente `<RussoIcone>`: a geometria difere do Lucide e o requisito é pixel perfect. O Vuetify usa `mdi-svg` só para ícones internos dos seus componentes |
 | Fonte | Plus Jakarta Sans empacotada via Fontsource (funciona offline no Capacitor) |
 | Qualidade | ESLint flat (typescript-eslint + eslint-plugin-vue) + Prettier, `vue-tsc`, Vitest |
 | CI | GitHub Actions com serviço Postgres 15 |
+| Fidelidade visual | **Pixel perfect com o protótipo navegável** (pedido do usuário em 2026-09-28): harness Playwright em `tools/visual` compara regiões do app e do protótipo pixel a pixel; limite de 0,2 % por região |
 | Node | `.nvmrc` 24 (LTS), `engines >=24` (dev local em 26 funciona) |
 | Fuso | Datas e horários de atendimento em `America/Sao_Paulo` |
 
@@ -48,7 +49,9 @@ apps/
 packages/
   db/           schema.prisma, migrations, seed, client exportado
   api-client/   schema.d.ts gerado do OpenAPI + createApiClient() (openapi-fetch) + auth client (better-auth/vue)
-  ui/           plugin Vuetify da Russo (tema, defaults, ícones), tokens TS, mapa de status, <StatusChip>, fonte
+  ui/           plugin Vuetify da Russo (tema, defaults), tokens TS/CSS, ícones do protótipo, status, componentes base, fonte
+tools/
+  visual/       harness Playwright que compara o app com o protótipo pixel a pixel
   tsconfig/     bases de tsconfig
 docs/
   design/       handoff (fonte da verdade de telas e regras)
@@ -61,7 +64,8 @@ Dependências entre pacotes: `api → db`; `gestor, prestador → api-client, ui
 
 - Rotas desta rodada:
   - `GET /api/health` → `{ ok: true }`
-  - `GET /api/me` → usuário da sessão `{ id, nome, email, role, prestador?: { id, nome } }`; 401 sem sessão
+  - `GET /api/me` → usuário da sessão `{ id, nome, email, papel, prestador: { id, nome } | null }`; 401 sem sessão
+  - `GET /api/acionamentos/contagem` → quantidade por status (gestor: todos; prestador: só os seus). Alimenta o badge de Aprovações do shell
   - `GET /api/openapi.json`, `GET /api/docs`
   - `/api/auth/*` → handler do Better Auth
 - Middlewares: `sessao` (resolve a sessão via `auth.api.getSession` e põe o usuário no contexto), `exigeLogin` (401), `exigePapel('gestor' | 'prestador')` (403). Regra de acesso a registrar no código: prestador só enxerga acionamentos com `prestadorId` igual ao seu (aplicada nas rotas de acionamento quando existirem).
@@ -96,7 +100,7 @@ Nomes de domínio em português, iguais ao handoff.
 - `renata@russo.dev` — Renata Silva, `gestor`
 - `carlos@russo.dev` — Carlos Mendes, `prestador` ligado ao prestador `p1`
 
-Senha de dev única documentada no README raiz. O seed se recusa a rodar com `NODE_ENV=production`.
+Os demais prestadores também ganham um usuário (sem senha), para serem autores dos eventos do histórico. Senha de dev única (`russo2026`) documentada no README raiz. O seed carrega o próprio `docs/design/acionamentos-data.js`, então os dados são idênticos aos do protótipo no mesmo dia. Ele se recusa a rodar com `NODE_ENV=production`.
 
 ## Pacote `ui`
 
@@ -123,14 +127,15 @@ Senha de dev única documentada no README raiz. O seed se recusa a rodar com `NO
 ## Testes
 
 - `api`: `health`; `openapi.json` expõe `/api/me`; `/api/me` 401 sem sessão e 200 com sessão do seed (login via Better Auth); `exigePapel` retorna 403 para o papel errado. Rodam contra `kgb_test` (migrations aplicadas antes da suíte).
-- `ui`: mapa de status bate com a tabela do handoff.
+- `ui`: mapa de status bate com a tabela do protótipo; datas e saudação no fuso de São Paulo; tokens CSS iguais aos tokens TS.
+- `visual`: `pnpm visual` compara sidebar, abas e cabeçalhos dos shells com o protótipo (≤ 0,2 % de pixels diferentes por região).
 - `gestor`: layout renderiza os 5 itens; guard redireciona para `/login` sem sessão.
 - `prestador`: saudação por horário (limites 12h e 18h); layout renderiza as 3 abas.
 
 ## Ferramentas de desenvolvimento
 
 - Scripts raiz: `dev`, `build`, `lint`, `format`, `typecheck`, `test`, `db:migrate`, `db:seed`, `db:reset`, `db:studio`, `api:generate`.
-- `.env.example` por app (`DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CORS_ORIGINS`, `VITE_API_URL`).
+- Um `.env` único na raiz (modelo em `.env.example`: `DATABASE_URL`, `DATABASE_URL_TEST`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CORS_ORIGINS`, `PORT`, `VITE_API_URL`), lido pela API, pelo Prisma e pelo Vite (`envDir`).
 - `.editorconfig`, `.nvmrc`, `.vscode/extensions.json` (Vue - Official, ESLint, Prettier, Prisma, Vitest) e `settings.json` (formatar ao salvar).
 - `README.md` raiz: pré-requisitos, setup passo a passo, scripts, estrutura, usuários de dev, como rodar no simulador iOS.
 - `CLAUDE.md`: comandos, arquitetura, convenções (nomes de domínio em português, regras de negócio em `docs/design/README.md`, contrato OpenAPI como fronteira entre fronts e API, TDD nas regras de negócio).
