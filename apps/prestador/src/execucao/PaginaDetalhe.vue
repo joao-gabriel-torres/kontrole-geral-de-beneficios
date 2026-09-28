@@ -17,6 +17,7 @@ import { mensagemDeErro } from '../consultas'
 import BarraAcoes from './BarraAcoes.vue'
 import CartaoEtapa from './CartaoEtapa.vue'
 import ConclusaoServico from './ConclusaoServico.vue'
+import PainelInviavel from './PainelInviavel.vue'
 import { avaliarEnvio, faixaDoStatus, mostrarConclusao, podeEditar } from './regras'
 import { usarDetalhe } from './usarDetalhe'
 
@@ -47,6 +48,10 @@ const url = (caminho: string | null) => resolverUrl(baseApi, caminho)
 
 function alternarEtapa(etapaId: string) {
   etapaAberta.value = etapaAberta.value === etapaId ? null : etapaId
+}
+
+async function enviarInviavel(comentario: string, arquivos: Blob[]) {
+  if (await acoes.marcarInviavel(comentario, arquivos)) painelInviavel.value = false
 }
 
 function voltar() {
@@ -166,6 +171,12 @@ function voltar() {
       @iniciar="acoes.iniciar"
       @enviar="acoes.enviar"
       @inviavel="painelInviavel = true"
+    />
+    <PainelInviavel
+      :aberto="painelInviavel"
+      :enviando="acoes.ocupado.value"
+      @fechar="painelInviavel = false"
+      @enviar="enviarInviavel"
     />
   </div>
 </template>

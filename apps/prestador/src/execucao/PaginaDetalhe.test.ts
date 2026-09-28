@@ -296,4 +296,61 @@ describe('PaginaDetalhe', () => {
       expect(wrapper.find('.aviso-falta').text()).toBe('Conclua todas as etapas para enviar')
     })
   })
+
+  describe('marcar como inviável', () => {
+    it('envia motivo e fotos num único POST multipart, avisa e fecha o painel', async () => {
+      URL.createObjectURL = vi.fn(() => 'blob:previa')
+      URL.revokeObjectURL = vi.fn()
+      const { wrapper } = await abrir(detalheExemplo())
+      expect(wrapper.find('.painel').exists()).toBe(false)
+      await wrapper.find('.link-inviavel').trigger('click')
+      const painel = wrapper.find('.painel')
+      await painel.find('textarea').setValue('Cliente ausente')
+      const arquivo = new Blob(['jpeg'], { type: 'image/jpeg' })
+      const botoes = wrapper.findAllComponents(BotoesFoto).find((b) => b.props('cor') === 'coral')!
+      botoes.vm.$emit('foto', { arquivo, tiradaEm: '2026-09-28T15:10:00-03:00' })
+      await flushPromises()
+      api.POST.mockResolvedValue(
+        ok(
+          detalheExemplo({
+            status: 'aguardando',
+            inviavel: true,
+            inviabilidade: { comentario: 'Cliente ausente', fotos: [fotoExemplo('i1')] },
+          }),
+        ),
+      )
+      await wrapper.find('.painel .enviar').trigger('click')
+      await flushPromises()
+      expect(api.POST).toHaveBeenCalledTimes(1)
+      const [rota, opcoes] = api.POST.mock.calls[0]!
+      expect(rota).toBe('/api/acionamentos/{id}/inviavel')
+      expect(opcoes.params).toEqual({ path: { id: 'a1' } })
+      const formulario = opcoes.bodySerializer() as FormData
+      expect(formulario.get('comentario')).toBe('Cliente ausente')
+      expect(formulario.getAll('arquivos')).toHaveLength(1)
+      expect(avisos.mensagem.value).toBe('Inviabilidade enviada ao gestor')
+      expect(wrapper.find('.painel').exists()).toBe(false)
+      expect(wrapper.find('.chip-status').text()).toBe('Inviabilidade em análise')
+    })
+
+    it('se a API recusar, o painel continua aberto com o que foi preenchido', async () => {
+      URL.createObjectURL = vi.fn(() => 'blob:previa')
+      URL.revokeObjectURL = vi.fn()
+      const { wrapper } = await abrir(detalheExemplo())
+      await wrapper.find('.link-inviavel').trigger('click')
+      await wrapper.find('.painel textarea').setValue('Cliente ausente')
+      wrapper
+        .findAllComponents(BotoesFoto)
+        .find((b) => b.props('cor') === 'coral')!
+        .vm.$emit('foto', { arquivo: new Blob(['j']), tiradaEm: '2026-09-28T15:10:00-03:00' })
+      await flushPromises()
+      api.POST.mockResolvedValue(erro(409, 'transicao_invalida', 'Não pode agora.'))
+      await wrapper.find('.painel .enviar').trigger('click')
+      await flushPromises()
+      expect(avisos.mensagem.value).toBe('Não pode agora.')
+      expect((wrapper.find('.painel textarea').element as HTMLTextAreaElement).value).toBe(
+        'Cliente ausente',
+      )
+    })
+  })
 })
