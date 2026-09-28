@@ -1,5 +1,5 @@
 <script setup lang="ts">
-withDefaults(defineProps<{ largura?: 1080 | 1280; espaco?: 16 | 20 }>(), {
+withDefaults(defineProps<{ largura?: 1080 | 1180 | 1280; espaco?: 16 | 20 }>(), {
   largura: 1280,
   espaco: 16,
 })

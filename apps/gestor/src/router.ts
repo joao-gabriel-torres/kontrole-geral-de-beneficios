@@ -24,13 +24,35 @@ export const rotas: RouteRecordRaw[] = [
       { path: 'painel', name: 'painel', component: () => import('./paginas/PaginaPainel.vue') },
       {
         path: 'acionamentos',
-        name: 'acionamentos',
-        component: () => import('./paginas/PaginaAcionamentos.vue'),
+        children: [
+          {
+            path: '',
+            name: 'acionamentos',
+            component: () => import('./acionamentos/PaginaAcionamentos.vue'),
+          },
+          {
+            path: ':id',
+            name: 'acionamento',
+            component: () => import('./acionamentos/detalhe/PaginaDetalhe.vue'),
+            props: (r) => ({ id: String(r.params.id), origem: 'acionamentos' }),
+          },
+        ],
       },
       {
         path: 'aprovacoes',
-        name: 'aprovacoes',
-        component: () => import('./paginas/PaginaAprovacoes.vue'),
+        children: [
+          {
+            path: '',
+            name: 'aprovacoes',
+            component: () => import('./aprovacoes/PaginaAprovacoes.vue'),
+          },
+          {
+            path: ':id',
+            name: 'aprovacao',
+            component: () => import('./acionamentos/detalhe/PaginaDetalhe.vue'),
+            props: (r) => ({ id: String(r.params.id), origem: 'aprovacoes' }),
+          },
+        ],
       },
       {
         path: 'prestadores',
