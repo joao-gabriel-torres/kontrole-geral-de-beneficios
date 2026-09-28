@@ -17,13 +17,23 @@ const tela = telaInteira('pa')
 const chip = (nome: string): Passo => ({ clicar: nome })
 const titulo = (texto: string): Passo => ({ clicar: texto, papel: 'text' })
 
+/** Os passos só clicam (e esperam 250 ms depois de cada clique): cliques num texto inerte esperam. */
+const esperar = (textoInerte: string, cliques: number): Passo[] =>
+  Array.from({ length: cliques }, () => ({ clicar: textoInerte, papel: 'text' as const }))
+
 /**
  * Toasts ficam fora da comparação (spec), mas o harness fotografa o protótipo só depois de o app
- * carregar: o toast do protótipo já sumiu e o do app não. Como os passos só clicam (250 ms cada),
- * dez cliques no código do cabeçalho (que não faz nada) deixam o toast de 2,6 s sumir nos dois.
+ * carregar: o toast do protótipo já sumiu e o do app não. Dez cliques no código do cabeçalho deixam
+ * o toast de 2,6 s sumir nos dois.
  */
-const esperarToast = (codigo: string): Passo[] =>
-  Array.from({ length: 10 }, () => ({ clicar: codigo, papel: 'text' as const }))
+const esperarToast = (codigo: string) => esperar(codigo, 10)
+
+/**
+ * O protótipo carrega a fonte do Google Fonts e o harness só espera `document.fonts` depois dos
+ * passos. Se "Finalizadas" for clicado antes de a fonte chegar, o chip ainda tem a largura da fonte
+ * de reserva e a faixa rola 9px a mais (50 em vez de 41, medido). Esperar pela fonte antes do clique.
+ */
+const esperarFonte = () => esperar('Suas demandas', 6)
 
 const demandas = (nome: string, passos: Passo[] = []): Caso => ({
   nome,
@@ -54,7 +64,7 @@ export const CASOS_PRESTADOR: Caso[] = [
   demandas('prestador-demandas-ativas'),
   demandas('prestador-demandas-corrigir', [chip('Corrigir 1')]),
   demandas('prestador-demandas-analise', [chip('Em análise 2')]),
-  demandas('prestador-demandas-finalizadas', [chip('Finalizadas 12')]),
+  demandas('prestador-demandas-finalizadas', [...esperarFonte(), chip('Finalizadas 12')]),
   demandas('prestador-detalhe-aberto', [titulo('Vazamento no teto do banheiro')]),
   demandas('prestador-detalhe-reprovado', [
     chip('Corrigir 1'),
@@ -70,6 +80,7 @@ export const CASOS_PRESTADOR: Caso[] = [
     titulo('Limpeza de ar-condicionado'),
   ]),
   demandas('prestador-detalhe-aprovado', [
+    ...esperarFonte(),
     chip('Finalizadas 12'),
     titulo('Troca de fechadura da porta dos fundos'),
   ]),
