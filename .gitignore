@@ -18,3 +18,6 @@ coverage/
 **/src/generated/
 *.tsbuildinfo
 tools/visual/.saida/
+
+# Fotos enviadas no desenvolvimento
+var/
