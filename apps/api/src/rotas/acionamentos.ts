@@ -3,6 +3,13 @@ import type { Ambiente } from '../contexto'
 import { prisma } from '../db'
 import { respostaErro } from '../erros'
 import { exigeLogin, usuarioLogado } from '../middlewares/acesso'
+import {
+  DetalheAcionamentoSchema,
+  FiltroListaSchema,
+  IdParam,
+  ResumoAcionamentoSchema,
+} from '../schemas'
+import { detalharAcionamento, listarAcionamentos } from '../servicos/acionamentos'
 
 const ContagemSchema = z
   .object({
@@ -32,21 +39,63 @@ const rotaContagem = createRoute({
   },
 })
 
-export const rotasAcionamentos = new OpenAPIHono<Ambiente>().openapi(rotaContagem, async (c) => {
-  const u = usuarioLogado(c)
-  const contagem: Contagem = {
-    aberto: 0,
-    em_andamento: 0,
-    aguardando: 0,
-    reprovado: 0,
-    aprovado: 0,
-  }
-  if (u.papel === 'prestador' && !u.prestadorId) return c.json(contagem, 200)
-  const grupos = await prisma.acionamento.groupBy({
-    by: ['status'],
-    _count: { _all: true },
-    where: u.papel === 'prestador' ? { prestadorId: u.prestadorId! } : {},
-  })
-  for (const g of grupos) contagem[g.status] = g._count._all
-  return c.json(contagem, 200)
+const rotaLista = createRoute({
+  method: 'get',
+  path: '/api/acionamentos',
+  tags: ['Acionamentos'],
+  summary: 'Lista (o prestador vê só os seus), do mais recente para o mais antigo',
+  security: [{ Bearer: [] }],
+  middleware: [exigeLogin] as const,
+  request: { query: FiltroListaSchema },
+  responses: {
+    200: {
+      description: 'Acionamentos',
+      content: { 'application/json': { schema: z.array(ResumoAcionamentoSchema) } },
+    },
+    401: respostaErro('Sem sessão'),
+  },
 })
+
+const rotaDetalhe = createRoute({
+  method: 'get',
+  path: '/api/acionamentos/{id}',
+  tags: ['Acionamentos'],
+  summary: 'Detalhe com etapas, fotos, revisões e linha do tempo',
+  security: [{ Bearer: [] }],
+  middleware: [exigeLogin] as const,
+  request: { params: IdParam },
+  responses: {
+    200: {
+      description: 'Detalhe',
+      content: { 'application/json': { schema: DetalheAcionamentoSchema } },
+    },
+    401: respostaErro('Sem sessão'),
+    404: respostaErro('Não encontrado'),
+  },
+})
+
+export const rotasAcionamentos = new OpenAPIHono<Ambiente>()
+  .openapi(rotaContagem, async (c) => {
+    const u = usuarioLogado(c)
+    const contagem: Contagem = {
+      aberto: 0,
+      em_andamento: 0,
+      aguardando: 0,
+      reprovado: 0,
+      aprovado: 0,
+    }
+    if (u.papel === 'prestador' && !u.prestadorId) return c.json(contagem, 200)
+    const grupos = await prisma.acionamento.groupBy({
+      by: ['status'],
+      _count: { _all: true },
+      where: u.papel === 'prestador' ? { prestadorId: u.prestadorId! } : {},
+    })
+    for (const g of grupos) contagem[g.status] = g._count._all
+    return c.json(contagem, 200)
+  })
+  .openapi(rotaLista, async (c) =>
+    c.json(await listarAcionamentos(usuarioLogado(c), c.req.valid('query')), 200),
+  )
+  .openapi(rotaDetalhe, async (c) =>
+    c.json(await detalharAcionamento(usuarioLogado(c), c.req.valid('param').id), 200),
+  )

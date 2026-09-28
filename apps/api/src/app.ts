@@ -4,10 +4,12 @@ import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
 import { auth } from './auth'
 import type { Ambiente } from './contexto'
+import { ErroDominio } from './dominio/acionamento'
 import { env } from './env'
-import { corpoErro } from './erros'
+import { corpoErro, ErroHttp } from './erros'
 import { sessao } from './middlewares/sessao'
 import { rotasAcionamentos } from './rotas/acionamentos'
+import { rotasCatalogo } from './rotas/catalogo'
 import { rotasMe } from './rotas/me'
 import { rotasSaude } from './rotas/saude'
 
@@ -53,12 +55,16 @@ export function criarApp() {
   app.route('/', rotasSaude)
   app.route('/', rotasMe)
   app.route('/', rotasAcionamentos)
+  app.route('/', rotasCatalogo)
 
   app.doc31('/api/openapi.json', INFO_OPENAPI)
   app.get('/api/docs', Scalar({ url: '/api/openapi.json' }))
 
   app.notFound((c) => c.json(corpoErro('nao_encontrado', 'Rota não encontrada'), 404))
   app.onError((erro, c) => {
+    if (erro instanceof ErroDominio || erro instanceof ErroHttp) {
+      return c.json(corpoErro(erro.codigo, erro.message), erro.status)
+    }
     if (erro instanceof HTTPException) {
       const codigo =
         erro.status === 401 ? 'nao_autenticado' : erro.status === 403 ? 'sem_permissao' : 'erro'

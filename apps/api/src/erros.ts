@@ -23,3 +23,18 @@ export function corpoErro(
 export function respostaErro(descricao: string) {
   return { description: descricao, content: { 'application/json': { schema: ErroSchema } } }
 }
+
+export class ErroHttp extends Error {
+  constructor(
+    readonly status: 401 | 403 | 404 | 409 | 413 | 415 | 422,
+    readonly codigo: string,
+    mensagem: string,
+  ) {
+    super(mensagem)
+    this.name = 'ErroHttp'
+  }
+}
+
+export function naoEncontrado(oque = 'Acionamento'): ErroHttp {
+  return new ErroHttp(404, 'nao_encontrado', `${oque} não encontrado`)
+}
