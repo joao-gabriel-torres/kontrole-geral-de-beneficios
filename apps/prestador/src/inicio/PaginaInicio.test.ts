@@ -99,7 +99,8 @@ describe('PaginaInicio', () => {
   })
 
   it('"Em execução agora" quando o próximo já começou', async () => {
-    api.GET.mockResolvedValue(ok(inicio({ proximo: resumo('1063', { status: 'em_andamento' }) })))
+    const emExecucao = resumo('1063', { status: 'em_andamento' })
+    api.GET.mockResolvedValue(ok(inicio({ proximo: emExecucao as InicioPrestador['proximo'] })))
     const { wrapper } = await montar(PaginaInicio)
     expect(wrapper.find('.proximo .selo').text()).toBe('Em execução agora')
   })
