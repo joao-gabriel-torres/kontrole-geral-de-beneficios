@@ -1,0 +1,12 @@
+{
+  "extends": "@kgb/tsconfig/vue.json",
+  "compilerOptions": { "types": ["vite/client", "node"] },
+  "include": [
+    "src",
+    "test",
+    "env.d.ts",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "capacitor.config.ts"
+  ]
+}
