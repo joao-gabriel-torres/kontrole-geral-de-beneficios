@@ -66,6 +66,28 @@ export const CASOS_GESTOR: Caso[] = [
     regioes: [telaWeb],
   },
   {
+    nome: 'gestor-web-novo-acionamento',
+    modo: 'gw',
+    navegarPrototipo: 'Acionamentos',
+    app: 'gestor',
+    rota: '/acionamentos',
+    passos: [{ clicar: 'Novo acionamento' }],
+    regioes: [telaWeb],
+  },
+  {
+    nome: 'gestor-web-novo-acionamento-tipos',
+    modo: 'gw',
+    navegarPrototipo: 'Acionamentos',
+    app: 'gestor',
+    rota: '/acionamentos',
+    passos: [
+      { clicar: 'Novo acionamento' },
+      { clicar: 'Vazamento' },
+      { clicar: 'Reparo em gesso' },
+    ],
+    regioes: [telaWeb],
+  },
+  {
     nome: 'gestor-web-aprovacoes',
     modo: 'gw',
     navegarPrototipo: 'Aprovações',

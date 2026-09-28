@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { simularApi } from '../../test/api-falsa'
 import { contagem } from '../../test/fixtures'
 import { aguardar, montar } from '../../test/montar'
+import { novoAcionamento } from '../acionamentos/novo/estado'
 import { api } from '../api'
 import { CHAVES } from '../consultas'
 import { toastGestor } from '../toast'
@@ -37,5 +38,19 @@ describe('LayoutGestor', () => {
     toastGestor.mostrar('Conclusão aprovada')
     await aguardar()
     expect(tela.find('[role="status"]').text()).toBe('Conclusão aprovada')
+  })
+
+  it('mostra o modal Novo acionamento quando ele é aberto', async () => {
+    simularApi(api, {
+      'GET /api/acionamentos/contagem': contagem(),
+      'GET /api/tipos': [],
+      'GET /api/prestadores': [],
+    })
+    const { tela } = await montar(LayoutGestor, { rota: '/painel' })
+    expect(tela.find('[role="dialog"]').exists()).toBe(false)
+    novoAcionamento.abrir()
+    await aguardar()
+    expect(tela.find('.coluna [role="dialog"]').exists()).toBe(true)
+    novoAcionamento.fechar()
   })
 })

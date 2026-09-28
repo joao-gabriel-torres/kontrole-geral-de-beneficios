@@ -5,6 +5,8 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { usarContagem } from '../acionamentos/dados'
+import ModalNovoAcionamento from '../acionamentos/novo/ModalNovoAcionamento.vue'
+import { novoAcionamento } from '../acionamentos/novo/estado'
 import NavInferior from '../componentes/NavInferior.vue'
 import NavLateral from '../componentes/NavLateral.vue'
 import { ITENS_NAVEGACAO } from '../navegacao'
@@ -18,6 +20,7 @@ const consultas = useQueryClient()
 const { data: contagem, refetch } = usarContagem()
 const aprovacoes = computed(() => contagem.value?.aguardando ?? 0)
 const { mensagem } = toastGestor
+const modalAberto = novoAcionamento.aberto
 const conteudo = ref<HTMLElement>()
 
 // A fila muda também pelas ações do prestador: o badge se atualiza a cada troca de tela.
@@ -52,6 +55,7 @@ async function encerrarSessao() {
     <div class="coluna">
       <main ref="conteudo" class="conteudo"><RouterView /></main>
       <NavInferior v-if="!mdAndUp" :itens="ITENS_NAVEGACAO" :aprovacoes="aprovacoes" />
+      <ModalNovoAcionamento v-if="modalAberto" @fechar="novoAcionamento.fechar()" />
       <AvisoToast :mensagem="mensagem" variante="gestor" />
     </div>
   </div>
