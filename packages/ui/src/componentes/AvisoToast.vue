@@ -24,7 +24,10 @@ defineProps<{ mensagem: string | null; variante: 'gestor' | 'prestador' }>()
   padding: 12px 18px;
   border-radius: 12px;
   z-index: 30;
-  white-space: nowrap;
+  /* Uma linha como no protótipo; mensagem longa quebra em vez de sair da tela estreita. */
+  width: max-content;
+  max-width: calc(100% - 32px);
+  text-align: center;
 }
 .prestador {
   left: 24px;
