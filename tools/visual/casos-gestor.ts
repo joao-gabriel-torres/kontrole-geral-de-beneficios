@@ -43,7 +43,7 @@ export const CASOS_GESTOR: Caso[] = [
     navegarPrototipo: 'Aprovações',
     app: 'gestor',
     rota: '/aprovacoes',
-    regioes: [sidebar, cabecalhoWeb(56)],
+    regioes: [telaWeb],
   },
   // O subtítulo "N ativos de M" depende de dados de prestadores: o cabeçalho entra quando a tela for implementada.
   {
@@ -75,7 +75,7 @@ export const CASOS_GESTOR: Caso[] = [
     navegarPrototipo: 'Aprovações',
     app: 'gestor',
     rota: '/aprovacoes',
-    regioes: [abasGestor],
+    regioes: [telaMobile],
   },
   {
     nome: 'gestor-mobile-acionamentos',
