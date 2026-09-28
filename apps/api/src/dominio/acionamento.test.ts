@@ -5,6 +5,7 @@ import {
   verificarEnvio,
   verificarInviabilidade,
   verificarRevisao,
+  type Acao,
   type StatusAcionamento,
 } from './acionamento'
 
@@ -20,25 +21,35 @@ function erroDe(fn: () => unknown): unknown {
 const TODOS: StatusAcionamento[] = ['aberto', 'em_andamento', 'aguardando', 'reprovado', 'aprovado']
 const regras = { photoMin: 1, requireAllSteps: false }
 
+const PERMITIDOS = {
+  iniciar: ['aberto'],
+  editar: ['em_andamento', 'reprovado'],
+  enviar: ['em_andamento', 'reprovado'],
+  marcarInviavel: ['aberto', 'em_andamento', 'reprovado'],
+  revisar: ['aguardando'],
+} as const satisfies Record<Acao, readonly StatusAcionamento[]>
+
+const pares = (Object.keys(PERMITIDOS) as Acao[]).flatMap((acao) =>
+  TODOS.map((status) => ({
+    acao,
+    status,
+    permitido: (PERMITIDOS[acao] as readonly string[]).includes(status),
+  })),
+)
+
 describe('exigirStatus', () => {
-  it.each([
-    ['iniciar', ['aberto']],
-    ['editar', ['em_andamento', 'reprovado']],
-    ['enviar', ['em_andamento', 'reprovado']],
-    ['marcarInviavel', ['aberto', 'em_andamento', 'reprovado']],
-    ['revisar', ['aguardando']],
-  ] as const)('%s só é permitido em %j', (acao, permitidos) => {
-    for (const status of TODOS) {
-      if ((permitidos as readonly string[]).includes(status)) {
-        expect(() => exigirStatus(acao, status)).not.toThrow()
-      } else {
-        expect(erroDe(() => exigirStatus(acao, status))).toMatchObject({
-          codigo: 'transicao_invalida',
-          status: 409,
-        })
-      }
-    }
+  it.each(pares.filter((p) => p.permitido))('$acao é permitido em $status', ({ acao, status }) => {
+    expect(() => exigirStatus(acao, status)).not.toThrow()
   })
+  it.each(pares.filter((p) => !p.permitido))(
+    '$acao é recusado (409) em $status',
+    ({ acao, status }) => {
+      expect(erroDe(() => exigirStatus(acao, status))).toMatchObject({
+        codigo: 'transicao_invalida',
+        status: 409,
+      })
+    },
+  )
 })
 
 describe('verificarEnvio', () => {
