@@ -26,7 +26,7 @@ export const rotas: RouteRecordRaw[] = [
       {
         path: 'demandas',
         name: 'demandas',
-        component: () => import('./paginas/PaginaDemandas.vue'),
+        component: () => import('./demandas/PaginaDemandas.vue'),
       },
       {
         path: 'demandas/:id',
