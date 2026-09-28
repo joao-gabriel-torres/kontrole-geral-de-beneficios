@@ -1,5 +1,5 @@
 import type { CorpoErro } from '@kgb/api-client'
-import { QueryClient } from '@tanstack/vue-query'
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/vue-query'
 
 /** Chaves do vue-query: depois de cada mutação, a lista, o detalhe e o Início são invalidados. */
 export const CHAVES = {
@@ -38,8 +38,14 @@ export function mensagemDeErro(erro: unknown): string {
   return erro instanceof ErroApi ? erro.message : MENSAGEM_SEM_CONEXAO
 }
 
-export function criarClienteConsultas(): QueryClient {
+/** `aoPerderSessao` é chamado quando a API recusa a sessão (401) numa consulta ou numa ação. */
+export function criarClienteConsultas(aoPerderSessao?: () => void): QueryClient {
+  const aoErro = (erro: unknown) => {
+    if (erro instanceof ErroApi && erro.status === 401) aoPerderSessao?.()
+  }
   return new QueryClient({
+    queryCache: new QueryCache({ onError: aoErro }),
+    mutationCache: new MutationCache({ onError: aoErro }),
     defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
   })
 }

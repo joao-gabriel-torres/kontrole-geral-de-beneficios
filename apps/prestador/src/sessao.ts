@@ -1,5 +1,7 @@
 import { comTempoLimite, type Usuario } from '@kgb/api-client'
+import type { QueryClient } from '@tanstack/vue-query'
 import { reactive, readonly } from 'vue'
+import type { Router } from 'vue-router'
 import { api, auth } from './api'
 import { obterToken, salvarToken } from './token'
 
@@ -83,5 +85,27 @@ export async function sair(): Promise<void> {
   } finally {
     await salvarToken(null)
     estado.usuario = null
+  }
+}
+
+let perdendoSessao = false
+
+/**
+ * A API recusou a sessão no meio do uso (expirou ou o cadastro foi desativado): esquece o usuário e os dados
+ * e volta ao login, que depois devolve para a tela atual. Várias consultas falhando juntas
+ * disparam uma volta só.
+ */
+export async function perderSessao(router: Router, consultas: QueryClient): Promise<void> {
+  if (perdendoSessao) return
+  perdendoSessao = true
+  try {
+    await salvarToken(null)
+    estado.usuario = null
+    estado.carregada = false
+    consultas.clear()
+    const voltar = router.currentRoute.value.fullPath
+    await router.replace({ name: 'login', query: voltar === '/' ? {} : { voltar } })
+  } finally {
+    perdendoSessao = false
   }
 }

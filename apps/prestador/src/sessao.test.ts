@@ -1,4 +1,6 @@
+import { QueryClient } from '@tanstack/vue-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createMemoryHistory, createRouter } from 'vue-router'
 
 const { api, auth, token } = vi.hoisted(() => ({
   api: { GET: vi.fn() },
@@ -8,7 +10,8 @@ const { api, auth, token } = vi.hoisted(() => ({
 vi.mock('./api', () => ({ api, auth }))
 vi.mock('./token', () => token)
 
-const { carregarSessao, entrar, mensagemDoMotivo, MENSAGENS, sessao } = await import('./sessao')
+const { carregarSessao, entrar, mensagemDoMotivo, MENSAGENS, perderSessao, sessao } =
+  await import('./sessao')
 const carlos = {
   id: 'u-p1',
   nome: 'Carlos Mendes',
@@ -81,6 +84,34 @@ describe('sessão do prestador', () => {
   it('outro 403 (origem recusada pela API) não diz que o cadastro está inativo', async () => {
     auth.signIn.email.mockResolvedValue({ error: { status: 403, code: 'INVALID_ORIGIN' } })
     expect(await entrar('c@x', 'x')).toEqual({ ok: false, mensagem: MENSAGENS.indisponivel })
+  })
+
+  it('sessão perdida no meio do uso: apaga o token, limpa o cache e volta ao login', async () => {
+    token.obterToken.mockReturnValue('valido')
+    api.GET.mockResolvedValue({ data: carlos, response: resposta(200) })
+    await carregarSessao()
+    const Vazio = { render: () => null }
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/login', name: 'login', component: Vazio },
+        { path: '/demandas/:id', name: 'detalhe', component: Vazio },
+      ],
+    })
+    await router.push('/demandas/abc')
+    const trocar = vi.spyOn(router, 'replace')
+    const consultas = new QueryClient()
+    consultas.setQueryData(['x'], 1)
+
+    await Promise.all([perderSessao(router, consultas), perderSessao(router, consultas)])
+
+    expect(token.salvarToken).toHaveBeenCalledWith(null)
+    expect(sessao.usuario).toBeNull()
+    expect(sessao.carregada).toBe(false)
+    expect(consultas.getQueryData(['x'])).toBeUndefined()
+    expect(trocar).toHaveBeenCalledOnce()
+    expect(router.currentRoute.value.name).toBe('login')
+    expect(router.currentRoute.value.query).toEqual({ voltar: '/demandas/abc' })
   })
 
   it('login que não responde termina com aviso de conexão', async () => {

@@ -1,4 +1,6 @@
+import { QueryClient } from '@tanstack/vue-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { criarRouterDeTeste } from '../test/montar'
 
 const { api, auth } = vi.hoisted(() => ({
   api: { GET: vi.fn() },
@@ -6,7 +8,8 @@ const { api, auth } = vi.hoisted(() => ({
 }))
 vi.mock('./api', () => ({ api, auth }))
 
-const { carregarSessao, entrar, mensagemDoMotivo, MENSAGENS, sessao } = await import('./sessao')
+const { carregarSessao, entrar, mensagemDoMotivo, MENSAGENS, perderSessao, sessao } =
+  await import('./sessao')
 
 const gestora = { id: 'u', nome: 'Renata Silva', email: 'r@x', papel: 'gestor', prestador: null }
 const resposta = (status: number) => new Response(null, { status })
@@ -52,6 +55,25 @@ describe('sessão do gestor', () => {
   it('prestador desativado tentando o painel web lê que a conta é de prestador', async () => {
     auth.signIn.email.mockResolvedValue({ error: { status: 403, code: 'PRESTADOR_INATIVO' } })
     expect(await entrar('c@x', 'x')).toEqual({ ok: false, mensagem: MENSAGENS.papel })
+  })
+
+  it('sessão perdida no meio do uso: esquece o usuário, limpa o cache e volta ao login', async () => {
+    api.GET.mockResolvedValue({ data: gestora, response: resposta(200) })
+    await carregarSessao()
+    const router = criarRouterDeTeste()
+    await router.push('/acionamentos/abc')
+    const trocar = vi.spyOn(router, 'replace')
+    const consultas = new QueryClient()
+    consultas.setQueryData(['x'], 1)
+
+    await Promise.all([perderSessao(router, consultas), perderSessao(router, consultas)])
+
+    expect(sessao.usuario).toBeNull()
+    expect(sessao.carregada).toBe(false)
+    expect(consultas.getQueryData(['x'])).toBeUndefined()
+    expect(trocar).toHaveBeenCalledOnce()
+    expect(router.currentRoute.value.name).toBe('login')
+    expect(router.currentRoute.value.query).toEqual({ voltar: '/acionamentos/abc' })
   })
 
   it('avisa sobre excesso de tentativas em vez de dizer que a senha está errada', async () => {

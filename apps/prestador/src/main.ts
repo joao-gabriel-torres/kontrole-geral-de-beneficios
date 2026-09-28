@@ -6,11 +6,13 @@ import App from './App.vue'
 import { criarClienteConsultas } from './consultas'
 import { vuetify } from './plugins/vuetify'
 import { router } from './router'
+import { perderSessao } from './sessao'
 import { carregarToken } from './token'
 
 await carregarToken()
+const consultas = criarClienteConsultas(() => void perderSessao(router, consultas))
 createApp(App)
   .use(vuetify)
   .use(router)
-  .use(VueQueryPlugin, { queryClient: criarClienteConsultas() })
+  .use(VueQueryPlugin, { queryClient: consultas })
   .mount('#app')

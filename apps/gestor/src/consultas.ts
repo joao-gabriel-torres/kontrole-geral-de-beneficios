@@ -1,8 +1,17 @@
-import { QueryClient } from '@tanstack/vue-query'
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/vue-query'
 import type { FiltroLista } from './acionamentos/filtros'
+import { ErroApi } from './erros'
 
-export function criarClienteConsultas(): QueryClient {
-  return new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 5_000 } } })
+/** `aoPerderSessao` é chamado quando a API recusa a sessão (401) numa consulta ou numa ação. */
+export function criarClienteConsultas(aoPerderSessao?: () => void): QueryClient {
+  const aoErro = (erro: unknown) => {
+    if (erro instanceof ErroApi && erro.status === 401) aoPerderSessao?.()
+  }
+  return new QueryClient({
+    queryCache: new QueryCache({ onError: aoErro }),
+    mutationCache: new MutationCache({ onError: aoErro }),
+    defaultOptions: { queries: { retry: 1, staleTime: 5_000 } },
+  })
 }
 
 /**
