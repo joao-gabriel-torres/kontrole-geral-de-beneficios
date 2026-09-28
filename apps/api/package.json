@@ -1,0 +1,28 @@
+{
+  "name": "@kgb/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "gerar:openapi": "tsx scripts/gerar-openapi.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.1",
+    "@hono/zod-openapi": "^1.6.3",
+    "@kgb/db": "workspace:*",
+    "@scalar/hono-api-reference": "^0.12.6",
+    "better-auth": "1.7.6",
+    "dotenv": "^18.0.4",
+    "hono": "^4.13.10",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@kgb/tsconfig": "workspace:*",
+    "@types/node": "^26.6.3",
+    "tsx": "^4.23.15",
+    "vitest": "^4.1.11"
+  }
+}

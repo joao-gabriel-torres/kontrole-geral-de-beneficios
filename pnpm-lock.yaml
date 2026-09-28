@@ -10,7 +10,7 @@ importers:
     devDependencies:
       '@vitest/eslint-plugin':
         specifier: ^1.6.27
-        version: 1.6.27(@typescript-eslint/eslint-plugin@8.70.1(@typescript-eslint/parser@8.70.1(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3)(vitest@4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))
+        version: 1.6.27(@typescript-eslint/eslint-plugin@8.70.1(@typescript-eslint/parser@8.70.1(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3)(vitest@4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))
       '@vue/eslint-config-typescript':
         specifier: ^14.9.0
         version: 14.9.0(eslint-plugin-vue@10.11.1(@typescript-eslint/parser@8.70.1(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.11.0(jiti@2.7.0))(vue-eslint-parser@10.4.1(eslint@10.11.0(jiti@2.7.0))))(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3)
@@ -36,6 +36,46 @@ importers:
         specifier: ~5.9.3
         version: 5.9.3
 
+  apps/api:
+    dependencies:
+      '@hono/node-server':
+        specifier: ^2.1.1
+        version: 2.1.1(hono@4.13.10)
+      '@hono/zod-openapi':
+        specifier: ^1.6.3
+        version: 1.6.3(hono@4.13.10)(zod@4.6.5)
+      '@kgb/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@scalar/hono-api-reference':
+        specifier: ^0.12.6
+        version: 0.12.6(hono@4.13.10)
+      better-auth:
+        specifier: 1.7.6
+        version: 1.7.6(@prisma/client@7.10.0(prisma@7.10.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3))(typescript@5.9.3))(mysql2@3.15.3)(pg@8.23.0)(prisma@7.10.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))
+      dotenv:
+        specifier: ^18.0.4
+        version: 18.0.4
+      hono:
+        specifier: ^4.13.10
+        version: 4.13.10
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@kgb/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      '@types/node':
+        specifier: ^26.6.3
+        version: 26.6.3
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
   packages/db:
     dependencies:
       '@prisma/adapter-pg':
@@ -46,7 +86,7 @@ importers:
         version: 7.10.0(prisma@7.10.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3))(typescript@5.9.3)
       better-auth:
         specifier: 1.7.6
-        version: 1.7.6(@prisma/client@7.10.0(prisma@7.10.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3))(typescript@5.9.3))(mysql2@3.15.3)(pg@8.23.0)(prisma@7.10.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))
+        version: 1.7.6(@prisma/client@7.10.0(prisma@7.10.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3))(typescript@5.9.3))(mysql2@3.15.3)(pg@8.23.0)(prisma@7.10.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))
       dotenv:
         specifier: ^18.0.4
         version: 18.0.4
@@ -71,7 +111,7 @@ importers:
         version: 4.23.15
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+        version: 4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/tsconfig:
     dependencies:
@@ -80,6 +120,11 @@ importers:
         version: 0.9.1(typescript@5.9.3)
 
 packages:
+
+  '@asteasolutions/zod-to-openapi@9.1.0':
+    resolution: {integrity: sha512-pLMeRgRYS7/vZIgAAkOe2P6+XGTifR1MT9pqDoxZ11EmcJJ+DPmdPqLN8ZZF4U8R9KHCCQCS9c2wtuE8wSrfkw==}
+    peerDependencies:
+      zod: ^4.0.0
 
   '@better-auth/core@1.7.6':
     resolution: {integrity: sha512-yBDDO0J4VCHT1qEZtzj6aMexX4etyLesitoxehcWHzPrzYqrFHwe/hgskye+imlGhQVOysuljMg8M8BA6GrtIg==}
@@ -365,6 +410,25 @@ packages:
   '@eslint/plugin-kit@0.7.3':
     resolution: {integrity: sha512-IkO+/KEUvwbVpiURZg+P7zF74z5Jxe0UgJxVni+RtoHQ6IZieXaO02kmadomap/q+l6bc/jdPGGqTjhuZnuz1Q==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
+
+  '@hono/node-server@2.1.1':
+    resolution: {integrity: sha512-ELuehkj5VCBdgEw9zs+ivkKwyzzUCSQuE96YmiPvn1ECBoZCczbFXJLeEGMTYjphP6gydh4pHMqEYPVMYUVgQg==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      hono: ^4
+
+  '@hono/zod-openapi@1.6.3':
+    resolution: {integrity: sha512-VYR82Y60plu8g3pN60OUXMVKpmxh3R04Qs++3DY9vtwZ9/sA/BRY0PcRIR+Z37/3itWtM7pYwT9bKiH9JhqV6Q==}
+    engines: {node: '>=16.0.0'}
+    peerDependencies:
+      hono: '>=4.10.0'
+      zod: ^4.0.0
+
+  '@hono/zod-validator@0.9.1':
+    resolution: {integrity: sha512-iiv6w0qrIc0arfvCtUqBWsvl4fXjzaTcQcCJTTtCnkawF9HHGE+KjEl0ox3gQJ6rKZEgE3mLExlQCF72M+mNuw==}
+    peerDependencies:
+      hono: '>=4.11.2'
+      zod: ^3.25.0 || ^4.0.0
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -660,6 +724,32 @@ packages:
 
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
+
+  '@scalar/client-side-rendering@0.4.5':
+    resolution: {integrity: sha512-6dhBKaRecrrk2WyVLxrA8oyTiY+4zzhwf5OUjUyuyQXZHt/751QDf/TvW14p2osEaNELfY/gjtN8meX+UslFQw==}
+    engines: {node: '>=22'}
+
+  '@scalar/helpers@0.15.0':
+    resolution: {integrity: sha512-eUnaVQ1EE2YFIVrPOQxVaUiVYZjM6Yg2Oh0yUI87pyI0ilH6jOLA6wIJVWP/AXLv5WnhsfJW33xlZcztozEZ2A==}
+    engines: {node: '>=22'}
+
+  '@scalar/hono-api-reference@0.12.6':
+    resolution: {integrity: sha512-u5CXaHTz8K9OZP5Yk/HungHJc4sqtQ1Y4Hf3NdY1EYsrUrgtCKdDn8G2xLKP2u+8+FICeUHx6IjPjEn3BkCCKg==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      hono: ^4.12.5
+
+  '@scalar/schemas@0.12.1':
+    resolution: {integrity: sha512-D/1h/ek2mCwZFOBHQQ8gqD/pQ6Dz5xwur3s6aCwA71AnDF8/Wh+nwUNyIz+H4iquYIq5AUQD02mRyhUE/nIqtg==}
+    engines: {node: '>=22'}
+
+  '@scalar/types@0.22.1':
+    resolution: {integrity: sha512-h8/oe1tG1UIPoAKETiOBtYpyoH7GW3mp4Yu3Znl1RWa2iYLWl7ZtnqJ2A+n5s7MvZEDAb33pt4W/eswB3VVr6Q==}
+    engines: {node: '>=22'}
+
+  '@scalar/validation@0.6.5':
+    resolution: {integrity: sha512-t/dtbqesbOLsTusFI2kXfiFEQOiZC7+oAY+jZnE82Y64xLamo/1KrZpta8GkuAfIHyeOHOx5bDFid04eO13MIg==}
+    engines: {node: '>=20'}
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -1358,6 +1448,10 @@ packages:
     resolution: {integrity: sha512-iZyKG96/JwPz1N55vj2Ie2vXbhu440zfUfJvSwEqEbeLluk7NnapfGqa7LH0mOsnDxTF85Mx8/dyR6HfqcbmbQ==}
     engines: {node: '>=20'}
 
+  hono@4.13.10:
+    resolution: {integrity: sha512-dQuLsa5oO+47QVMVMaaD9cIv8ctmVtK1iRvwWngkfloFJMeFeuoUFDswIqZGxmGX3hrRzREgEArjkK9OgsQEhA==}
+    engines: {node: '>=16.9.0'}
+
   hookified@1.15.1:
     resolution: {integrity: sha512-MvG/clsADq1GPM2KGo2nyfaWVyn9naPiXrqIe4jYjXNZQt238kWyOGrsyc/DmRAQ+Re6yeo6yX/yoNCG5KAEVg==}
 
@@ -1548,6 +1642,11 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
+  nanoid@5.1.16:
+    resolution: {integrity: sha512-kVrnsrJqMR8+oLJnGEmSWw9BivK5mt7H3FZatVRjrc5wGqFYuBxX1yG7+A7Gi5AefkX6t/oCkizcQgpu0cY1dQ==}
+    engines: {node: ^18 || >=20}
+    hasBin: true
+
   nanostores@1.5.4:
     resolution: {integrity: sha512-4UXY7OAJEK0Y6V3SudBU7cXjAzTDc189R78dDOh0Xbm19gpKYto6WizSg58LJf12lTsRxKSLGyE117OiLpM4DQ==}
     engines: {node: ^20.0.0 || >=22.0.0}
@@ -1564,6 +1663,9 @@ packages:
 
   ohash@2.0.12:
     resolution: {integrity: sha512-65S/5gk9YSsaRjcyf7Nfa6h/d3E8/1gslpXfI4W7Dxn/oap8IKRuNT5VXkLQ1YFKIEg4apRY4Pj6aiwFzrDdmw==}
+
+  openapi3-ts@4.6.1:
+    resolution: {integrity: sha512-XW9MOldkhoICNeXVzzmXzmOW5G73ppOEGmh7fLCqHjgfdEYCGGN+00MlVCeUZgovjjfC56j9tvtDt1zGabNjjA==}
 
   optionator@0.9.4:
     resolution: {integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g==}
@@ -1819,6 +1921,10 @@ packages:
   std-env@4.2.0:
     resolution: {integrity: sha512-oCUKSupKTHX53EyjDtuZQ64pjLJ6yYCtpmEw0goYxtjG9KpbRe8KAsl2tBUGU9DyMcJ0RwJ8GqJAFzMXcXW1Rw==}
 
+  tagged-tag@1.0.0:
+    resolution: {integrity: sha512-yEFYrVhod+hdNyx7g5Bnkkb0G6si8HJurOoOEgC8B/O0uXLHlaey/65KRv6cuWBNhBgHKAROVpc7QyYqE5gFng==}
+    engines: {node: '>=20'}
+
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
 
@@ -1856,6 +1962,10 @@ packages:
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
     engines: {node: '>= 0.8.0'}
+
+  type-fest@5.10.0:
+    resolution: {integrity: sha512-NoSdpq/WEiAg5sjmBkmV/hfxv6HJH4NqPNrqjtSO5CwRmpsDfaf4begxW34KdJykH/l1yHtwBWQkCRdoXO8mPA==}
+    engines: {node: '>=20'}
 
   typescript-eslint@8.70.1:
     resolution: {integrity: sha512-AcWG7KDjZ2THNXsgwttMaGmzVi0VFRlFYfqFHYQRbDpF3owuYbuiL8c7UUrd2k8s3PoSfIQrWfrGXfcElrWLYA==}
@@ -1998,6 +2108,11 @@ packages:
     resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
     engines: {node: '>=0.4'}
 
+  yaml@2.9.1:
+    resolution: {integrity: sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
@@ -2009,6 +2124,11 @@ packages:
     resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
 
 snapshots:
+
+  '@asteasolutions/zod-to-openapi@9.1.0(zod@4.6.5)':
+    dependencies:
+      openapi3-ts: 4.6.1
+      zod: 4.6.5
 
   '@better-auth/core@1.7.6(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.5))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.4)':
     dependencies:
@@ -2197,6 +2317,23 @@ snapshots:
     dependencies:
       '@eslint/core': 1.2.1
       levn: 0.4.1
+
+  '@hono/node-server@2.1.1(hono@4.13.10)':
+    dependencies:
+      hono: 4.13.10
+
+  '@hono/zod-openapi@1.6.3(hono@4.13.10)(zod@4.6.5)':
+    dependencies:
+      '@asteasolutions/zod-to-openapi': 9.1.0(zod@4.6.5)
+      '@hono/zod-validator': 0.9.1(hono@4.13.10)(zod@4.6.5)
+      hono: 4.13.10
+      openapi3-ts: 4.6.1
+      zod: 4.6.5
+
+  '@hono/zod-validator@0.9.1(hono@4.13.10)(zod@4.6.5)':
+    dependencies:
+      hono: 4.13.10
+      zod: 4.6.5
 
   '@humanfs/core@0.19.2':
     dependencies:
@@ -2451,6 +2588,34 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
+  '@scalar/client-side-rendering@0.4.5':
+    dependencies:
+      '@scalar/helpers': 0.15.0
+      '@scalar/schemas': 0.12.1
+      '@scalar/types': 0.22.1
+      '@scalar/validation': 0.6.5
+
+  '@scalar/helpers@0.15.0': {}
+
+  '@scalar/hono-api-reference@0.12.6(hono@4.13.10)':
+    dependencies:
+      '@scalar/client-side-rendering': 0.4.5
+      hono: 4.13.10
+
+  '@scalar/schemas@0.12.1':
+    dependencies:
+      '@scalar/helpers': 0.15.0
+      '@scalar/validation': 0.6.5
+
+  '@scalar/types@0.22.1':
+    dependencies:
+      '@scalar/helpers': 0.15.0
+      nanoid: 5.1.16
+      type-fest: 5.10.0
+      zod: 4.6.5
+
+  '@scalar/validation@0.6.5': {}
+
   '@standard-schema/spec@1.1.0': {}
 
   '@turbo/darwin-64@2.11.5':
@@ -2700,7 +2865,7 @@ snapshots:
       d3-time-format: 4.1.0
       internmap: 2.0.3
 
-  '@vitest/eslint-plugin@1.6.27(@typescript-eslint/eslint-plugin@8.70.1(@typescript-eslint/parser@8.70.1(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3)(vitest@4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))':
+  '@vitest/eslint-plugin@1.6.27(@typescript-eslint/eslint-plugin@8.70.1(@typescript-eslint/parser@8.70.1(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3)(vitest@4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))':
     dependencies:
       '@typescript-eslint/scope-manager': 8.70.1
       '@typescript-eslint/utils': 8.70.1(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3)
@@ -2708,7 +2873,7 @@ snapshots:
     optionalDependencies:
       '@typescript-eslint/eslint-plugin': 8.70.1(@typescript-eslint/parser@8.70.1(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3)
       typescript: 5.9.3
-      vitest: 4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+      vitest: 4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
     transitivePeerDependencies:
       - supports-color
 
@@ -2721,13 +2886,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.1
 
-  '@vitest/mocker@4.1.11(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))':
+  '@vitest/mocker@4.1.11(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
     dependencies:
       '@vitest/spy': 4.1.11
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)
+      vite: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
   '@vitest/pretty-format@4.1.11':
     dependencies:
@@ -2796,7 +2961,7 @@ snapshots:
 
   balanced-match@4.0.4: {}
 
-  better-auth@1.7.6(@prisma/client@7.10.0(prisma@7.10.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3))(typescript@5.9.3))(mysql2@3.15.3)(pg@8.23.0)(prisma@7.10.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))):
+  better-auth@1.7.6(@prisma/client@7.10.0(prisma@7.10.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3))(typescript@5.9.3))(mysql2@3.15.3)(pg@8.23.0)(prisma@7.10.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))):
     dependencies:
       '@better-auth/core': 1.7.6(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.5))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.4)
       '@better-auth/drizzle-adapter': 1.7.6(@better-auth/core@1.7.6(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.5))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.4))(@better-auth/utils@0.4.2)
@@ -2822,7 +2987,7 @@ snapshots:
       prisma: 7.10.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3)
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
-      vitest: 4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+      vitest: 4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
     transitivePeerDependencies:
       - '@opentelemetry/api'
 
@@ -3194,6 +3359,8 @@ snapshots:
     dependencies:
       hookified: 1.15.1
 
+  hono@4.13.10: {}
+
   hookified@1.15.1: {}
 
   hookified@2.2.0: {}
@@ -3337,6 +3504,8 @@ snapshots:
 
   nanoid@3.3.19: {}
 
+  nanoid@5.1.16: {}
+
   nanostores@1.5.4: {}
 
   natural-compare@1.4.0: {}
@@ -3348,6 +3517,10 @@ snapshots:
   obug@2.2.1: {}
 
   ohash@2.0.12: {}
+
+  openapi3-ts@4.6.1:
+    dependencies:
+      yaml: 2.9.1
 
   optionator@0.9.4:
     dependencies:
@@ -3574,6 +3747,8 @@ snapshots:
 
   std-env@4.2.0: {}
 
+  tagged-tag@1.0.0: {}
+
   tinybench@2.9.0: {}
 
   tinyexec@1.3.1: {}
@@ -3612,6 +3787,10 @@ snapshots:
     dependencies:
       prelude-ls: 1.2.1
 
+  type-fest@5.10.0:
+    dependencies:
+      tagged-tag: 1.0.0
+
   typescript-eslint@8.70.1(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3):
     dependencies:
       '@typescript-eslint/eslint-plugin': 8.70.1(@typescript-eslint/parser@8.70.1(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.11.0(jiti@2.7.0))(typescript@5.9.3)
@@ -3637,7 +3816,7 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
 
-  vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15):
+  vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
@@ -3650,11 +3829,12 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.7.0
       tsx: 4.23.15
+      yaml: 2.9.1
 
-  vitest@4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)):
+  vitest@4.1.11(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)):
     dependencies:
       '@vitest/expect': 4.1.11
-      '@vitest/mocker': 4.1.11(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+      '@vitest/mocker': 4.1.11(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@vitest/pretty-format': 4.1.11
       '@vitest/runner': 4.1.11
       '@vitest/snapshot': 4.1.11
@@ -3671,7 +3851,7 @@ snapshots:
       tinyexec: 1.3.1
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.1
-      vite: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)
+      vite: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 26.6.3
@@ -3704,6 +3884,8 @@ snapshots:
   xml-name-validator@5.0.0: {}
 
   xtend@4.0.2: {}
+
+  yaml@2.9.1: {}
 
   yocto-queue@0.1.0: {}
 
