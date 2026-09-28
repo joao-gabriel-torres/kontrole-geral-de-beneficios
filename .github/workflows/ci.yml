@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: kgb_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kgb_test
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/kgb_test
+      BETTER_AUTH_SECRET: segredo-apenas-para-o-ci-com-mais-de-32-caracteres
+      BETTER_AUTH_URL: http://localhost:3000
+      CORS_ORIGINS: http://localhost:5173,http://localhost:5174,capacitor://localhost,https://localhost
+      TZ: America/Sao_Paulo
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - name: Cliente da API está atualizado
+        run: pnpm api:generate && git diff --exit-code -- packages/api-client

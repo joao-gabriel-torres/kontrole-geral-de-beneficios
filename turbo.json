@@ -1,11 +1,20 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "envMode": "loose",
+  "agentGuidance": false,
   "globalDependencies": [".env"],
   "tasks": {
-    "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
     "typecheck": {},
-    "test": { "cache": false },
-    "dev": { "cache": false, "persistent": true }
+    "test": {
+      "cache": false
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
   }
 }
