@@ -128,9 +128,15 @@ async function anexar(p: Page, escopo: Locator, nome: string) {
 }
 
 async function comentar(p: Page, campo: Locator, texto: string) {
+  // O comentário é salvo com debounce: espera o PATCH com este texto (e não o de uma etapa marcada).
+  const salvo = p.waitForResponse(
+    (r) =>
+      r.request().method() === 'PATCH' &&
+      (r.request().postData() ?? '').includes(JSON.stringify(texto)) &&
+      r.ok(),
+  )
   await campo.fill(texto)
-  // O comentário é salvo com debounce: espera a gravação terminar.
-  await p.waitForResponse((r) => r.request().method() === 'PATCH' && r.ok())
+  await salvo
 }
 
 async function executar(p: Page) {
