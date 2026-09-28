@@ -16,6 +16,7 @@ import { baseApi } from '../api'
 import { mensagemDeErro } from '../consultas'
 import BarraAcoes from './BarraAcoes.vue'
 import CartaoEtapa from './CartaoEtapa.vue'
+import { proverComentariosPendentes } from './comentariosPendentes'
 import ConclusaoServico from './ConclusaoServico.vue'
 import PainelInviavel from './PainelInviavel.vue'
 import { avaliarEnvio, faixaDoStatus, mostrarConclusao, podeEditar } from './regras'
@@ -52,8 +53,36 @@ function alternarEtapa(etapaId: string) {
   etapaAberta.value = etapaAberta.value === etapaId ? null : etapaId
 }
 
-async function enviarInviavel(comentario: string, arquivos: Blob[]) {
-  if (await acoes.marcarInviavel(comentario, arquivos)) painelInviavel.value = false
+const descarregarComentarios = proverComentariosPendentes()
+/** Salvando os comentários pendentes antes de uma mudança de status (conta como ocupado). */
+const salvandoComentarios = ref(false)
+const ocupado = computed(() => salvandoComentarios.value || acoes.ocupado.value)
+
+/**
+ * Depois do envio a API não aceita mais editar comentários: o que ainda está no debounce (ou falhou)
+ * é salvo antes. Se não salvar, a ação não segue (o aviso com o erro já foi mostrado).
+ */
+async function comComentariosSalvos(acao: () => Promise<unknown>): Promise<void> {
+  if (ocupado.value) return
+  salvandoComentarios.value = true
+  try {
+    await descarregarComentarios()
+  } catch {
+    return
+  } finally {
+    salvandoComentarios.value = false
+  }
+  await acao()
+}
+
+function enviar() {
+  return comComentariosSalvos(acoes.enviar)
+}
+
+function enviarInviavel(comentario: string, arquivos: Blob[]) {
+  return comComentariosSalvos(async () => {
+    if (await acoes.marcarInviavel(comentario, arquivos)) painelInviavel.value = false
+  })
 }
 
 function voltar() {
@@ -169,14 +198,14 @@ function voltar() {
       v-if="d"
       :status="d.status"
       :envio="envio"
-      :ocupado="acoes.ocupado.value"
+      :ocupado="ocupado"
       @iniciar="acoes.iniciar"
-      @enviar="acoes.enviar"
+      @enviar="enviar"
       @inviavel="painelInviavel = true"
     />
     <PainelInviavel
       :aberto="painelInviavel"
-      :enviando="acoes.ocupado.value"
+      :enviando="ocupado"
       @fechar="painelInviavel = false"
       @enviar="enviarInviavel"
     />

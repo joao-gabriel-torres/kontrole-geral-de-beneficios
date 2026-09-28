@@ -325,6 +325,63 @@ describe('PaginaDetalhe', () => {
         body: { comentario: 'Tudo testado' },
       })
     })
+
+    it('enviar logo depois de digitar salva o comentário final antes de enviar', async () => {
+      const d = detalheExemplo({ status: 'em_andamento', fotosConclusao: [fotoExemplo('c1')] })
+      const { wrapper } = await abrir(d)
+      api.PATCH.mockResolvedValue(ok({ ...d, comentarioConclusao: 'Tudo testado' }))
+      api.POST.mockResolvedValue(ok({ ...d, status: 'aguardando' }))
+      await wrapper.find('.conclusao textarea').setValue('Tudo testado')
+      await wrapper.find('.barra-acoes .principal').trigger('click')
+      await flushPromises()
+      expect(api.PATCH).toHaveBeenCalledWith('/api/acionamentos/{id}/conclusao', {
+        ...caminho(),
+        body: { comentario: 'Tudo testado' },
+      })
+      expect(api.POST).toHaveBeenCalledWith('/api/acionamentos/{id}/enviar', caminho())
+      expect(api.PATCH.mock.invocationCallOrder[0]).toBeLessThan(
+        api.POST.mock.invocationCallOrder[0]!,
+      )
+      expect(avisos.mensagem.value).toBe('Enviado para aprovação')
+    })
+
+    it('se o comentário pendente não salvar, não envia (o aviso mostra o erro)', async () => {
+      const d = detalheExemplo({ status: 'em_andamento', fotosConclusao: [fotoExemplo('c1')] })
+      const { wrapper } = await abrir(d)
+      api.PATCH.mockResolvedValue(erro(409, 'transicao_invalida', 'Não dá para alterar agora.'))
+      await wrapper.find('.conclusao textarea').setValue('Tudo testado')
+      await wrapper.find('.barra-acoes .principal').trigger('click')
+      await flushPromises()
+      expect(api.POST).not.toHaveBeenCalled()
+      expect(avisos.mensagem.value).toBe('Não dá para alterar agora.')
+    })
+
+    it('marcar como inviável também salva antes o comentário da etapa', async () => {
+      URL.createObjectURL = vi.fn(() => 'blob:previa')
+      URL.revokeObjectURL = vi.fn()
+      const d = detalheExemplo({ status: 'em_andamento' })
+      const { wrapper } = await abrir(d)
+      api.PATCH.mockResolvedValue(ok(d))
+      api.POST.mockResolvedValue(ok({ ...d, status: 'aguardando', inviavel: true }))
+      await wrapper.find('.chevron').trigger('click')
+      await wrapper.find('.expandido textarea').setValue('Sem acesso ao forro')
+      await wrapper.find('.link-inviavel').trigger('click')
+      await wrapper.find('.painel textarea').setValue('Cliente ausente')
+      wrapper
+        .findAllComponents(BotoesFoto)
+        .find((b) => b.props('cor') === 'coral')!
+        .vm.$emit('foto', { arquivo: new Blob(['j']), tiradaEm: '2026-09-28T15:10:00-03:00' })
+      await flushPromises()
+      await wrapper.find('.painel .enviar').trigger('click')
+      await flushPromises()
+      expect(api.PATCH).toHaveBeenCalledWith('/api/acionamentos/{id}/etapas/{etapaId}', {
+        params: { path: { id: 'a1', etapaId: 'e1' } },
+        body: { comentario: 'Sem acesso ao forro' },
+      })
+      expect(api.PATCH.mock.invocationCallOrder[0]).toBeLessThan(
+        api.POST.mock.invocationCallOrder[0]!,
+      )
+    })
   })
 
   describe('marcar como inviável', () => {

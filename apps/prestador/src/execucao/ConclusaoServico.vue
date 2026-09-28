@@ -5,6 +5,7 @@ import { baseApi } from '../api'
 import BotoesFoto from './BotoesFoto.vue'
 import type { FotoCapturada } from './fotos'
 import { textoFotosObrigatorias } from './regras'
+import { registrarComentarioPendente } from './comentariosPendentes'
 import { usarAutosave } from './usarAutosave'
 
 const props = defineProps<{
@@ -16,10 +17,11 @@ const props = defineProps<{
 }>()
 defineEmits<{ adicionarFoto: [foto: FotoCapturada]; removerFoto: [fotoId: string] }>()
 
-const { texto, digitar } = usarAutosave({
+const { texto, digitar, descarregar } = usarAutosave({
   valor: () => props.comentario,
   salvar: (t) => props.salvarComentario(t),
 })
+registrarComentarioPendente(descarregar)
 </script>
 
 <template>

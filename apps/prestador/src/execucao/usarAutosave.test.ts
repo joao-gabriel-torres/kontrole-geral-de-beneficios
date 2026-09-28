@@ -74,6 +74,53 @@ describe('usarAutosave', () => {
     expect(salvar).toHaveBeenCalledWith('não perca isto')
   })
 
+  it('descarregar envia na hora o que esperava o debounce e resolve depois de salvar', async () => {
+    let concluir = () => {}
+    const salvar = vi.fn(() => new Promise<void>((ok) => (concluir = ok)))
+    const { digitar, descarregar } = preparar('', salvar)
+    digitar('Tudo testado')
+    let pronto = false
+    const descarga = descarregar().then(() => (pronto = true))
+    expect(salvar).toHaveBeenCalledWith('Tudo testado')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(pronto).toBe(false)
+    concluir()
+    await descarga
+    await vi.advanceTimersByTimeAsync(600)
+    expect(salvar).toHaveBeenCalledTimes(1)
+  })
+
+  it('descarregar espera o salvamento em andamento e não reenvia o mesmo texto', async () => {
+    let concluir = () => {}
+    const salvar = vi.fn(() => new Promise<void>((ok) => (concluir = ok)))
+    const { digitar, descarregar } = preparar('', salvar)
+    digitar('Tudo testado')
+    await vi.advanceTimersByTimeAsync(600)
+    const descarga = descarregar()
+    concluir()
+    await descarga
+    expect(salvar).toHaveBeenCalledTimes(1)
+  })
+
+  it('descarregar sem nada pendente não chama o servidor', async () => {
+    const { descarregar, salvar } = preparar('já salvo')
+    await descarregar()
+    expect(salvar).not.toHaveBeenCalled()
+  })
+
+  it('descarregar rejeita quando não consegue salvar, e reenvia o texto que falhou antes', async () => {
+    const salvar = vi.fn<Salvar>().mockRejectedValueOnce(new Error('rede'))
+    const { digitar, descarregar } = preparar('', salvar)
+    digitar('texto')
+    await vi.advanceTimersByTimeAsync(600)
+    salvar.mockRejectedValueOnce(new Error('rede'))
+    await expect(descarregar()).rejects.toThrow()
+    salvar.mockResolvedValueOnce(undefined)
+    await descarregar()
+    expect(salvar).toHaveBeenCalledTimes(3)
+    expect(salvar).toHaveBeenLastCalledWith('texto')
+  })
+
   it('se o salvamento falha, mantém o texto local', async () => {
     const salvar = vi.fn(async () => {
       throw new Error('rede')

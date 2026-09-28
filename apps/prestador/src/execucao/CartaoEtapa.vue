@@ -6,6 +6,7 @@ import { baseApi } from '../api'
 import BotoesFoto from './BotoesFoto.vue'
 import type { FotoCapturada } from './fotos'
 import { resumoEtapa } from './regras'
+import { registrarComentarioPendente } from './comentariosPendentes'
 import { usarAutosave } from './usarAutosave'
 
 type Etapa = DetalheAcionamento['demandas'][number]['etapas'][number]
@@ -23,10 +24,11 @@ const emit = defineEmits<{
   removerFoto: [fotoId: string]
 }>()
 
-const { texto, digitar } = usarAutosave({
+const { texto, digitar, descarregar } = usarAutosave({
   valor: () => props.etapa.comentario,
   salvar: (t) => props.salvarComentario(t),
 })
+registrarComentarioPendente(descarregar)
 const resumo = computed(() =>
   resumoEtapa(props.etapa.fotos.length, props.editavel ? texto.value : props.etapa.comentario),
 )
