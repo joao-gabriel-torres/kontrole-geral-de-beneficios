@@ -1,6 +1,8 @@
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
+import { criarPrisma } from './index'
+import { semear } from './seed/index'
 
 const PASTA_DB = fileURLToPath(new URL('..', import.meta.url))
 
@@ -13,8 +15,8 @@ export function verificarUrlDeTeste(url: string | undefined): string {
   return url
 }
 
-/** Apaga o schema do banco de teste e aplica as migrations. Nunca roda fora de um banco *_test. */
-export async function prepararBancoDeTeste(): Promise<string> {
+/** Apaga o schema do banco de teste, aplica as migrations e, se pedido, roda o seed. Nunca roda fora de um banco *_test. */
+export async function prepararBancoDeTeste({ semearDados = false } = {}): Promise<string> {
   const url = verificarUrlDeTeste(process.env.DATABASE_URL_TEST)
   const cliente = new pg.Client({ connectionString: url })
   await cliente.connect()
@@ -28,5 +30,13 @@ export async function prepararBancoDeTeste(): Promise<string> {
     env: { ...process.env, DATABASE_URL: url },
     stdio: 'pipe',
   })
+  if (semearDados) {
+    const prisma = criarPrisma(url)
+    try {
+      await semear(prisma)
+    } finally {
+      await prisma.$disconnect()
+    }
+  }
   return url
 }
