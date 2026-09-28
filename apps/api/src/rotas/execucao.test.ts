@@ -153,7 +153,10 @@ describe('fotos', () => {
         formularioFoto({ contexto: 'conclusao' }),
       )
     ).json()
-    expect((await app.request(foto.url.replace(/sig=./, 'sig=0'))).status).toBe(403)
+    // Troca o 1º caractere da assinatura de verdade (se já fosse "0", trocar por "0" não mudaria nada).
+    const adulterada = foto.url.replace(/sig=(.)/, (_, c: string) => `sig=${c === '0' ? '1' : '0'}`)
+    expect(adulterada).not.toBe(foto.url)
+    expect((await app.request(adulterada)).status).toBe(403)
     const vencida = Math.floor(Date.now() / 1000) - 10
     expect(
       (
