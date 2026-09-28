@@ -18,7 +18,8 @@
     "db:seed": "pnpm --filter @kgb/db seed",
     "db:reset": "pnpm --filter @kgb/db reset",
     "db:studio": "pnpm --filter @kgb/db studio",
-    "postinstall": "pnpm --filter @kgb/db generate"
+    "postinstall": "pnpm --filter @kgb/db generate",
+    "api:generate": "pnpm --filter @kgb/api gerar:openapi && pnpm --filter @kgb/api-client gerar:tipos"
   },
   "devDependencies": {
     "@vitest/eslint-plugin": "^1.6.27",

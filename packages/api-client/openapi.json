@@ -1,0 +1,240 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "KGB API",
+    "version": "0.1.0",
+    "description": "API do sistema de acionamentos da Russo Assistência"
+  },
+  "components": {
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Saude": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
+      "Usuario": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "papel": {
+            "type": "string",
+            "enum": [
+              "gestor",
+              "prestador"
+            ]
+          },
+          "prestador": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "nome": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "nome"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "email",
+          "papel",
+          "prestador"
+        ]
+      },
+      "Erro": {
+        "type": "object",
+        "properties": {
+          "erro": {
+            "type": "object",
+            "properties": {
+              "codigo": {
+                "type": "string"
+              },
+              "mensagem": {
+                "type": "string"
+              },
+              "campos": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "campo": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "campo",
+                    "mensagem"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "codigo",
+              "mensagem"
+            ]
+          }
+        },
+        "required": [
+          "erro"
+        ]
+      },
+      "ContagemAcionamentos": {
+        "type": "object",
+        "properties": {
+          "aberto": {
+            "type": "integer"
+          },
+          "em_andamento": {
+            "type": "integer"
+          },
+          "aguardando": {
+            "type": "integer"
+          },
+          "reprovado": {
+            "type": "integer"
+          },
+          "aprovado": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "aberto",
+          "em_andamento",
+          "aguardando",
+          "reprovado",
+          "aprovado"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Sistema"
+        ],
+        "summary": "Verifica se a API está no ar",
+        "responses": {
+          "200": {
+            "description": "API no ar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Saude"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "tags": [
+          "Sessão"
+        ],
+        "summary": "Usuário da sessão atual",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usuário logado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usuario"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acionamentos/contagem": {
+      "get": {
+        "tags": [
+          "Acionamentos"
+        ],
+        "summary": "Quantidade de acionamentos por status (o prestador vê só os seus)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contagem por status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContagemAcionamentos"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}
