@@ -97,6 +97,10 @@ const emit = defineEmits<{ sair: [] }>()
 .espaco {
   flex: 1;
 }
+/* O gatilho do menu é um <button>, que encolhe até o conteúdo: no protótipo o cartão ocupa a largura da sidebar. */
+.lateral :deep(.gatilho) {
+  width: 100%;
+}
 .usuario {
   display: flex;
   align-items: center;
