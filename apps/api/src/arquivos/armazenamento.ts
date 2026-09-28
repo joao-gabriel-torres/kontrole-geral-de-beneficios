@@ -4,7 +4,7 @@ import { dirname, resolve, sep } from 'node:path'
 /** Onde as fotos ficam guardadas. Hoje: disco local. Depois: S3/R2 com a mesma interface. */
 export interface Armazenamento {
   salvar(chave: string, dados: Uint8Array, tipo: string): Promise<void>
-  abrir(chave: string): Promise<Uint8Array | null>
+  abrir(chave: string): Promise<Uint8Array<ArrayBuffer> | null>
   remover(chave: string): Promise<void>
 }
 
@@ -27,7 +27,7 @@ export class ArmazenamentoDisco implements Armazenamento {
     await writeFile(alvo, dados)
   }
 
-  async abrir(chave: string): Promise<Uint8Array | null> {
+  async abrir(chave: string): Promise<Uint8Array<ArrayBuffer> | null> {
     try {
       return new Uint8Array(await readFile(this.caminho(chave)))
     } catch (erro) {

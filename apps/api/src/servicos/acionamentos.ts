@@ -1,21 +1,27 @@
+import { randomUUID } from 'node:crypto'
 import type { Prisma } from '@kgb/db'
 import { armazenamento } from '../arquivos'
+import { detectarTipoImagem, TAMANHO_MAXIMO_FOTO, type TipoImagem } from '../arquivos/imagem'
 import type { UsuarioSessao } from '../contexto'
 import { prisma } from '../db'
 import {
   ErroDominio,
+  exigirStatus,
   normalizarNovoAcionamento,
+  verificarEnvio,
+  verificarInviabilidade,
   verificarRevisao,
   type DadosNovoAcionamento,
   type Decisao,
   type Regras,
   type StatusAcionamento,
 } from '../dominio/acionamento'
-import { naoEncontrado } from '../erros'
+import { ErroHttp, naoEncontrado } from '../erros'
 import {
   incluirDetalhe,
   incluirResumo,
   paraDetalhe,
+  paraFoto,
   paraResumo,
   PREFIXO_PLACEHOLDER,
 } from './serializacao'
@@ -204,5 +210,216 @@ export async function revisarAcionamento(
     return chaves
   })
   await removerArquivos(chavesApagadas)
+  return detalharAcionamento(u, id)
+}
+
+export const MAX_FOTOS_INVIABILIDADE = 5
+
+async function travarDoPrestador(tx: Prisma.TransactionClient, u: UsuarioSessao, id: string) {
+  const a = await travar(tx, id)
+  if (!a || !u.prestadorId || a.prestadorId !== u.prestadorId) throw naoEncontrado()
+  return a
+}
+
+async function lerImagem(arquivo: unknown): Promise<{ dados: Uint8Array; tipo: TipoImagem }> {
+  if (!(arquivo instanceof File)) throw new ErroHttp(422, 'arquivo_obrigatorio', 'Envie a foto')
+  if (arquivo.size > TAMANHO_MAXIMO_FOTO)
+    throw new ErroHttp(413, 'arquivo_grande', 'A foto passa de 10 MB')
+  const dados = new Uint8Array(await arquivo.arrayBuffer())
+  const tipo = detectarTipoImagem(dados)
+  if (!tipo)
+    throw new ErroHttp(415, 'tipo_arquivo_invalido', 'Envie uma foto em JPEG, PNG, WebP ou HEIC')
+  return { dados, tipo }
+}
+
+export async function iniciarAtendimento(u: UsuarioSessao, id: string) {
+  await prisma.$transaction(async (tx) => {
+    const a = await travarDoPrestador(tx, u, id)
+    exigirStatus('iniciar', a.status)
+    await tx.acionamento.update({
+      where: { id },
+      data: {
+        status: 'em_andamento',
+        iniciadoEm: new Date(),
+        eventos: { create: { tipo: 'iniciado', autorId: u.id } },
+      },
+    })
+  })
+  return detalharAcionamento(u, id)
+}
+
+export async function atualizarEtapa(
+  u: UsuarioSessao,
+  id: string,
+  etapaId: string,
+  dados: { feita?: boolean; comentario?: string },
+) {
+  await prisma.$transaction(async (tx) => {
+    const a = await travarDoPrestador(tx, u, id)
+    exigirStatus('editar', a.status)
+    const r = await tx.etapa.updateMany({
+      where: { id: etapaId, demanda: { acionamentoId: id } },
+      data: {
+        ...(dados.feita !== undefined ? { feita: dados.feita } : {}),
+        ...(dados.comentario !== undefined
+          ? { comentario: dados.comentario.trim() ? dados.comentario : null }
+          : {}),
+      },
+    })
+    if (r.count === 0) throw naoEncontrado('Etapa')
+  })
+  return detalharAcionamento(u, id)
+}
+
+export async function atualizarConclusao(u: UsuarioSessao, id: string, comentario: string) {
+  await prisma.$transaction(async (tx) => {
+    const a = await travarDoPrestador(tx, u, id)
+    exigirStatus('editar', a.status)
+    await tx.acionamento.update({
+      where: { id },
+      data: { comentarioConclusao: comentario.trim() ? comentario : null },
+    })
+  })
+  return detalharAcionamento(u, id)
+}
+
+export async function adicionarFoto(
+  u: UsuarioSessao,
+  id: string,
+  entrada: {
+    arquivo: unknown
+    contexto: 'etapa' | 'conclusao'
+    etapaId?: string
+    tiradaEm?: string
+  },
+) {
+  const { dados, tipo } = await lerImagem(entrada.arquivo)
+  if (entrada.contexto === 'etapa' && !entrada.etapaId) {
+    throw new ErroHttp(422, 'etapa_obrigatoria', 'Informe a etapa da foto')
+  }
+  const fotoId = randomUUID()
+  const chave = `${id}/${fotoId}.${tipo.extensao}`
+  try {
+    const foto = await prisma.$transaction(async (tx) => {
+      const a = await travarDoPrestador(tx, u, id)
+      exigirStatus('editar', a.status)
+      if (entrada.contexto === 'etapa') {
+        const etapa = await tx.etapa.findFirst({
+          where: { id: entrada.etapaId, demanda: { acionamentoId: id } },
+          select: { id: true },
+        })
+        if (!etapa) throw naoEncontrado('Etapa')
+      }
+      await armazenamento.salvar(chave, dados, tipo.mime)
+      return tx.foto.create({
+        data: {
+          id: fotoId,
+          acionamentoId: id,
+          contexto: entrada.contexto,
+          etapaId: entrada.contexto === 'etapa' ? entrada.etapaId! : null,
+          storageKey: chave,
+          tiradaEm: entrada.tiradaEm ? new Date(entrada.tiradaEm) : new Date(),
+        },
+      })
+    })
+    return paraFoto(foto)
+  } catch (erro) {
+    await armazenamento.remover(chave)
+    throw erro
+  }
+}
+
+export async function removerFoto(u: UsuarioSessao, id: string, fotoId: string) {
+  const chave = await prisma.$transaction(async (tx) => {
+    const a = await travarDoPrestador(tx, u, id)
+    exigirStatus('editar', a.status)
+    const foto = await tx.foto.findFirst({
+      where: { id: fotoId, acionamentoId: id, contexto: { in: ['etapa', 'conclusao'] } },
+      select: { storageKey: true },
+    })
+    if (!foto) throw naoEncontrado('Foto')
+    await tx.foto.delete({ where: { id: fotoId } })
+    return foto.storageKey
+  })
+  await removerArquivos([chave])
+}
+
+export async function enviarParaAprovacao(u: UsuarioSessao, id: string) {
+  await prisma.$transaction(async (tx) => {
+    const a = await travarDoPrestador(tx, u, id)
+    const fotosConclusao = await tx.foto.count({
+      where: { acionamentoId: id, contexto: 'conclusao' },
+    })
+    const etapas = await tx.etapa.findMany({
+      where: { demanda: { acionamentoId: id } },
+      select: { feita: true },
+    })
+    verificarEnvio({ status: a.status, fotosConclusao, etapas, regras: await regrasAtuais(tx) })
+    await tx.acionamento.update({
+      where: { id },
+      data: { status: 'aguardando', eventos: { create: { tipo: 'enviado', autorId: u.id } } },
+    })
+  })
+  return detalharAcionamento(u, id)
+}
+
+export async function marcarInviavel(
+  u: UsuarioSessao,
+  id: string,
+  entrada: { comentario: string; arquivos: unknown[] },
+) {
+  if (entrada.arquivos.length > MAX_FOTOS_INVIABILIDADE) {
+    throw new ErroHttp(422, 'fotos_demais', `Envie no máximo ${MAX_FOTOS_INVIABILIDADE} fotos`)
+  }
+  const imagens = await Promise.all(entrada.arquivos.map(lerImagem))
+  const chaves: string[] = []
+  try {
+    await prisma.$transaction(async (tx) => {
+      const a = await travarDoPrestador(tx, u, id)
+      const comentario = verificarInviabilidade({
+        status: a.status,
+        comentario: entrada.comentario,
+        fotos: imagens.length,
+      })
+      const agora = new Date()
+      for (const imagem of imagens) {
+        const fotoId = randomUUID()
+        const chave = `${id}/${fotoId}.${imagem.tipo.extensao}`
+        await armazenamento.salvar(chave, imagem.dados, imagem.tipo.mime)
+        chaves.push(chave)
+        await tx.foto.create({
+          data: {
+            id: fotoId,
+            acionamentoId: id,
+            contexto: 'inviabilidade',
+            storageKey: chave,
+            tiradaEm: agora,
+          },
+        })
+      }
+      await tx.acionamento.update({
+        where: { id },
+        data: {
+          status: 'aguardando',
+          inviavel: true,
+          inviabilidadeComentario: comentario,
+          iniciadoEm: a.iniciadoEm ?? agora,
+          eventos: {
+            create: [
+              ...(a.iniciadoEm ? [] : [{ tipo: 'iniciado' as const, autorId: u.id, em: agora }]),
+              {
+                tipo: 'inviabilidade_enviada' as const,
+                autorId: u.id,
+                em: new Date(agora.getTime() + 1),
+              },
+            ],
+          },
+        },
+      })
+    })
+  } catch (erro) {
+    await removerArquivos(chaves)
+    throw erro
+  }
   return detalharAcionamento(u, id)
 }

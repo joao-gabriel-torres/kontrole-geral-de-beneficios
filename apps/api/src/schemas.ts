@@ -122,7 +122,8 @@ export const ConclusaoPatchSchema = z
   .openapi('AtualizacaoConclusao')
 
 export const FotoFormSchema = z.object({
-  arquivo: z.any().openapi({ type: 'string', format: 'binary' }),
+  // opcional no schema: a ausência vira o erro de domínio `arquivo_obrigatorio` no serviço
+  arquivo: z.any().optional().openapi({ type: 'string', format: 'binary' }),
   contexto: z.enum(['etapa', 'conclusao']),
   etapaId: z.string().optional(),
   tiradaEm: z.iso.datetime({ offset: true }).optional(),
@@ -130,7 +131,11 @@ export const FotoFormSchema = z.object({
 
 export const InviavelFormSchema = z.object({
   comentario: z.string().max(2000),
-  arquivos: z.any().openapi({ type: 'array', items: { type: 'string', format: 'binary' } }),
+  // opcional no schema: nenhuma foto vira o erro de domínio `fotos_insuficientes` no serviço
+  arquivos: z
+    .any()
+    .optional()
+    .openapi({ type: 'array', items: { type: 'string', format: 'binary' } }),
 })
 
 export const InicioPrestadorSchema = z

@@ -9,7 +9,9 @@ import { env } from './env'
 import { corpoErro, ErroHttp } from './erros'
 import { sessao } from './middlewares/sessao'
 import { rotasAcionamentos } from './rotas/acionamentos'
+import { rotasArquivos } from './rotas/arquivos'
 import { rotasCatalogo } from './rotas/catalogo'
+import { rotasExecucao } from './rotas/execucao'
 import { rotasMe } from './rotas/me'
 import { rotasSaude } from './rotas/saude'
 
@@ -56,6 +58,8 @@ export function criarApp() {
   app.route('/', rotasMe)
   app.route('/', rotasAcionamentos)
   app.route('/', rotasCatalogo)
+  app.route('/', rotasExecucao)
+  app.route('/', rotasArquivos)
 
   app.doc31('/api/openapi.json', INFO_OPENAPI)
   app.get('/api/docs', Scalar({ url: '/api/openapi.json' }))
