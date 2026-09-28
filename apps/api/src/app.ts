@@ -2,9 +2,12 @@ import { OpenAPIHono } from '@hono/zod-openapi'
 import { Scalar } from '@scalar/hono-api-reference'
 import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
+import { auth } from './auth'
 import type { Ambiente } from './contexto'
 import { env } from './env'
 import { corpoErro } from './erros'
+import { sessao } from './middlewares/sessao'
+import { rotasMe } from './rotas/me'
 import { rotasSaude } from './rotas/saude'
 
 export const INFO_OPENAPI = {
@@ -39,12 +42,15 @@ export function criarApp() {
       exposeHeaders: ['set-auth-token'],
     }),
   )
+  app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
+  app.use('/api/*', sessao)
 
   app.openAPIRegistry.registerComponent('securitySchemes', 'Bearer', {
     type: 'http',
     scheme: 'bearer',
   })
   app.route('/', rotasSaude)
+  app.route('/', rotasMe)
 
   app.doc31('/api/openapi.json', INFO_OPENAPI)
   app.get('/api/docs', Scalar({ url: '/api/openapi.json' }))
