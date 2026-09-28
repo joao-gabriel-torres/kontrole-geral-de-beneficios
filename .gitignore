@@ -1,0 +1,15 @@
+# SO / editores
+.DS_Store
+*.swp
+.idea/
+
+# Dependências e builds
+node_modules/
+dist/
+.turbo/
+coverage/
+
+# Ambiente
+.env
+.env.*
+!.env.example

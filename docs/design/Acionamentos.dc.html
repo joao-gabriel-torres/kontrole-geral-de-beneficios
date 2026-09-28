@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/vitalize-design-system-019e1c43-5cc1-797b-b0e6-ed363858356e/colors_and_type.css">
+<script src="_ds/vitalize-design-system-019e1c43-5cc1-797b-b0e6-ed363858356e/_ds_bundle.js"></script>
+<script src="acionamentos-data.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap">
+<style>html,body{margin:0;height:100%;background:#EFF1F3;font-family:'Plus Jakarta Sans',var(--font-text);color:#262A3B;-webkit-font-smoothing:antialiased}*{box-sizing:border-box}a{color:#004E8F;text-decoration:none}a:hover{color:#0069BD}input,textarea,select,button{font-family:inherit;color:#262A3B}button{cursor:pointer}::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#D5D8DD;border-radius:8px}</style>
+</helmet>
+<div style="height:100vh;display:flex;flex-direction:column">
+  <div style="height:56px;flex:none;display:flex;align-items:center;gap:12px;padding:0 20px;background:#fff;border-bottom:1px solid #E5E5E5">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img src="assets/russo-mark.png" style="height:30px;width:auto;display:block">
+      <div style="font-weight:800;font-size:16px;color:#0069BD;letter-spacing:.01em;white-space:nowrap;flex:none">RUSSO <span style="font-weight:600">ASSISTÊNCIA</span></div>
+      
+    </div>
+    <div style="flex:1"></div>
+    <div style="display:flex;gap:4px;padding:4px;background:#EFF1F3;border-radius:12px;flex:none">
+      <sc-for list="{{ modes }}" as="m" hint-placeholder-count="3">
+        <button onClick="{{ m.go }}" style="border:0;height:32px;padding:0 14px;border-radius:9px;font-size:13px;font-weight:600;white-space:nowrap;flex:none;background:{{ m.bg }};color:{{ m.fg }};box-shadow:{{ m.sh }}">{{ m.label }}</button>
+      </sc-for>
+    </div>
+    <div style="flex:1"></div>
+    <button onClick="{{ reset }}" style="border:0;background:transparent;font-size:12px;font-weight:500;color:#8F8D8D;white-space:nowrap;flex:none">Restaurar exemplo</button>
+  </div>
+  <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+    <sc-if value="{{ isG }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:{{ fr.align }};padding:{{ fr.pad }};overflow:auto">
+        <div style="display:flex;position:relative;overflow:hidden;background:#F9F9F9;width:{{ fr.w }};height:{{ fr.h }};border:{{ fr.border }};border-radius:{{ fr.radius }};flex:none">
+          <sc-if value="{{ wide }}" hint-placeholder-val="{{ true }}">
+            <div style="width:232px;flex:none;background:#fff;border-right:1px solid #E5E5E5;padding:24px 16px;display:flex;flex-direction:column;gap:4px">
+              <div style="font-size:12px;font-weight:600;color:#8F8D8D;text-transform:uppercase;letter-spacing:.06em;padding:0 12px 12px">Gestão de demandas</div>
+              <sc-for list="{{ gnav }}" as="n" hint-placeholder-count="4">
+                <button onClick="{{ n.go }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border:0;border-radius:12px;background:{{ n.bg }};color:{{ n.fg }};font-size:14px;font-weight:600;text-align:left" style-hover="background:#EEF4FA">
+                  <img src="{{ n.icon }}" style="width:20px;height:20px">
+                  <span style="flex:1">{{ n.label }}</span>
+                  <sc-if value="{{ n.hasBadge }}"><span style="min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:#FC7608;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ n.badge }}</span></sc-if>
+                </button>
+              </sc-for>
+              <div style="flex:1"></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:#F9F9F9">
+                <div style="width:36px;height:36px;border-radius:50%;background:#262A3B;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">RS</div>
+                <div style="min-width:0">
+                  <div style="font-size:14px;font-weight:600;color:#2C3143">Renata Silva</div>
+                  <div style="font-size:12px;color:#8F8D8D">Gestora</div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative">
+            <sc-if value="{{ compact }}">
+              <div style="height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font-size:14px;font-weight:600;background:#fff">
+                <div>{{ clock }}</div>
+                <div style="width:72px;height:6px;border-radius:3px;background:#262A3B;opacity:.12"></div>
+              </div>
+            </sc-if>
+            <div style="flex:1;min-height:0;overflow:auto;padding:{{ fr.cpad }}">
+              <sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;flex-direction:column;gap:20px;max-width:1280px;margin:0 auto">
+                  <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px">
+                    <div style="flex:1;min-width:200px">
+                      <div style="font-size:12px;font-weight:500;color:#8F8D8D">{{ todayLabel }}</div>
+                      <div style="font-size:24px;line-height:36px;font-weight:700;color:#2C3143">Seu painel</div>
+                    </div>
+                    <div style="display:flex;gap:4px;padding:4px;background:#EFF1F3;border-radius:12px">
+                      <sc-for list="{{ periodBtns }}" as="b" hint-placeholder-count="2">
+                        <button onClick="{{ b.go }}" style="border:0;height:32px;padding:0 12px;border-radius:9px;font-size:13px;font-weight:600;background:{{ b.bg }};color:{{ b.fg }};box-shadow:{{ b.sh }}">{{ b.label }}</button>
+                      </sc-for>
+                    </div>
+                    <button onClick="{{ newAc }}" style="height:44px;padding:0 18px;border:0;border-radius:16px;background:#0069BD;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px" style-hover="background:#005AA3">Novo acionamento</button>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+                    <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="5">
+                      <div onClick="{{ k.go }}" style="background:#fff;border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:6px;min-width:0" style-hover="box-shadow:0 4px 16px rgba(0,0,0,.08)">
+                        <div style="font-size:13px;font-weight:500;color:#50555C">{{ k.label }}</div>
+                        <div style="font-size:28px;line-height:36px;font-weight:700;color:#262A3B;letter-spacing:-.02em">{{ k.value }}</div>
+                        <div style="font-size:12px;font-weight:500;color:#8F8D8D">{{ k.sub }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:16px">
+                    <div style="flex:2 1 420px;min-width:0;background:#fff;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px">
+                      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                        <div style="flex:1;font-size:16px;font-weight:700;color:#2C3143">Volume por período</div>
+                        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#50555C"><span style="width:10px;height:10px;border-radius:3px;background:#0069BD"></span>Aprovados</div>
+                        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#50555C"><span style="width:10px;height:10px;border-radius:3px;background:#CCE1F2"></span>Demais status</div>
+                      </div>
+                      <div style="display:flex;align-items:flex-end;gap:4px;height:180px">
+                        <sc-for list="{{ bars }}" as="b" hint-placeholder-count="7">
+                          <div style="flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px">
+                            <div style="font-size:11px;font-weight:600;color:#50555C;height:14px">{{ b.n }}</div>
+                            <div style="width:100%;max-width:44px;height:{{ b.h }};background:{{ b.bg }};border-radius:6px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end">
+                              <div style="height:{{ b.hOk }};background:#0069BD"></div>
+                            </div>
+                            <div style="font-size:11px;font-weight:500;color:#8F8D8D;height:14px">{{ b.label }}</div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                    <div style="flex:1 1 280px;min-width:0;background:#fff;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px">
+                      <div style="font-size:16px;font-weight:700;color:#2C3143">Reprovações por tipo</div>
+                      <sc-if value="{{ hasReprov }}">
+                        <div style="display:flex;flex-direction:column;gap:14px">
+                          <sc-for list="{{ reprovByType }}" as="r" hint-placeholder-count="4">
+                            <div style="display:flex;flex-direction:column;gap:6px">
+                              <div style="display:flex;gap:8px;font-size:13px"><span style="flex:1;font-weight:600;color:#2C3143">{{ r.name }}</span><span style="color:#8F8D8D">{{ r.rate }}</span><span style="font-weight:700;color:#262A3B;min-width:16px;text-align:right">{{ r.nl }}</span></div>
+                              <div style="height:8px;border-radius:4px;background:#EFF1F3;overflow:hidden"><div style="height:100%;width:{{ r.w }};background:#FF6A5D;border-radius:4px"></div></div>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:16px">
+                    <div style="flex:1 1 320px;min-width:0;background:#fff;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:12px">
+                      <div style="display:flex;align-items:center"><div style="flex:1;font-size:16px;font-weight:700;color:#2C3143">Fila de aprovação</div><span style="font-size:12px;font-weight:600;color:#B85200;background:#FFEBDC;padding:2px 10px;border-radius:999px">{{ kpis.1.value }}</span></div>
+                      <sc-if value="{{ noQueue }}"><div style="font-size:14px;color:#8F8D8D;padding:12px 0">Nada para conferir agora.</div></sc-if>
+                      <sc-for list="{{ queueTop }}" as="a" hint-placeholder-count="3">
+                        <div onClick="{{ a.open }}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:#F9F9F9;cursor:pointer" style-hover="background:#EEF4FA">
+                          <div style="width:36px;height:36px;border-radius:50%;background:{{ a.proColor }};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">{{ a.proIni }}</div>
+                          <div style="flex:1;min-width:0">
+                            <div style="font-size:14px;font-weight:600;color:#2C3143;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.title }}</div>
+                            <div style="font-size:12px;color:#8F8D8D">{{ a.code }} · {{ a.sentAt }}</div>
+                          </div>
+                          <span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:{{ a.stBg }};color:{{ a.stFg }};white-space:nowrap">{{ a.stLabel }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="flex:1.4 1 360px;min-width:0;background:#fff;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:8px">
+                      <div style="font-size:16px;font-weight:700;color:#2C3143;padding-bottom:4px">Ranking de prestadores</div>
+                      <div style="display:grid;grid-template-columns:40px minmax(0,1fr) 72px 72px 64px;gap:8px;font-size:12px;font-weight:500;color:#8F8D8D;padding:0 4px"><span></span><span>Prestador</span><span style="text-align:right">Concluídos</span><span style="text-align:right">Aprovação</span><span style="text-align:right">Tempo</span></div>
+                      <sc-for list="{{ ranking }}" as="r" hint-placeholder-count="4">
+                        <div style="display:grid;grid-template-columns:40px minmax(0,1fr) 72px 72px 64px;gap:8px;align-items:center;padding:10px 4px;border-top:1px solid #E5E5E5;font-size:14px">
+                          <span style="width:30px;height:24px;border-radius:8px;background:{{ r.posBg }};color:{{ r.posFg }};font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ r.pos }}</span>
+                          <div style="display:flex;align-items:center;gap:10px;min-width:0"><div style="width:30px;height:30px;border-radius:50%;background:{{ r.color }};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">{{ r.ini }}</div><span style="font-weight:600;color:#2C3143;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span></div>
+                          <span style="text-align:right;font-weight:700">{{ r.finL }}</span>
+                          <span style="text-align:right;color:#363853">{{ r.rate }}</span>
+                          <span style="text-align:right;color:#363853">{{ r.avg }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isList }}">
+                <div style="display:flex;flex-direction:column;gap:16px;max-width:1280px;margin:0 auto">
+                  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+                    <div style="flex:1;min-width:180px;font-size:24px;line-height:36px;font-weight:700;color:#2C3143">Acionamentos</div>
+                    <button onClick="{{ newAc }}" style="height:44px;padding:0 18px;border:0;border-radius:16px;background:#0069BD;color:#fff;font-size:14px;font-weight:600" style-hover="background:#005AA3">Novo acionamento</button>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;height:48px;padding:0 16px;background:#fff;border-radius:16px">
+                    <img src="assets/icons/search.svg" style="width:18px;height:18px;opacity:.55">
+                    <input value="{{ gSearch }}" onChange="{{ onSearch }}" placeholder="Buscar por título, cliente, código ou prestador" style="flex:1;min-width:0;border:0;outline:0;font-size:14px;background:transparent">
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px">
+                    <sc-for list="{{ gFilters }}" as="c" hint-placeholder-count="6">
+                      <button onClick="{{ c.go }}" style="height:34px;padding:0 14px;border:0;border-radius:999px;background:{{ c.bg }};color:{{ c.fg }};font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px">{{ c.label }}<span style="opacity:.6">{{ c.n }}</span></button>
+                    </sc-for>
+                  </div>
+                  <div style="background:#fff;border-radius:16px;overflow:hidden">
+                    <sc-for list="{{ gRows }}" as="a" hint-placeholder-count="6">
+                      <div onClick="{{ a.open }}" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:14px 20px;border-bottom:1px solid #E5E5E5;cursor:pointer" style-hover="background:#F9F9F9">
+                        <div style="flex:3 1 240px;min-width:0">
+                          <div style="font-size:14px;font-weight:600;color:#2C3143">{{ a.title }}</div>
+                          <div style="font-size:12px;color:#8F8D8D">{{ a.code }} · {{ a.client }}</div>
+                        </div>
+                        <div style="flex:2 1 160px;min-width:0;font-size:13px;color:#363853">{{ a.typesLabel }}</div>
+                        <div style="flex:1.4 1 130px;display:flex;align-items:center;gap:8px;min-width:0"><div style="width:26px;height:26px;border-radius:50%;background:{{ a.proColor }};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">{{ a.proIni }}</div><span style="font-size:13px;color:#363853;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.proName }}</span></div>
+                        <div style="flex:1 1 100px;font-size:13px;color:#363853"><div style="font-weight:600">{{ a.dateBr }}</div><div style="font-size:12px;color:#8F8D8D">{{ a.time }}</div></div>
+                        <div style="flex:1 1 90px;display:flex;flex-direction:column;gap:4px"><div style="font-size:12px;color:#50555C">{{ a.prog }} etapas</div><div style="height:6px;border-radius:3px;background:#EFF1F3;overflow:hidden"><div style="height:100%;width:{{ a.pct }};background:#0069BD"></div></div></div>
+                        <div style="flex:1.3 1 150px;display:flex;justify-content:flex-end"><span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:{{ a.stBg }};color:{{ a.stFg }};white-space:nowrap">{{ a.stLabel }}</span></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isAppr }}">
+                <div style="display:flex;flex-direction:column;gap:16px;max-width:1080px;margin:0 auto">
+                  <div>
+                    <div style="font-size:24px;line-height:36px;font-weight:700;color:#2C3143">Aprovações</div>
+                    <div style="font-size:14px;color:#50555C">Confira as fotos e comentários de cada etapa antes de aprovar.</div>
+                  </div>
+                  <sc-if value="{{ noQueue }}"><div style="background:#fff;border-radius:16px;padding:40px;text-align:center;font-size:14px;color:#8F8D8D">Sua fila está vazia.</div></sc-if>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+                    <sc-for list="{{ queue }}" as="a" hint-placeholder-count="3">
+                      <div onClick="{{ a.open }}" style="background:#fff;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px;cursor:pointer" style-hover="box-shadow:0 4px 16px rgba(0,0,0,.08)">
+                        <div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:600;color:#8F8D8D;flex:1">{{ a.code }}</span><span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:{{ a.stBg }};color:{{ a.stFg }}">{{ a.stLabel }}</span></div>
+                        <div>
+                          <div style="font-size:16px;font-weight:700;color:#2C3143">{{ a.title }}</div>
+                          <div style="font-size:13px;color:#50555C">{{ a.client }} · {{ a.typesLabel }}</div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px solid #E5E5E5">
+                          <div style="width:30px;height:30px;border-radius:50%;background:{{ a.proColor }};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ a.proIni }}</div>
+                          <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">{{ a.proName }}</div><div style="font-size:12px;color:#8F8D8D">{{ a.sentAt }}</div></div>
+                          <span style="font-size:13px;font-weight:600;color:#004E8F">Analisar</span>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isPros }}">
+                <div style="display:flex;flex-direction:column;gap:16px;max-width:1280px;margin:0 auto">
+                  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+                    <div style="flex:1;min-width:200px">
+                      <div style="font-size:24px;line-height:36px;font-weight:700;color:#2C3143">Prestadores</div>
+                      <div style="font-size:14px;color:#50555C">{{ prActive }} ativos de {{ prTotal }}</div>
+                    </div>
+                    <button onClick="{{ prExport }}" style="height:44px;padding:0 16px;border:0;border-radius:16px;background:#fff;color:#262A3B;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;white-space:nowrap" style-hover="background:#EEF4FA"><img src="assets/icons/download.svg" style="width:18px">Exportar planilha</button>
+                    <label style="height:44px;padding:0 16px;border-radius:16px;background:#fff;color:#262A3B;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap" style-hover="background:#EEF4FA"><input type="file" accept=".xlsx,.xls,.csv" onChange="{{ prImport }}" style="display:none"><img src="assets/icons/upload.svg" style="width:18px">Subir planilha</label>
+                    <button onClick="{{ prNew }}" style="height:44px;padding:0 18px;border:0;border-radius:16px;background:#0069BD;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;white-space:nowrap" style-hover="background:#005AA3"><img src="assets/icons/plus.svg" style="width:18px;filter:brightness(0) invert(1)">Novo prestador</button>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+                    <div style="flex:1 1 260px;display:flex;align-items:center;gap:10px;height:44px;padding:0 16px;background:#fff;border-radius:16px">
+                      <img src="assets/icons/search.svg" style="width:18px;height:18px;opacity:.55">
+                      <input value="{{ prSearch }}" onChange="{{ onPrSearch }}" placeholder="Buscar por nome, documento, região ou e-mail" style="flex:1;min-width:0;border:0;outline:0;font-size:14px;background:transparent">
+                    </div>
+                    <div style="display:flex;gap:8px">
+                      <sc-for list="{{ prFilters }}" as="c" hint-placeholder-count="3">
+                        <button onClick="{{ c.go }}" style="height:36px;padding:0 14px;border:0;border-radius:999px;background:{{ c.bg }};color:{{ c.fg }};font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap">{{ c.label }}<span style="opacity:.6">{{ c.n }}</span></button>
+                      </sc-for>
+                    </div>
+                    <button onClick="{{ prTemplate }}" style="border:0;background:transparent;font-size:13px;font-weight:600;color:#0069BD;display:flex;align-items:center;gap:6px;white-space:nowrap"><img src="assets/icons/sheet.svg" style="width:16px">Baixar modelo da planilha</button>
+                  </div>
+                  <div style="background:#fff;border-radius:16px;overflow:hidden">
+                    <sc-if value="{{ noPrRows }}"><div style="padding:32px;text-align:center;font-size:14px;color:#8F8D8D">Nenhum prestador encontrado.</div></sc-if>
+                    <sc-for list="{{ prRows }}" as="p" hint-placeholder-count="5">
+                      <div onClick="{{ p.edit }}" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:14px 20px;border-bottom:1px solid #E5E5E5;cursor:pointer" style-hover="background:#F9F9F9">
+                        <div style="flex:2.4 1 220px;min-width:0;display:flex;align-items:center;gap:12px;opacity:{{ p.op }}">
+                          <div style="width:40px;height:40px;border-radius:50%;background:{{ p.color }};color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">{{ p.ini }}</div>
+                          <div style="min-width:0">
+                            <div style="font-size:14px;font-weight:600;color:#2C3143">{{ p.name }}</div>
+                            <div style="font-size:12px;color:#8F8D8D">{{ p.doc }} · {{ p.region }}</div>
+                          </div>
+                        </div>
+                        <div style="flex:1.6 1 170px;min-width:0;opacity:{{ p.op }}">
+                          <div style="font-size:13px;color:#363853">{{ p.phone }}</div>
+                          <div style="font-size:12px;color:#8F8D8D;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.email }}</div>
+                        </div>
+                        <div style="flex:2 1 200px;min-width:0;display:flex;flex-wrap:wrap;gap:6px;opacity:{{ p.op }}">
+                          <sc-for list="{{ p.chips }}" as="c"><span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:#EFF1F3;color:#363853;white-space:nowrap">{{ c.n }}</span></sc-for>
+                          <sc-if value="{{ p.hasMore }}"><span style="font-size:12px;font-weight:600;padding:3px 8px;border-radius:999px;background:#EFF1F3;color:#8F8D8D">{{ p.more }}</span></sc-if>
+                        </div>
+                        <div style="flex:1.2 1 140px;font-size:12px;color:#50555C">{{ p.load }}</div>
+                        <div style="flex:none;display:flex;align-items:center;gap:6px">
+                          <button onClick="{{ p.toggle }}" title="Ativar ou desativar" style="border:0;background:transparent;padding:4px;display:flex;align-items:center;gap:8px">
+                            <span style="width:44px;height:26px;border-radius:13px;background:{{ p.trackBg }};position:relative;display:block;transition:background .2s"><span style="position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:11px;background:#fff;box-shadow:0 3px 1px rgba(0,0,0,.06),0 3px 8px rgba(0,0,0,.15);transform:{{ p.knobX }};transition:transform .2s"></span></span>
+                            <span style="font-size:12px;font-weight:600;color:{{ p.stFg }};width:44px;text-align:left">{{ p.stLabel }}</span>
+                          </button>
+                          <button onClick="{{ p.del }}" title="Excluir" style="width:36px;height:36px;border:0;border-radius:10px;background:transparent;display:flex;align-items:center;justify-content:center" style-hover="background:#FFD7D4"><img src="assets/icons/trash.svg" style="width:18px"></button>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isTypes }}">
+                <div style="display:flex;flex-direction:column;gap:16px;max-width:1080px;margin:0 auto">
+                  <div>
+                    <div style="font-size:24px;line-height:36px;font-weight:700;color:#2C3143">Tipos de demanda</div>
+                    <div style="font-size:14px;color:#50555C">O checklist de cada tipo é copiado para o acionamento quando ele é criado.</div>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+                    <div style="flex:1 1 240px;min-width:0;background:#fff;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:4px">
+                      <sc-for list="{{ typeList }}" as="t" hint-placeholder-count="8">
+                        <button onClick="{{ t.go }}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid {{ t.bd }};border-radius:12px;background:{{ t.bg }};text-align:left">
+                          <span style="width:10px;height:10px;border-radius:5px;background:{{ t.color }};flex:none"></span>
+                          <span style="flex:1;font-size:14px;font-weight:600;color:#2C3143">{{ t.name }}</span>
+                          <span style="font-size:12px;color:#8F8D8D">{{ t.n }}</span>
+                        </button>
+                      </sc-for>
+                      <div style="display:flex;gap:8px;padding:8px 4px 4px;border-top:1px solid #E5E5E5;margin-top:4px">
+                        <input value="{{ newType }}" onChange="{{ onNewType }}" onKeyDown="{{ onTypeKey }}" placeholder="Novo tipo" style="flex:1;min-width:0;height:40px;border:1px dashed #0069BD;border-radius:12px;padding:0 12px;font-size:14px;outline:0">
+                        <button onClick="{{ addType }}" style="height:40px;padding:0 14px;border:0;border-radius:12px;background:#E6F0FA;color:#004E8F;font-size:13px;font-weight:600">Adicionar</button>
+                      </div>
+                    </div>
+                    <div style="flex:2 1 340px;min-width:0;background:#fff;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px">
+                      <div style="display:flex;align-items:center;gap:12px">
+                        <span style="width:14px;height:14px;border-radius:7px;background:{{ selType.color }};flex:none"></span>
+                        <input value="{{ selType.name }}" onChange="{{ renameType }}" style="flex:1;min-width:0;border:0;outline:0;font-size:18px;font-weight:700;color:#2C3143;padding:4px 0;border-bottom:1px solid transparent" style-focus="border-bottom:1px solid #262A3B">
+                        <button onClick="{{ rmType }}" style="border:0;background:transparent;font-size:13px;font-weight:600;color:#B8342A">Excluir tipo</button>
+                      </div>
+                      <div style="font-size:12px;font-weight:600;color:#8F8D8D;text-transform:uppercase;letter-spacing:.06em">Checklist · {{ selType.count }}</div>
+                      <div style="display:flex;flex-direction:column;gap:8px">
+                        <sc-for list="{{ items }}" as="it" hint-placeholder-count="5">
+                          <div style="display:flex;align-items:center;gap:8px;padding:4px 4px 4px 12px;border-radius:12px;background:#F9F9F9">
+                            <span style="width:22px;font-size:12px;font-weight:700;color:#8F8D8D">{{ it.n }}</span>
+                            <input value="{{ it.text }}" onChange="{{ it.onChange }}" style="flex:1;min-width:0;height:40px;border:0;background:transparent;outline:0;font-size:14px;font-weight:500">
+                            <button onClick="{{ it.up }}" title="Subir" style="width:36px;height:36px;border:0;border-radius:10px;background:transparent;opacity:{{ it.upOp }};display:flex;align-items:center;justify-content:center"><img src="assets/icons/chevron-right.svg" style="width:18px;transform:rotate(-90deg)"></button>
+                            <button onClick="{{ it.rm }}" title="Remover" style="width:36px;height:36px;border:0;border-radius:10px;background:transparent;display:flex;align-items:center;justify-content:center" style-hover="background:#FFD7D4"><img src="assets/icons/cancel.svg" style="width:18px"></button>
+                          </div>
+                        </sc-for>
+                        <sc-if value="{{ noItems }}"><div style="font-size:14px;color:#8F8D8D;padding:8px 0">Nenhum item ainda.</div></sc-if>
+                      </div>
+                      <div style="display:flex;gap:8px">
+                        <input value="{{ newItem }}" onChange="{{ onNewItem }}" onKeyDown="{{ onItemKey }}" placeholder="Nova etapa do checklist" style="flex:1;min-width:0;height:44px;border:1px dashed #0069BD;border-radius:12px;padding:0 14px;font-size:14px;outline:0">
+                        <button onClick="{{ addItem }}" style="height:44px;padding:0 16px;border:0;border-radius:12px;background:#0069BD;color:#fff;font-size:14px;font-weight:600">Adicionar etapa</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ gd }}">
+                <div style="display:flex;flex-direction:column;gap:16px;max-width:1180px;margin:0 auto">
+                  <button onClick="{{ gd.back }}" style="align-self:flex-start;border:0;background:transparent;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:#50555C;padding:0"><img src="assets/icons/chevron-right.svg" style="width:18px;transform:rotate(180deg)">{{ gd.backLabel }}</button>
+                  <div style="display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px">
+                    <div style="flex:1;min-width:220px">
+                      <div style="font-size:13px;font-weight:600;color:#8F8D8D">{{ gd.code }}</div>
+                      <div style="font-size:24px;line-height:32px;font-weight:700;color:#2C3143">{{ gd.title }}</div>
+                    </div>
+                    <span style="font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;background:{{ gd.stBg }};color:{{ gd.stFg }}">{{ gd.stLabel }}</span>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+                    <div style="flex:2 1 400px;min-width:0;display:flex;flex-direction:column;gap:16px">
+                      <div style="background:#fff;border-radius:16px;padding:20px 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px">
+                        <div><div style="font-size:12px;color:#8F8D8D">Cliente</div><div style="font-size:14px;font-weight:600;color:#2C3143">{{ gd.client }}</div></div>
+                        <div><div style="font-size:12px;color:#8F8D8D">Endereço</div><a href="{{ gd.mapUrl }}" target="_blank" style="font-size:14px;font-weight:600">{{ gd.address }}</a></div>
+                        <div><div style="font-size:12px;color:#8F8D8D">Atendimento</div><div style="font-size:14px;font-weight:600;color:#2C3143">{{ gd.dateBr }} · {{ gd.time }}</div></div>
+                        <div><div style="font-size:12px;color:#8F8D8D">Prestador</div><div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#2C3143"><span style="width:22px;height:22px;border-radius:50%;background:{{ gd.proColor }};color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ gd.proIni }}</span>{{ gd.proName }}</div></div>
+                      </div>
+                      <sc-if value="{{ gd.hasInv }}">
+                        <div style="background:#fff;border-radius:16px;padding:20px 24px;display:flex;flex-direction:column;gap:12px;border:1px solid #F4D8E8">
+                          <div style="font-size:16px;font-weight:700;color:#A8336A">Motivo da inviabilidade</div>
+                          <div style="font-size:14px;line-height:20px;color:#363853">{{ gd.invComment }}</div>
+                          <div style="display:flex;flex-wrap:wrap;gap:8px">
+                            <sc-for list="{{ gd.invV }}" as="p">
+                              <div style="position:relative;width:96px;height:96px;border-radius:12px;overflow:hidden;background:{{ p.bg }}">
+                                <sc-if value="{{ p.isImg }}"><img src="{{ p.src }}" style="width:100%;height:100%;object-fit:cover;display:block"></sc-if>
+                                <sc-if value="{{ p.notImg }}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><img src="assets/icons/image.svg" style="width:24px;opacity:.6;filter:brightness(0) invert(1)"></div></sc-if>
+                                <div style="position:absolute;left:5px;bottom:5px;font-size:10px;font-weight:600;color:#fff;background:rgba(0,0,0,.35);padding:0 5px;border-radius:4px">{{ p.stamp }}</div>
+                              </div>
+                            </sc-for>
+                          </div>
+                        </div>
+                      </sc-if>
+                      <sc-for list="{{ gd.dems }}" as="dm" hint-placeholder-count="1">
+                        <div style="background:#fff;border-radius:16px;padding:20px 24px;display:flex;flex-direction:column;gap:4px">
+                          <div style="display:flex;align-items:center;gap:10px;padding-bottom:8px"><span style="width:10px;height:10px;border-radius:5px;background:{{ dm.color }}"></span><span style="flex:1;font-size:16px;font-weight:700;color:#2C3143">{{ dm.name }}</span><span style="font-size:13px;font-weight:600;color:#50555C">{{ dm.prog }}</span></div>
+                          <sc-for list="{{ dm.steps }}" as="s" hint-placeholder-count="4">
+                            <div style="display:flex;gap:12px;padding:12px 0;border-top:1px solid #E5E5E5">
+                              <sc-if value="{{ s.done }}"><div style="width:22px;height:22px;border-radius:7px;background:#0069BD;display:flex;align-items:center;justify-content:center;flex:none"><img src="assets/icons/check.svg" style="width:16px;filter:brightness(0) invert(1)"></div></sc-if>
+                              <sc-if value="{{ s.notDone }}"><div style="width:22px;height:22px;border-radius:7px;border:1.5px solid #ADB3BC;flex:none"></div></sc-if>
+                              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+                                <div style="font-size:14px;font-weight:600;color:{{ s.tc }}">{{ s.text }}</div>
+                                <sc-if value="{{ s.hasComment }}"><div style="font-size:13px;color:#363853;background:#F9F9F9;border-radius:10px;padding:8px 12px">{{ s.comment }}</div></sc-if>
+                                <sc-if value="{{ s.hasPhotos }}">
+                                  <div style="display:flex;flex-wrap:wrap;gap:8px">
+                                    <sc-for list="{{ s.photos }}" as="p">
+                                      <div style="position:relative;width:80px;height:80px;border-radius:12px;overflow:hidden;background:{{ p.bg }}">
+                                        <sc-if value="{{ p.isImg }}"><img src="{{ p.src }}" style="width:100%;height:100%;object-fit:cover;display:block"></sc-if>
+                                        <sc-if value="{{ p.notImg }}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><img src="assets/icons/image.svg" style="width:22px;opacity:.6;filter:brightness(0) invert(1)"></div></sc-if>
+                                        <div style="position:absolute;left:5px;bottom:5px;font-size:10px;font-weight:600;color:#fff;background:rgba(0,0,0,.35);padding:0 5px;border-radius:4px">{{ p.stamp }}</div>
+                                      </div>
+                                    </sc-for>
+                                  </div>
+                                </sc-if>
+                              </div>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </sc-for>
+                      <sc-if value="{{ gd.hasFinal }}">
+                        <div style="background:#fff;border-radius:16px;padding:20px 24px;display:flex;flex-direction:column;gap:12px">
+                          <div style="font-size:16px;font-weight:700;color:#2C3143">Conclusão do serviço</div>
+                          <sc-if value="{{ gd.hasFinalComment }}"><div style="font-size:14px;color:#363853">{{ gd.finalComment }}</div></sc-if>
+                          <div style="display:flex;flex-wrap:wrap;gap:8px">
+                            <sc-for list="{{ gd.finalV }}" as="p">
+                              <div style="position:relative;width:120px;height:120px;border-radius:12px;overflow:hidden;background:{{ p.bg }}">
+                                <sc-if value="{{ p.isImg }}"><img src="{{ p.src }}" style="width:100%;height:100%;object-fit:cover;display:block"></sc-if>
+                                <sc-if value="{{ p.notImg }}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><img src="assets/icons/image.svg" style="width:28px;opacity:.6;filter:brightness(0) invert(1)"></div></sc-if>
+                                <div style="position:absolute;left:6px;bottom:6px;font-size:11px;font-weight:600;color:#fff;background:rgba(0,0,0,.35);padding:0 5px;border-radius:4px">{{ p.stamp }}</div>
+                              </div>
+                            </sc-for>
+                          </div>
+                        </div>
+                      </sc-if>
+                    </div>
+                    <div style="flex:1 1 280px;min-width:0;display:flex;flex-direction:column;gap:16px">
+                      <sc-if value="{{ gd.reviewable }}">
+                        <div style="background:#fff;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.08)">
+                          <div style="font-size:16px;font-weight:700;color:#2C3143">{{ gd.reviewTitle }}</div>
+                          <textarea value="{{ gd.reviewTxt }}" onChange="{{ gd.onReviewTxt }}" placeholder="Observação para o prestador (obrigatória para reprovar)" style="height:96px;resize:none;border:1px solid #E5E5E5;border-radius:12px;padding:12px;font-size:14px;outline:0" style-focus="border-color:#262A3B"></textarea>
+                          <button onClick="{{ gd.approve }}" style="height:48px;border:0;border-radius:16px;background:#0069BD;color:#fff;font-size:14px;font-weight:600" style-hover="background:#005AA3">{{ gd.approveLabel }}</button>
+                          <button onClick="{{ gd.reprove }}" style="height:48px;border:1px solid #FF6A5D;border-radius:16px;background:#fff;color:#B8342A;font-size:14px;font-weight:600" style-hover="background:#FFD7D4">{{ gd.reproveLabel }}</button>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ gd.hasLast }}">
+                        <div style="background:#fff;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:6px">
+                          <div style="font-size:13px;font-weight:600;color:#50555C">{{ gd.lastLabel }}</div>
+                          <sc-if value="{{ gd.lastHasReason }}"><div style="font-size:14px;color:#363853">{{ gd.lastReason }}</div></sc-if>
+                        </div>
+                      </sc-if>
+                      <div style="background:#fff;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+                        <div style="font-size:16px;font-weight:700;color:#2C3143">Histórico</div>
+                        <sc-for list="{{ gd.timeline }}" as="e" hint-placeholder-count="3">
+                          <div style="display:flex;gap:12px">
+                            <span style="width:10px;height:10px;border-radius:5px;background:{{ e.c }};margin-top:5px;flex:none"></span>
+                            <div style="min-width:0">
+                              <div style="font-size:14px;font-weight:600;color:#2C3143">{{ e.t }}</div>
+                              <div style="font-size:12px;color:#8F8D8D">{{ e.when }}</div>
+                              <sc-if value="{{ e.hasNote }}"><div style="font-size:13px;color:#363853;margin-top:4px">{{ e.note }}</div></sc-if>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <sc-if value="{{ gd.isMine }}">
+                        <button onClick="{{ gd.openInApp }}" style="height:44px;border:1px dashed #0069BD;border-radius:16px;background:transparent;color:#004E8F;font-size:13px;font-weight:600">Ver no app do prestador</button>
+                      </sc-if>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+            <sc-if value="{{ compact }}">
+              <div style="height:76px;flex:none;display:flex;background:#fff;border-top:1px solid #E5E5E5;padding:6px 8px 14px">
+                <sc-for list="{{ gnav }}" as="n" hint-placeholder-count="4">
+                  <button onClick="{{ n.go }}" style="flex:1;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;position:relative">
+                    <img src="{{ n.icon }}" style="width:22px;height:22px">
+                    <span style="font-size:11px;font-weight:600;color:{{ n.fg }}">{{ n.label }}</span>
+                    <span style="width:4px;height:4px;border-radius:2px;background:{{ n.dot }}"></span>
+                    <sc-if value="{{ n.hasBadge }}"><span style="position:absolute;top:0;left:52%;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#FC7608;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ n.badge }}</span></sc-if>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ hasToastG }}">
+              <div style="position:absolute;left:50%;bottom:96px;transform:translateX(-50%);background:#262A3B;color:#fff;font-size:14px;font-weight:500;padding:12px 18px;border-radius:12px;box-shadow:0 12px 32px rgba(28,18,67,.2);z-index:30;white-space:nowrap">{{ toastG }}</div>
+            </sc-if>
+            <sc-if value="{{ prFormOn }}">
+              <div style="position:absolute;inset:0;background:rgba(28,18,67,.8);z-index:20;display:flex;justify-content:center;align-items:flex-start;overflow:auto;padding:24px 12px">
+                <div style="width:100%;max-width:620px;background:#fff;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:16px">
+                  <div style="display:flex;align-items:center;gap:12px">
+                    <div style="flex:1;font-size:18px;font-weight:700;color:#2C3143">{{ pfTitle }}</div>
+                    <button onClick="{{ pfClose }}" style="width:36px;height:36px;border:0;border-radius:12px;background:#EFF1F3;display:flex;align-items:center;justify-content:center"><img src="assets/icons/cancel.svg" style="width:18px"></button>
+                  </div>
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#363853">Nome completo ou razão social
+                    <input value="{{ pf.name }}" onChange="{{ pfh.name }}" placeholder="Nome" style="height:48px;border:1px solid #E5E5E5;border-radius:16px;padding:0 16px;font-size:14px;font-weight:500;outline:0" style-focus="border-color:#262A3B">
+                  </label>
+                  <div style="display:flex;flex-wrap:wrap;gap:12px">
+                    <label style="flex:1 1 200px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#363853">CPF ou CNPJ
+                      <input value="{{ pf.doc }}" onChange="{{ pfh.doc }}" placeholder="000.000.000-00" style="height:48px;border:1px solid #E5E5E5;border-radius:16px;padding:0 16px;font-size:14px;font-weight:500;outline:0" style-focus="border-color:#262A3B">
+                    </label>
+                    <label style="flex:1 1 200px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#363853">Telefone
+                      <input value="{{ pf.phone }}" onChange="{{ pfh.phone }}" placeholder="(11) 90000-0000" style="height:48px;border:1px solid #E5E5E5;border-radius:16px;padding:0 16px;font-size:14px;font-weight:500;outline:0" style-focus="border-color:#262A3B">
+                    </label>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:12px">
+                    <label style="flex:1.4 1 220px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#363853">E-mail
+                      <input value="{{ pf.email }}" onChange="{{ pfh.email }}" placeholder="email@exemplo.com" style="height:48px;border:1px solid #E5E5E5;border-radius:16px;padding:0 16px;font-size:14px;font-weight:500;outline:0" style-focus="border-color:#262A3B">
+                    </label>
+                    <label style="flex:1 1 160px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#363853">Região de atendimento
+                      <input value="{{ pf.region }}" onChange="{{ pfh.region }}" placeholder="Zona Oeste" style="height:48px;border:1px solid #E5E5E5;border-radius:16px;padding:0 16px;font-size:14px;font-weight:500;outline:0" style-focus="border-color:#262A3B">
+                    </label>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <div style="font-size:13px;font-weight:600;color:#363853">Especialidades</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px">
+                      <sc-for list="{{ pfTypes }}" as="t" hint-placeholder-count="8">
+                        <button onClick="{{ t.toggle }}" style="height:36px;padding:0 12px;border:1px solid {{ t.bd }};border-radius:999px;background:{{ t.bg }};color:{{ t.fg }};font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:{{ t.color }}"></span>{{ t.name }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <sc-if value="{{ pfHasErr }}"><div style="font-size:13px;font-weight:500;color:#B85200">{{ pfErr }}</div></sc-if>
+                  <div style="display:flex;justify-content:flex-end;gap:12px">
+                    <button onClick="{{ pfClose }}" style="height:48px;padding:0 20px;border:0;border-radius:16px;background:#EFF1F3;color:#363853;font-size:14px;font-weight:600">Cancelar</button>
+                    <button onClick="{{ pfSave }}" style="height:48px;padding:0 24px;border:0;border-radius:16px;background:{{ pfBg }};color:{{ pfFg }};font-size:14px;font-weight:600">Salvar</button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ prImpOn }}">
+              <div style="position:absolute;inset:0;background:rgba(28,18,67,.8);z-index:20;display:flex;justify-content:center;align-items:flex-start;overflow:auto;padding:24px 12px">
+                <div style="width:100%;max-width:760px;background:#fff;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:16px">
+                  <div style="display:flex;align-items:center;gap:12px">
+                    <img src="assets/icons/sheet.svg" style="width:24px">
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:18px;font-weight:700;color:#2C3143">Conferir importação</div>
+                      <div style="font-size:13px;color:#8F8D8D;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ piFile }}</div>
+                    </div>
+                    <button onClick="{{ piClose }}" style="width:36px;height:36px;border:0;border-radius:12px;background:#EFF1F3;display:flex;align-items:center;justify-content:center"><img src="assets/icons/cancel.svg" style="width:18px"></button>
+                  </div>
+                  <div style="font-size:14px;font-weight:600;color:#262A3B">{{ piSummary }}</div>
+                  <div style="max-height:320px;overflow:auto;border:1px solid #E5E5E5;border-radius:16px">
+                    <sc-for list="{{ piRows }}" as="r" hint-placeholder-count="4">
+                      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:10px 16px;border-bottom:1px solid #E5E5E5">
+                        <div style="flex:2 1 180px;min-width:0"><div style="font-size:14px;font-weight:600;color:#2C3143">{{ r.name }}</div><div style="font-size:12px;color:#8F8D8D">{{ r.doc }}</div></div>
+                        <div style="flex:2 1 160px;min-width:0;font-size:12px;color:#50555C">{{ r.types }}</div>
+                        <span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:{{ r.actBg }};color:{{ r.actFg }};white-space:nowrap">{{ r.act }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <sc-if value="{{ piHasMissing }}">
+                    <button onClick="{{ piToggle }}" style="border:0;background:#F9F9F9;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;text-align:left">
+                      <span style="width:44px;height:26px;border-radius:13px;background:{{ piTrack }};position:relative;display:block;flex:none"><span style="position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:11px;background:#fff;box-shadow:0 3px 1px rgba(0,0,0,.06),0 3px 8px rgba(0,0,0,.15);transform:{{ piKnob }};transition:transform .2s"></span></span>
+                      <span style="display:flex;flex-direction:column;gap:2px">
+                        <span style="font-size:14px;font-weight:600;color:#2C3143">Desativar quem não está na planilha</span>
+                        <span style="font-size:12px;color:#50555C">{{ piMissingL }}</span>
+                      </span>
+                    </button>
+                  </sc-if>
+                  <div style="display:flex;justify-content:flex-end;gap:12px">
+                    <button onClick="{{ piClose }}" style="height:48px;padding:0 20px;border:0;border-radius:16px;background:#EFF1F3;color:#363853;font-size:14px;font-weight:600">Cancelar</button>
+                    <button onClick="{{ piApply }}" style="height:48px;padding:0 24px;border:0;border-radius:16px;background:{{ piBg }};color:{{ piFg }};font-size:14px;font-weight:600">Importar</button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ prConfOn }}">
+              <div style="position:absolute;inset:0;background:rgba(28,18,67,.8);z-index:20;display:flex;justify-content:center;align-items:center;padding:24px 12px">
+                <div style="width:100%;max-width:440px;background:#fff;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:14px">
+                  <div style="font-size:18px;font-weight:700;color:#2C3143">Excluir {{ pcName }} ?</div>
+                  <div style="font-size:14px;line-height:20px;color:#363853">{{ pcMsg }}</div>
+                  <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap">
+                    <button onClick="{{ pcClose }}" style="height:44px;padding:0 18px;border:0;border-radius:16px;background:#EFF1F3;color:#363853;font-size:14px;font-weight:600">Cancelar</button>
+                    <button onClick="{{ pcDeactivate }}" style="height:44px;padding:0 18px;border:1px solid #0069BD;border-radius:16px;background:#fff;color:#0069BD;font-size:14px;font-weight:600">Desativar</button>
+                    <sc-if value="{{ pcFree }}"><button onClick="{{ pcDelete }}" style="height:44px;padding:0 18px;border:0;border-radius:16px;background:#FF6A5D;color:#fff;font-size:14px;font-weight:600">Excluir</button></sc-if>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ showNew }}">
+              <div style="position:absolute;inset:0;background:rgba(28,18,67,.8);z-index:20;display:flex;justify-content:center;align-items:flex-start;overflow:auto;padding:24px 12px">
+                <div style="width:100%;max-width:920px;background:#fff;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:20px">
+                  <div style="display:flex;align-items:center;gap:12px">
+                    <div style="flex:1;font-size:18px;font-weight:700;color:#2C3143">Novo acionamento</div>
+                    <button onClick="{{ closeNew }}" style="width:36px;height:36px;border:0;border-radius:12px;background:#EFF1F3;display:flex;align-items:center;justify-content:center"><img src="assets/icons/cancel.svg" style="width:18px"></button>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+                    <div style="flex:3 1 300px;min-width:0;display:flex;flex-direction:column;gap:14px">
+                      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#363853">Título do acionamento
+                        <input value="{{ f.title }}" onChange="{{ fh.title }}" placeholder="Ex.: Vazamento no banheiro social" style="height:48px;border:1px solid #E5E5E5;border-radius:16px;padding:0 16px;font-size:14px;font-weight:500;outline:0" style-focus="border-color:#262A3B">
+                      </label>
+                      <div style="display:flex;flex-direction:column;gap:8px">
+                        <div style="font-size:13px;font-weight:600;color:#363853">Tipos de demanda</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px">
+                          <sc-for list="{{ formTypes }}" as="t" hint-placeholder-count="8">
+                            <button onClick="{{ t.toggle }}" style="height:36px;padding:0 12px;border:1px solid {{ t.bd }};border-radius:999px;background:{{ t.bg }};color:{{ t.fg }};font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:{{ t.color }}"></span>{{ t.name }}</button>
+                          </sc-for>
+                        </div>
+                      </div>
+                      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#363853">Cliente
+                        <input value="{{ f.client }}" onChange="{{ fh.client }}" placeholder="Nome do cliente" style="height:48px;border:1px solid #E5E5E5;border-radius:16px;padding:0 16px;font-size:14px;font-weight:500;outline:0" style-focus="border-color:#262A3B">
+                      </label>
+                      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#363853">Endereço
+                        <input value="{{ f.address }}" onChange="{{ fh.address }}" placeholder="Rua, número · bairro" style="height:48px;border:1px solid #E5E5E5;border-radius:16px;padding:0 16px;font-size:14px;font-weight:500;outline:0" style-focus="border-color:#262A3B">
+                      </label>
+                      <div style="display:flex;flex-wrap:wrap;gap:12px">
+                        <label style="flex:2 1 150px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#363853">Data
+                          <input type="date" value="{{ f.date }}" onChange="{{ fh.date }}" style="height:48px;border:1px solid #E5E5E5;border-radius:16px;padding:0 14px;font-size:14px;font-weight:500;outline:0">
+                        </label>
+                        <label style="flex:1 1 100px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#363853">Início
+                          <input type="time" value="{{ f.start }}" onChange="{{ fh.start }}" style="height:48px;border:1px solid #E5E5E5;border-radius:16px;padding:0 14px;font-size:14px;font-weight:500;outline:0">
+                        </label>
+                        <label style="flex:1 1 100px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#363853">Fim
+                          <input type="time" value="{{ f.end }}" onChange="{{ fh.end }}" style="height:48px;border:1px solid #E5E5E5;border-radius:16px;padding:0 14px;font-size:14px;font-weight:500;outline:0">
+                        </label>
+                      </div>
+                      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#363853">Prestador
+                        <select value="{{ f.pid }}" onChange="{{ fh.pid }}" style="height:48px;border:1px solid #E5E5E5;border-radius:16px;padding:0 14px;font-size:14px;font-weight:500;outline:0;background:#fff">
+                          <sc-for list="{{ prosOpts }}" as="p"><option value="{{ p.id }}">{{ p.name }}</option></sc-for>
+                        </select>
+                      </label>
+                    </div>
+                    <div style="flex:2 1 260px;min-width:0;background:#F9F9F9;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px">
+                      <div>
+                        <div style="font-size:16px;font-weight:700;color:#2C3143">Checklist gerado</div>
+                        <div style="font-size:12px;color:#8F8D8D">{{ previewCount }}</div>
+                      </div>
+                      <sc-if value="{{ noPreview }}"><div style="font-size:14px;color:#8F8D8D;padding:16px 0">Escolha um ou mais tipos de demanda para montar o checklist.</div></sc-if>
+                      <sc-for list="{{ formPreview }}" as="t">
+                        <div style="display:flex;flex-direction:column;gap:6px">
+                          <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#2C3143"><span style="width:8px;height:8px;border-radius:4px;background:{{ t.color }}"></span>{{ t.name }}</div>
+                          <sc-for list="{{ t.items }}" as="it">
+                            <div style="display:flex;gap:10px;font-size:13px;color:#363853;padding:6px 10px;background:#fff;border-radius:10px"><span style="color:#8F8D8D;font-weight:600;width:14px">{{ it.n }}</span>{{ it.text }}</div>
+                          </sc-for>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div style="display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap">
+                    <button onClick="{{ closeNew }}" style="height:48px;padding:0 20px;border:0;border-radius:16px;background:#EFF1F3;color:#363853;font-size:14px;font-weight:600">Cancelar</button>
+                    <button onClick="{{ create }}" style="height:48px;padding:0 24px;border:0;border-radius:16px;background:{{ createBg }};color:{{ createFg }};font-size:14px;font-weight:600">Enviar ao prestador</button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isP }}">
+      <div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:flex-start;padding:24px;overflow:auto">
+        <div style="width:395px;height:832px;border:10px solid #262A3B;border-radius:52px;overflow:hidden;background:#fff;position:relative;flex:none;display:flex;flex-direction:column">
+          <div style="height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font-size:14px;font-weight:600">
+            <div>{{ clock }}</div>
+            <div style="width:72px;height:6px;border-radius:3px;background:#262A3B;opacity:.12"></div>
+          </div>
+          <div style="flex:1;min-height:0;overflow:auto;position:relative">
+            <sc-if value="{{ pHome }}" hint-placeholder-val="{{ true }}">
+              <div style="padding:8px 24px 24px;display:flex;flex-direction:column;gap:20px">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <img src="assets/russo-mark.png" style="height:36px;width:auto">
+                  <div style="flex:1">
+                    <div style="font-size:12px;font-weight:500;color:#8F8D8D">{{ pToday }}</div>
+                    <div style="font-size:24px;line-height:32px;font-weight:700;color:#2C3143">{{ hello }}, Carlos</div>
+                  </div>
+                  <div style="width:44px;height:44px;border-radius:50%;background:#0069BD;color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">CM</div>
+                </div>
+                <sc-if value="{{ next }}">
+                  <div style="background:#0069BD;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:14px;color:#fff">
+                    <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:4px;background:#FC7608"></span><span style="font-size:12px;font-weight:600;opacity:.8;flex:1">{{ nextLabel }}</span><span style="font-size:12px;font-weight:600;opacity:.8">{{ next.code }}</span></div>
+                    <div>
+                      <div style="font-size:24px;line-height:32px;font-weight:700">{{ next.whenL }}</div>
+                      <div style="font-size:16px;font-weight:600;margin-top:4px">{{ next.title }}</div>
+                      <div style="font-size:13px;opacity:.75;margin-top:2px">{{ next.client }} · {{ next.address }}</div>
+                    </div>
+                    <div style="display:flex;gap:8px">
+                      <a href="{{ next.mapUrl }}" target="_blank" style="flex:1;height:44px;border-radius:14px;background:rgba(255,255,255,.12);color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px"><img src="assets/icons/pin.svg" style="width:18px;filter:brightness(0) invert(1)">Rota</a>
+                      <button onClick="{{ next.open }}" style="flex:1.4;height:44px;border:0;border-radius:14px;background:#fff;color:#0069BD;font-size:14px;font-weight:700">Abrir checklist</button>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ noNext }}"><div style="background:#F9F9F9;border-radius:24px;padding:20px;font-size:14px;color:#50555C">Nenhum atendimento pendente na sua agenda.</div></sc-if>
+                <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+                  <sc-for list="{{ shortcuts }}" as="s" hint-placeholder-count="4">
+                    <button onClick="{{ s.go }}" style="border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;position:relative">
+                      <div style="width:56px;height:56px;border-radius:16px;background:#EEF4FA;display:flex;align-items:center;justify-content:center"><img src="{{ s.icon }}" style="width:22px;height:22px"></div>
+                      <span style="font-size:12px;font-weight:600;color:#363853">{{ s.label }}</span>
+                      <sc-if value="{{ s.hasBadge }}"><span style="position:absolute;top:-4px;right:8px;min-width:20px;height:20px;border-radius:10px;background:#FC7608;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ s.badge }}</span></sc-if>
+                    </button>
+                  </sc-for>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                  <sc-for list="{{ metrics }}" as="m" hint-placeholder-count="4">
+                    <div style="background:{{ m.bg }};border-radius:16px;padding:14px 16px">
+                      <div style="font-size:12px;font-weight:600;color:#50555C">{{ m.label }}</div>
+                      <div style="font-size:24px;line-height:32px;font-weight:700;color:{{ m.fg }}">{{ m.value }}</div>
+                      <div style="font-size:12px;color:#8F8D8D">{{ m.sub }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <div style="font-size:16px;font-weight:700;color:#2C3143">Sua agenda de hoje</div>
+                  <sc-if value="{{ noToday }}"><div style="font-size:14px;color:#8F8D8D">Nada agendado para hoje.</div></sc-if>
+                  <sc-for list="{{ todayL }}" as="a" hint-placeholder-count="3">
+                    <div onClick="{{ a.open }}" style="display:flex;gap:12px;padding:14px;border-radius:16px;background:#F9F9F9;cursor:pointer">
+                      <div style="width:48px;flex:none;font-size:14px;font-weight:700;color:#262A3B">{{ a.start }}</div>
+                      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+                        <div style="font-size:14px;font-weight:600;color:#2C3143">{{ a.title }}</div>
+                        <div style="font-size:12px;color:#8F8D8D">{{ a.client }}</div>
+                        <span style="align-self:flex-start;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:{{ a.stBg }};color:{{ a.stFg }}">{{ a.stLabel }}</span>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ pAgenda }}">
+              <div style="padding:8px 24px 24px;display:flex;flex-direction:column;gap:16px">
+                <div style="font-size:24px;line-height:32px;font-weight:700;color:#2C3143">Agenda</div>
+                <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">
+                  <sc-for list="{{ days }}" as="d" hint-placeholder-count="7">
+                    <button onClick="{{ d.go }}" style="border:0;height:68px;border-radius:14px;background:{{ d.bg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0">
+                      <span style="font-size:11px;font-weight:600;color:{{ d.sub }}">{{ d.wd }}</span>
+                      <span style="font-size:16px;font-weight:700;color:{{ d.fg }}">{{ d.n }}</span>
+                      <span style="width:5px;height:5px;border-radius:3px;background:{{ d.dot }}"></span>
+                    </button>
+                  </sc-for>
+                </div>
+                <div style="font-size:16px;font-weight:700;color:#2C3143">{{ aLabel }}</div>
+                <sc-if value="{{ noAgenda }}"><div style="font-size:14px;color:#8F8D8D">Dia livre.</div></sc-if>
+                <sc-for list="{{ agenda }}" as="a" hint-placeholder-count="2">
+                  <div style="display:flex;gap:12px">
+                    <div style="width:44px;flex:none;padding-top:14px;font-size:13px;font-weight:700;color:#262A3B">{{ a.start }}</div>
+                    <div onClick="{{ a.open }}" style="flex:1;min-width:0;padding:14px;border-radius:16px;background:#F9F9F9;display:flex;flex-direction:column;gap:6px;cursor:pointer;border-left:0">
+                      <div style="font-size:14px;font-weight:600;color:#2C3143">{{ a.title }}</div>
+                      <div style="font-size:12px;color:#50555C">{{ a.time }} · {{ a.typesLabel }}</div>
+                      <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:#8F8D8D"><img src="assets/icons/pin.svg" style="width:14px;opacity:.6">{{ a.address }}</div>
+                      <span style="align-self:flex-start;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:{{ a.stBg }};color:{{ a.stFg }}">{{ a.stLabel }}</span>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ pList }}">
+              <div style="padding:8px 24px 24px;display:flex;flex-direction:column;gap:16px">
+                <div style="font-size:24px;line-height:32px;font-weight:700;color:#2C3143">Suas demandas</div>
+                <div style="display:flex;gap:6px;overflow-x:auto;margin:0 -24px;padding:0 24px">
+                  <sc-for list="{{ pFilters }}" as="c" hint-placeholder-count="4">
+                    <button onClick="{{ c.go }}" style="flex:none;height:34px;padding:0 12px;border:0;border-radius:999px;background:{{ c.bg }};color:{{ c.fg }};font-size:13px;font-weight:600;display:flex;gap:6px;align-items:center">{{ c.label }}<span style="opacity:.6">{{ c.n }}</span></button>
+                  </sc-for>
+                </div>
+                <sc-if value="{{ noPItems }}"><div style="font-size:14px;color:#8F8D8D;padding:20px 0;text-align:center">Nada por aqui.</div></sc-if>
+                <sc-for list="{{ pItems }}" as="a" hint-placeholder-count="3">
+                  <div onClick="{{ a.open }}" style="padding:16px;border-radius:16px;background:#F9F9F9;display:flex;flex-direction:column;gap:8px;cursor:pointer">
+                    <div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:600;color:#8F8D8D;flex:1">{{ a.code }} · {{ a.whenL }}</span></div>
+                    <div style="font-size:15px;font-weight:700;color:#2C3143">{{ a.title }}</div>
+                    <div style="font-size:12px;color:#50555C">{{ a.client }} · {{ a.typesLabel }}</div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div style="flex:1;height:6px;border-radius:3px;background:#E5E5E5;overflow:hidden"><div style="height:100%;width:{{ a.pct }};background:#0069BD"></div></div>
+                      <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:{{ a.stBg }};color:{{ a.stFg }}">{{ a.stLabel }}</span>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ pd }}">
+              <div style="min-height:100%;display:flex;flex-direction:column">
+                <div style="position:sticky;top:0;z-index:2;background:#fff;display:flex;align-items:center;gap:8px;padding:4px 16px 8px">
+                  <button onClick="{{ pd.back }}" style="width:40px;height:40px;border:0;border-radius:12px;background:#F9F9F9;display:flex;align-items:center;justify-content:center"><img src="assets/icons/chevron-right.svg" style="width:20px;transform:rotate(180deg)"></button>
+                  <div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:#2C3143">{{ pd.code }}</div>
+                  <div style="width:40px"></div>
+                </div>
+                <div style="padding:8px 24px 24px;display:flex;flex-direction:column;gap:16px;flex:1">
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <span style="align-self:flex-start;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:{{ pd.stBg }};color:{{ pd.stFg }}">{{ pd.stLabel }}</span>
+                    <div style="font-size:22px;line-height:30px;font-weight:700;color:#2C3143">{{ pd.title }}</div>
+                    <div style="font-size:14px;font-weight:500;color:#50555C">{{ pd.client }}</div>
+                  </div>
+                  <div style="background:#F9F9F9;border-radius:16px;padding:4px 16px">
+                    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #E5E5E5"><img src="assets/icons/date-time.svg" style="width:20px"><div style="flex:1;font-size:14px;font-weight:600">{{ pd.dateBr }} · {{ pd.time }}</div></div>
+                    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #E5E5E5"><img src="assets/icons/pin.svg" style="width:20px"><div style="flex:1;font-size:14px;font-weight:600;min-width:0">{{ pd.address }}</div><a href="{{ pd.mapUrl }}" target="_blank" style="font-size:13px;font-weight:600">Rota</a></div>
+                    <div style="display:flex;align-items:center;gap:12px;padding:12px 0"><img src="assets/icons/description.svg" style="width:20px"><div style="flex:1;font-size:14px;font-weight:600">{{ pd.typesLabel }}</div></div>
+                  </div>
+                  <sc-if value="{{ pd.isFix }}">
+                    <div style="background:#FFD7D4;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:4px">
+                      <div style="font-size:13px;font-weight:700;color:#B8342A">Reprovado pelo gestor</div>
+                      <div style="font-size:14px;color:#2C3143">{{ pd.fixReason }}</div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ pd.isWait }}">
+                    <div style="background:#FFEBDC;border-radius:16px;padding:14px 16px">
+                      <div style="font-size:13px;font-weight:700;color:#B85200">{{ pd.waitTitle }}</div>
+                      <div style="font-size:13px;color:#2C3143">{{ pd.waitWhen }} · aguarde a conferência do gestor</div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ pd.isDone }}">
+                    <div style="background:#E6F0FA;border-radius:16px;padding:14px 16px;font-size:13px;font-weight:700;color:#004E8F">{{ pd.doneTitle }}</div>
+                  </sc-if>
+                  <sc-if value="{{ pd.hasInv }}">
+                    <div style="border:1px solid #F4D8E8;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+                      <div style="font-size:13px;font-weight:700;color:#A8336A">Motivo da inviabilidade</div>
+                      <div style="font-size:14px;color:#363853">{{ pd.invComment }}</div>
+                      <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <sc-for list="{{ pd.invV }}" as="p">
+                          <div style="position:relative;width:64px;height:64px;border-radius:12px;overflow:hidden;background:{{ p.bg }}">
+                            <sc-if value="{{ p.isImg }}"><img src="{{ p.src }}" style="width:100%;height:100%;object-fit:cover;display:block"></sc-if>
+                            <div style="position:absolute;left:4px;bottom:4px;font-size:10px;font-weight:600;color:#fff;background:rgba(0,0,0,.35);padding:0 4px;border-radius:4px">{{ p.stamp }}</div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <div style="font-size:16px;font-weight:700;color:#2C3143;flex:1">Checklist</div>
+                    <span style="font-size:13px;font-weight:600;color:#50555C">{{ pd.prog }}</span>
+                  </div>
+                  <div style="height:6px;border-radius:3px;background:#EFF1F3;overflow:hidden;margin-top:-8px"><div style="height:100%;width:{{ pd.pct }};background:#0069BD"></div></div>
+                  <sc-for list="{{ pd.dems }}" as="dm" hint-placeholder-count="1">
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                      <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#50555C"><span style="width:8px;height:8px;border-radius:4px;background:{{ dm.color }}"></span><span style="flex:1">{{ dm.name }}</span><span>{{ dm.prog }}</span></div>
+                      <sc-for list="{{ dm.steps }}" as="s" hint-placeholder-count="4">
+                        <div style="background:#F9F9F9;border-radius:16px">
+                          <div style="display:flex;align-items:center;gap:12px;padding:12px 12px 12px 14px">
+                            <button onClick="{{ s.toggle }}" style="width:28px;height:28px;border:0;padding:0;background:transparent;flex:none">
+                              <sc-if value="{{ s.done }}"><div style="width:26px;height:26px;border-radius:8px;background:#0069BD;display:flex;align-items:center;justify-content:center"><img src="assets/icons/check.svg" style="width:18px;filter:brightness(0) invert(1)"></div></sc-if>
+                              <sc-if value="{{ s.notDone }}"><div style="width:26px;height:26px;border-radius:8px;border:1.5px solid #ADB3BC;background:#fff"></div></sc-if>
+                            </button>
+                            <div onClick="{{ s.toggleOpen }}" style="flex:1;min-width:0;cursor:pointer">
+                              <div style="font-size:14px;font-weight:600;color:{{ s.tc }}">{{ s.text }}</div>
+                              <sc-if value="{{ s.hasMeta }}"><div style="font-size:12px;color:#004E8F;font-weight:500">{{ s.meta }}</div></sc-if>
+                            </div>
+                            <button onClick="{{ s.toggleOpen }}" style="width:32px;height:32px;border:0;background:transparent;display:flex;align-items:center;justify-content:center"><img src="assets/icons/chevron-right.svg" style="width:18px;transform:{{ s.chev }}"></button>
+                          </div>
+                          <sc-if value="{{ s.open }}">
+                            <div style="padding:0 14px 14px;display:flex;flex-direction:column;gap:10px">
+                              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                                <sc-for list="{{ s.photos }}" as="p">
+                                  <div style="position:relative;width:68px;height:68px;border-radius:12px;overflow:hidden;background:{{ p.bg }}">
+                                    <sc-if value="{{ p.isImg }}"><img src="{{ p.src }}" style="width:100%;height:100%;object-fit:cover;display:block"></sc-if>
+                                    <sc-if value="{{ p.notImg }}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><img src="assets/icons/image.svg" style="width:20px;opacity:.6;filter:brightness(0) invert(1)"></div></sc-if>
+                                    <div style="position:absolute;left:4px;bottom:4px;font-size:10px;font-weight:600;color:#fff;background:rgba(0,0,0,.35);padding:0 4px;border-radius:4px">{{ p.stamp }}</div>
+                                    <sc-if value="{{ p.canRm }}"><button onClick="{{ p.rm }}" style="position:absolute;top:3px;right:3px;width:22px;height:22px;border:0;border-radius:11px;background:rgba(255,255,255,.9);padding:0;display:flex;align-items:center;justify-content:center"><img src="assets/icons/cancel.svg" style="width:14px"></button></sc-if>
+                                  </div>
+                                </sc-for>
+                                <sc-if value="{{ s.canEdit }}">
+                                  <button onClick="{{ s.onCam }}" style="width:68px;height:68px;border:1px dashed #0069BD;border-radius:12px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:#004E8F"><img src="assets/icons/camera.svg" style="width:20px">Câmera</button>
+                                  <label style="width:68px;height:68px;border:1px dashed #0069BD;border-radius:12px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:#004E8F;cursor:pointer"><input type="file" accept="image/*" onChange="{{ s.onGal }}" style="display:none"><img src="assets/icons/image.svg" style="width:20px">Galeria</label>
+                                </sc-if>
+                              </div>
+                              <sc-if value="{{ s.canEdit }}">
+                                <textarea value="{{ s.comment }}" onChange="{{ s.onCom }}" placeholder="Comentário" style="height:64px;resize:none;border:1px solid #E5E5E5;border-radius:12px;padding:10px 12px;font-size:14px;outline:0;background:#fff" style-focus="border-color:#262A3B"></textarea>
+                              </sc-if>
+                              <sc-if value="{{ s.readOnlyEmpty }}"><div style="font-size:12px;color:#8F8D8D">Sem fotos ou comentários.</div></sc-if>
+                            </div>
+                          </sc-if>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ pd.showFinal }}">
+                    <div style="border:1px solid #CCE1F2;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px">
+                      <div>
+                        <div style="font-size:16px;font-weight:700;color:#2C3143">Conclusão do serviço</div>
+                        <div style="font-size:12px;color:#8F8D8D">{{ pd.finalReq }}</div>
+                      </div>
+                      <div style="display:flex;flex-wrap:wrap;gap:8px">
+                        <sc-for list="{{ pd.finalV }}" as="p">
+                          <div style="position:relative;width:68px;height:68px;border-radius:12px;overflow:hidden;background:{{ p.bg }}">
+                            <sc-if value="{{ p.isImg }}"><img src="{{ p.src }}" style="width:100%;height:100%;object-fit:cover;display:block"></sc-if>
+                            <sc-if value="{{ p.notImg }}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><img src="assets/icons/image.svg" style="width:20px;opacity:.6;filter:brightness(0) invert(1)"></div></sc-if>
+                            <div style="position:absolute;left:4px;bottom:4px;font-size:10px;font-weight:600;color:#fff;background:rgba(0,0,0,.35);padding:0 4px;border-radius:4px">{{ p.stamp }}</div>
+                            <sc-if value="{{ p.canRm }}"><button onClick="{{ p.rm }}" style="position:absolute;top:3px;right:3px;width:22px;height:22px;border:0;border-radius:11px;background:rgba(255,255,255,.9);padding:0;display:flex;align-items:center;justify-content:center"><img src="assets/icons/cancel.svg" style="width:14px"></button></sc-if>
+                          </div>
+                        </sc-for>
+                        <sc-if value="{{ pd.canEdit }}">
+                          <button onClick="{{ pd.onFinalCam }}" style="width:68px;height:68px;border:1px dashed #0069BD;border-radius:12px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:#004E8F"><img src="assets/icons/camera.svg" style="width:20px">Câmera</button>
+                          <label style="width:68px;height:68px;border:1px dashed #0069BD;border-radius:12px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:#004E8F;cursor:pointer"><input type="file" accept="image/*" onChange="{{ pd.onFinalGal }}" style="display:none"><img src="assets/icons/image.svg" style="width:20px">Galeria</label>
+                        </sc-if>
+                      </div>
+                      <sc-if value="{{ pd.canEdit }}">
+                        <textarea value="{{ pd.finalComment }}" onChange="{{ pd.onFinalCom }}" placeholder="Comentário final para o gestor" style="height:64px;resize:none;border:1px solid #E5E5E5;border-radius:12px;padding:10px 12px;font-size:14px;outline:0" style-focus="border-color:#262A3B"></textarea>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                </div>
+                <sc-if value="{{ pd.isOpen }}">
+                  <div style="position:sticky;bottom:0;background:#fff;border-top:1px solid #E5E5E5;padding:12px 24px 24px;display:flex;flex-direction:column;gap:8px">
+                    <button onClick="{{ pd.start }}" style="height:48px;border:0;border-radius:16px;background:#0069BD;color:#fff;font-size:15px;font-weight:600">Iniciar atendimento</button>
+                    <button onClick="{{ pd.openInv }}" style="height:32px;border:0;background:transparent;color:#A8336A;font-size:13px;font-weight:600">Marcar como inviável</button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ pd.canEdit }}">
+                  <div style="position:sticky;bottom:0;background:#fff;border-top:1px solid #E5E5E5;padding:12px 24px 24px;display:flex;flex-direction:column;gap:8px">
+                    <sc-if value="{{ pd.hasMissing }}"><div style="font-size:12px;font-weight:500;color:#B85200;text-align:center">{{ pd.missing }}</div></sc-if>
+                    <button onClick="{{ pd.submit }}" style="height:48px;border:0;border-radius:16px;background:{{ pd.submitBg }};color:{{ pd.submitFg }};font-size:15px;font-weight:600">Enviar para aprovação</button>
+                    <button onClick="{{ pd.openInv }}" style="height:32px;border:0;background:transparent;color:#A8336A;font-size:13px;font-weight:600">Marcar como inviável</button>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+          </div>
+          <sc-if value="{{ pTabsOn }}" hint-placeholder-val="{{ true }}">
+            <div style="height:80px;flex:none;display:flex;background:#fff;border-top:1px solid #E5E5E5;padding:6px 16px 18px">
+              <sc-for list="{{ ptabs }}" as="t" hint-placeholder-count="3">
+                <button onClick="{{ t.go }}" style="flex:1;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px">
+                  <img src="{{ t.icon }}" style="width:24px;height:24px">
+                  <span style="font-size:11px;font-weight:600;color:{{ t.fg }}">{{ t.label }}</span>
+                  <span style="width:4px;height:4px;border-radius:2px;background:{{ t.dot }}"></span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ hasToastP }}">
+            <div style="position:absolute;left:24px;right:24px;bottom:110px;background:#262A3B;color:#fff;font-size:14px;font-weight:500;padding:12px 16px;border-radius:14px;text-align:center;z-index:40;box-shadow:0 12px 32px rgba(28,18,67,.2)">{{ toastP }}</div>
+          </sc-if>
+          <sc-if value="{{ sheetOn }}">
+            <div style="position:absolute;inset:0;background:rgba(28,18,67,.8);z-index:30;display:flex;flex-direction:column;justify-content:flex-end">
+              <div style="background:#fff;border-radius:24px 24px 0 0;padding:12px 24px 28px;display:flex;flex-direction:column;gap:14px">
+                <div style="width:40px;height:5px;border-radius:3px;background:#E5E5E5;align-self:center"></div>
+                <div>
+                  <div style="font-size:18px;font-weight:700;color:#2C3143">Marcar como inviável</div>
+                  <div style="font-size:13px;color:#50555C">Explique o motivo e registre pelo menos 1 foto. O gestor vai conferir.</div>
+                </div>
+                <textarea value="{{ invC }}" onChange="{{ onInvC }}" placeholder="Motivo" style="height:96px;resize:none;border:1px solid #E5E5E5;border-radius:12px;padding:12px;font-size:14px;outline:0" style-focus="border-color:#262A3B"></textarea>
+                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                  <sc-for list="{{ invTiles }}" as="p">
+                    <div style="position:relative;width:68px;height:68px;border-radius:12px;overflow:hidden;background:{{ p.bg }}">
+                      <sc-if value="{{ p.isImg }}"><img src="{{ p.src }}" style="width:100%;height:100%;object-fit:cover;display:block"></sc-if>
+                      <sc-if value="{{ p.notImg }}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><img src="assets/icons/image.svg" style="width:20px;opacity:.6;filter:brightness(0) invert(1)"></div></sc-if>
+                      <div style="position:absolute;left:4px;bottom:4px;font-size:10px;font-weight:600;color:#fff;background:rgba(0,0,0,.35);padding:0 4px;border-radius:4px">{{ p.stamp }}</div>
+                      <button onClick="{{ p.rm }}" style="position:absolute;top:3px;right:3px;width:22px;height:22px;border:0;border-radius:11px;background:rgba(255,255,255,.9);padding:0;display:flex;align-items:center;justify-content:center"><img src="assets/icons/cancel.svg" style="width:14px"></button>
+                    </div>
+                  </sc-for>
+                  <button onClick="{{ invCam }}" style="width:68px;height:68px;border:1px dashed #F47B50;border-radius:12px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:#A8336A"><img src="assets/icons/camera.svg" style="width:20px">Câmera</button>
+                  <label style="width:68px;height:68px;border:1px dashed #F47B50;border-radius:12px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:#A8336A;cursor:pointer"><input type="file" accept="image/*" onChange="{{ invGal }}" style="display:none"><img src="assets/icons/image.svg" style="width:20px">Galeria</label>
+                </div>
+                <div style="display:flex;gap:8px">
+                  <button onClick="{{ closeInv }}" style="flex:1;height:48px;border:0;border-radius:16px;background:#EFF1F3;color:#363853;font-size:14px;font-weight:600">Cancelar</button>
+                  <button onClick="{{ sendInv }}" style="flex:1.6;height:48px;border:0;border-radius:16px;background:{{ invBg }};color:{{ invFg }};font-size:14px;font-weight:600">Enviar ao gestor</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;photoMin&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:1,&quot;min&quot;:1,&quot;max&quot;:5,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Regras de envio&quot;},&quot;requireAllSteps&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Regras de envio&quot;}}">
+class Component extends DCLogic {
+  state = { data: null, mode: 'gw', gv: 'dash', gId: null, showNew: false, f: null, gFilter: 'all', gSearch: '', period: 7, typeSel: 't1', newItem: '', newType: '', reviewTxt: '', pv: 'home', pId: null, pFilter: 'ativas', aDay: 0, openStep: null, sheet: false, inv: { comment: '', photos: [] }, toast: null };
+  KEY = 'acionamentos_v3';
+  componentDidMount() {
+    const boot = () => {
+      if (!window.ACD) return setTimeout(boot, 50);
+      let d = null; try { d = JSON.parse(localStorage.getItem(this.KEY)); } catch (e) {}
+      if (!d || d.v !== 5) d = window.ACD.seed();
+      this.setState({ data: d, mode: localStorage.getItem(this.KEY + '_mode') || 'gw' });
+    };
+    boot();
+    this._clk = setInterval(() => this.forceUpdate(), 30000);
+  }
+  componentWillUnmount() { clearInterval(this._clk); }
+  save(d) { try { localStorage.setItem(this.KEY, JSON.stringify(d)); } catch (e) { const c = JSON.parse(JSON.stringify(d)); c.acs.forEach(a => { const strip = l => l.forEach(p => { if (p.src) { delete p.src; p.bg = '#8E9AAF'; } }); a.demandas.forEach(x => x.steps.forEach(s => strip(s.photos))); strip(a.finalPhotos); if (a.inv) strip(a.inv.photos); }); try { localStorage.setItem(this.KEY, JSON.stringify(c)); } catch (e2) {} } }
+  upd(fn) { this.setState(s => { const d = JSON.parse(JSON.stringify(s.data)); fn(d); this.save(d); return { data: d }; }); }
+  toast(m, side) { this.setState({ toast: { m, side } }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: null }), 2600); }
+  ac(d, id) { return d.acs.find(a => a.id === id); }
+  photosOf(a, t) { if (t.k === 'final') return a.finalPhotos; const dm = a.demandas.find(x => x.id === t.did); return dm.steps.find(x => x.id === t.sid).photos; }
+  cam() { const A = window.ACD; return { id: A.uid(), bg: A.PH[Math.floor(Math.random() * A.PH.length)], stamp: A.hm(new Date()) }; }
+  addPhoto(aid, t, p) { this.upd(d => { const a = this.ac(d, aid); this.photosOf(a, t).push(p); }); }
+  gallery(e, cb) { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; window.ACD.readPhoto(f, src => cb({ id: window.ACD.uid(), src, stamp: window.ACD.hm(new Date()) })); }
+  setMode(m) { localStorage.setItem(this.KEY + '_mode', m); this.setState({ mode: m, sheet: false }); }
+  reset() { const d = window.ACD.seed(); this.save(d); this.setState({ data: d, gv: 'dash', pv: 'home', gId: null, pId: null, showNew: false }); }
+  vGestor() {
+    const A = window.ACD, S = this.state, D = S.data, acs = D.acs, today = A.iso(A.addD(0));
+    const dec = acs.map(A.deco);
+    const wait = acs.filter(a => a.status === 'aguardando');
+    const go = v => () => this.setState({ gv: v, gId: null });
+    const navDef = [['dash', 'Painel', 'dashboard'], ['list', 'Acionamentos', 'description'], ['approvals', 'Aprovações', 'check-done'], ['pros', 'Prestadores', 'member'], ['types', 'Checklists', 'settings']];
+    const gv = S.gv;
+    const gnav = navDef.map(([id, label, icon]) => { const on = gv === id || (gv === 'detail' && S.gFrom === id); return { label, icon: 'assets/icons/' + icon + '.svg', go: go(id), bg: on ? '#E6F0FA' : 'transparent', fg: on ? '#004E8F' : '#363853', dot: on ? '#0069BD' : 'transparent', badge: id === 'approvals' ? wait.length : 0, hasBadge: id === 'approvals' && wait.length > 0 }; });
+    const openG = id => () => this.setState({ gv: 'detail', gId: id, gFrom: gv === 'detail' ? S.gFrom : gv, reviewTxt: '' });
+    // KPIs
+    const P = S.period, from = A.iso(A.addD(-(P - 1)));
+    const inP = acs.filter(a => a.date >= from && a.date <= today);
+    const openN = acs.filter(a => ['aberto', 'em_andamento', 'reprovado'].includes(a.status)).length;
+    const revs = inP.flatMap(a => a.reviews), apr = revs.filter(r => r.d === 'a').length;
+    const subm = inP.filter(a => a.subs.length && a.startedAt);
+    const avg = subm.length ? subm.reduce((s, a) => s + (new Date(a.subs[0]) - new Date(a.startedAt)) / 60000, 0) / subm.length : 0;
+    const invN = inP.filter(a => a.inviavel).length;
+    const kpis = [
+      { label: 'Acionamentos em aberto', value: String(openN), sub: acs.filter(a => a.date === today && a.status !== 'aprovado').length + ' para hoje', go: go('list') },
+      { label: 'Aguardando aprovação', value: String(wait.length), sub: 'Na sua fila', go: go('approvals') },
+      { label: 'Taxa de aprovação', value: (revs.length ? Math.round(apr / revs.length * 100) : 0) + '%', sub: apr + ' de ' + revs.length + ' análises', go: null },
+      { label: 'Tempo médio de conclusão', value: A.dur(avg), sub: 'Do início ao envio', go: null },
+      { label: 'Demandas inviáveis', value: String(invN), sub: (inP.length ? Math.round(invN / inP.length * 100) : 0) + '% do período', go: null }
+    ];
+    const days = []; for (let i = P - 1; i >= 0; i--) days.push(A.addD(-i));
+    const counts = days.map(d => { const k = A.iso(d); const l = acs.filter(a => a.date === k); return { n: l.length, ok: l.filter(a => a.status === 'aprovado' && !a.inviavel).length, d }; });
+    const mx = Math.max(1, ...counts.map(c => c.n));
+    const bars = counts.map((c, i) => ({ n: c.n ? String(c.n) : '', h: Math.max(4, c.n / mx * 100) + '%', hOk: (c.n ? c.ok / c.n * 100 : 0) + '%', label: P === 7 ? A.WD[c.d.getDay()] : (i % 5 === 0 || i === P - 1 ? A.pad(c.d.getDate()) : ''), bg: c.n ? '#CCE1F2' : '#EFF1F3' }));
+    const periodBtns = [7, 30].map(p => ({ label: p + ' dias', go: () => this.setState({ period: p }), bg: P === p ? '#fff' : 'transparent', fg: P === p ? '#262A3B' : '#50555C', sh: P === p ? '0 1px 3px rgba(0,0,0,.1)' : 'none' }));
+    const rt = {}; inP.forEach(a => a.reviews.forEach(r => { if (r.d === 'r') a.demandas.forEach(dm => { rt[dm.typeName] = rt[dm.typeName] || { n: 0, color: dm.color }; rt[dm.typeName].n++; }); }));
+    const tot = {}; inP.forEach(a => a.demandas.forEach(dm => { tot[dm.typeName] = (tot[dm.typeName] || 0) + 1; }));
+    const rl = Object.keys(rt).map(k => ({ name: k, n: rt[k].n, color: rt[k].color, rate: Math.round(rt[k].n / tot[k] * 100) + '% das demandas' })).sort((a, b) => b.n - a.n);
+    const rmx = Math.max(1, ...rl.map(r => r.n));
+    const reprovByType = rl.map(r => Object.assign(r, { w: r.n / rmx * 100 + '%', nl: String(r.n) }));
+    const ranking = A.PROS.filter(p => !p.deleted && (p.status === 'ativo' || inP.some(a => a.pid === p.id))).map(p => { const m = inP.filter(a => a.pid === p.id); const fin = m.filter(a => a.status === 'aprovado' && !a.inviavel).length; const rv = m.flatMap(a => a.reviews); const ap = rv.filter(r => r.d === 'a').length; const sb = m.filter(a => a.subs.length && a.startedAt); const av = sb.length ? sb.reduce((s, a) => s + (new Date(a.subs[0]) - new Date(a.startedAt)) / 60000, 0) / sb.length : 0; return { name: p.name, ini: p.ini, color: p.color, fin, finL: String(fin), rate: rv.length ? Math.round(ap / rv.length * 100) + '%' : '—', rateN: rv.length ? ap / rv.length : 0, avg: sb.length ? A.dur(av) : '—' }; }).sort((a, b) => b.fin - a.fin || b.rateN - a.rateN).map((r, i) => Object.assign(r, { pos: String(i + 1) + 'º', posBg: i === 0 ? '#FFEBDC' : '#EFF1F3', posFg: i === 0 ? '#B85200' : '#363853' }));
+    const queue = wait.map(A.deco).sort((a, b) => a.subs[a.subs.length - 1] < b.subs[b.subs.length - 1] ? -1 : 1).map(a => Object.assign(a, { sentAt: 'Enviado ' + A.fmtTs(a.subs[a.subs.length - 1]), open: openG(a.id) }));
+    // List
+    const fDef = [['all', 'Todos'], ['aberto', 'Agendados'], ['em_andamento', 'Em execução'], ['aguardando', 'Aguardando'], ['reprovado', 'Reprovados'], ['fin', 'Finalizados']];
+    const match = (a, f) => f === 'all' || (f === 'fin' ? a.status === 'aprovado' : a.status === f);
+    const gFilters = fDef.map(([id, l]) => ({ label: l, n: String(acs.filter(a => match(a, id)).length), go: () => this.setState({ gFilter: id }), bg: S.gFilter === id ? '#262A3B' : '#fff', fg: S.gFilter === id ? '#fff' : '#363853' }));
+    const q = S.gSearch.trim().toLowerCase();
+    const gRows = dec.filter(a => match(a, S.gFilter) && (!q || (a.title + a.client + a.code + a.proName).toLowerCase().includes(q))).sort((a, b) => (b.date + b.start).localeCompare(a.date + a.start)).slice(0, 60).map(a => Object.assign(a, { open: openG(a.id) }));
+    const out = {
+      gnav, isDash: gv === 'dash', isList: gv === 'list', isAppr: gv === 'approvals', isTypes: gv === 'types', isDetail: gv === 'detail',
+      todayLabel: A.WDL[new Date().getDay()] + ', ' + A.br(today),
+      kpis, bars, periodBtns, reprovByType, hasReprov: reprovByType.length > 0, ranking, queue, hasQueue: queue.length > 0, noQueue: queue.length === 0, queueTop: queue.slice(0, 4),
+      gFilters, gRows, gSearch: S.gSearch, onSearch: e => this.setState({ gSearch: e.target.value }), gCount: gRows.length + ' acionamentos',
+      newAc: () => this.setState({ showNew: true, f: { title: '', typeIds: [], client: '', address: '', date: today, start: '09:00', end: '11:00', pid: A.ME } }),
+      toastG: S.toast && S.toast.side === 'g' ? S.toast.m : '', hasToastG: !!(S.toast && S.toast.side === 'g')
+    };
+    return Object.assign(out, this.vForm(), this.vTypes(), this.vGDetail(), this.vPros ? this.vPros() : {}, { isPros: gv === 'pros' });
+  }
+  vForm() {
+    const A = window.ACD, S = this.state, f = S.f, D = S.data;
+    if (!S.showNew || !f) return { showNew: false };
+    const set = k => e => { const v = e.target.value; this.setState(s => ({ f: Object.assign({}, s.f, { [k]: v }) })); };
+    const fh = {}; ['title', 'client', 'address', 'date', 'start', 'end', 'pid'].forEach(k => fh[k] = set(k));
+    const formTypes = D.types.map(t => { const on = f.typeIds.includes(t.id); return { name: t.name, color: t.color, bg: on ? '#E6F0FA' : '#fff', bd: on ? '#0069BD' : '#E5E5E5', fg: on ? '#004E8F' : '#363853', toggle: () => this.setState(s => ({ f: Object.assign({}, s.f, { typeIds: on ? s.f.typeIds.filter(x => x !== t.id) : s.f.typeIds.concat(t.id) }) })) }; });
+    const formPreview = f.typeIds.map(id => D.types.find(t => t.id === id)).filter(Boolean).map(t => ({ name: t.name, color: t.color, items: t.checklist.map((x, i) => ({ text: x, n: String(i + 1) })) }));
+    const valid = f.title.trim() && f.client.trim() && f.address.trim() && f.typeIds.length && f.date && f.start < f.end;
+    return {
+      showNew: true, f, fh, formTypes, formPreview, hasPreview: formPreview.length > 0, noPreview: formPreview.length === 0,
+      previewCount: formPreview.reduce((s, t) => s + t.items.length, 0) + ' itens no checklist',
+      prosOpts: A.PROS.filter(p => !p.deleted && p.status === 'ativo').map(p => ({ id: p.id, name: p.name + ' · ' + p.region })),
+      createBg: valid ? '#0069BD' : '#CCE1F2', createFg: valid ? '#fff' : '#004E8F',
+      closeNew: () => this.setState({ showNew: false }),
+      create: () => {
+        if (!valid) return;
+        let code;
+        this.upd(d => {
+          code = 1001 + d.acs.length;
+          d.acs.push({ id: 'a' + code + A.uid(), code: 'AC-' + code, title: f.title.trim(), client: f.client.trim(), address: f.address.trim(), date: f.date, start: f.start, end: f.end, pid: f.pid, status: 'aberto', inviavel: false, createdAt: new Date().toISOString(), startedAt: null, subs: [], reviews: [], finalPhotos: [], finalComment: '', inv: null,
+            demandas: f.typeIds.map(id => { const t = d.types.find(x => x.id === id); return { id: A.uid(), typeId: id, typeName: t.name, color: t.color, steps: t.checklist.map(text => ({ id: A.uid(), text, done: false, photos: [], comment: '' })) }; }) });
+        });
+        const p = A.PROS.find(x => x.id === f.pid);
+        this.setState({ showNew: false, gv: 'list', gFilter: 'all', gSearch: '' });
+        this.toast('Acionamento enviado para ' + p.name, 'g');
+      }
+    };
+  }
+  vTypes() {
+    const S = this.state, D = S.data;
+    const sel = D.types.find(t => t.id === S.typeSel) || D.types[0];
+    const ti = D.types.findIndex(t => t.id === sel.id);
+    const typeList = D.types.map(t => ({ name: t.name, color: t.color, n: t.checklist.length + ' itens', go: () => this.setState({ typeSel: t.id, newItem: '' }), bg: t.id === sel.id ? '#E6F0FA' : '#fff', bd: t.id === sel.id ? '#0069BD' : 'transparent' }));
+    const items = sel.checklist.map((text, i) => ({ text, n: String(i + 1),
+      onChange: e => { const v = e.target.value; this.upd(d => { d.types[ti].checklist[i] = v; }); },
+      rm: () => this.upd(d => { d.types[ti].checklist.splice(i, 1); }),
+      up: () => { if (i) this.upd(d => { const c = d.types[ti].checklist; [c[i - 1], c[i]] = [c[i], c[i - 1]]; }); },
+      upOp: i ? '1' : '.3' }));
+    const addItem = () => { const v = S.newItem.trim(); if (!v) return; this.upd(d => { d.types[ti].checklist.push(v); }); this.setState({ newItem: '' }); };
+    const addType = () => { const v = S.newType.trim(); if (!v) return; const id = 't' + window.ACD.uid(); const cols = ['#0069BD', '#FC7608', '#B37BE7', '#F47B50', '#FF6A5D', '#FFB523', '#363853', '#47C272']; this.upd(d => { d.types.push({ id, name: v, color: cols[d.types.length % cols.length], checklist: [] }); }); this.setState({ newType: '', typeSel: id }); };
+    return {
+      typeList, selType: { name: sel.name, color: sel.color, count: sel.checklist.length + ' itens' }, items, noItems: items.length === 0,
+      renameType: e => { const v = e.target.value; this.upd(d => { d.types[ti].name = v; }); },
+      newItem: S.newItem, onNewItem: e => this.setState({ newItem: e.target.value }), addItem, onItemKey: e => { if (e.key === 'Enter') addItem(); },
+      newType: S.newType, onNewType: e => this.setState({ newType: e.target.value }), addType, onTypeKey: e => { if (e.key === 'Enter') addType(); },
+      rmType: () => { if (D.types.length < 2) return; this.upd(d => { d.types.splice(ti, 1); }); this.setState({ typeSel: D.types[ti === 0 ? 1 : 0].id }); }
+    };
+  }
+  vGDetail() {
+    const A = window.ACD, S = this.state;
+    const raw = S.gv === 'detail' && S.data.acs.find(a => a.id === S.gId);
+    if (!raw) return { gd: null };
+    const a = A.deco(raw);
+    const ev = [{ t: 'Acionamento criado', at: a.createdAt }];
+    if (a.startedAt) ev.push({ t: 'Atendimento iniciado', at: a.startedAt });
+    a.subs.forEach((s, i) => ev.push({ t: a.inviavel && i === a.subs.length - 1 ? 'Inviabilidade enviada' : (i ? 'Reenviado para aprovação' : 'Enviado para aprovação'), at: s }));
+    a.reviews.forEach(r => ev.push({ t: r.d === 'a' ? 'Aprovado' : 'Reprovado', note: r.reason, at: r.at, c: r.d === 'a' ? '#0069BD' : '#FF6A5D' }));
+    ev.sort((x, y) => x.at < y.at ? -1 : 1);
+    const timeline = ev.map(e => ({ t: e.t, note: e.note || '', hasNote: !!e.note, when: A.fmtTs(e.at), c: e.c || '#ADB3BC' }));
+    const review = d => () => {
+      const txt = S.reviewTxt.trim();
+      if (d === 'r' && !txt) return this.toast('Escreva o motivo da reprovação', 'g');
+      this.upd(dd => { const x = this.ac(dd, a.id); x.reviews.push({ d, reason: txt, at: new Date().toISOString() }); if (d === 'a') x.status = 'aprovado'; else { x.status = 'reprovado'; if (x.inviavel) { x.inviavel = false; x.inv = null; } } });
+      this.setState({ reviewTxt: '' });
+      this.toast(d === 'a' ? 'Conclusão aprovada' : 'Devolvido ao prestador para correção', 'g');
+    };
+    const last = a.reviews[a.reviews.length - 1];
+    const gd = Object.assign(a, {
+      back: () => this.setState({ gv: S.gFrom || 'list', gId: null }),
+      backLabel: S.gFrom === 'approvals' ? 'Aprovações' : S.gFrom === 'dash' ? 'Painel' : 'Acionamentos',
+      dems: a.demandas.map(dm => ({ name: dm.typeName, color: dm.color, prog: dm.steps.filter(s => s.done).length + '/' + dm.steps.length, steps: dm.steps.map(s => ({ text: s.text, done: s.done, notDone: !s.done, comment: s.comment, hasComment: !!s.comment, photos: s.photos.map(p => A.pv(p)), hasPhotos: s.photos.length > 0, tc: s.done ? '#2C3143' : '#8F8D8D' })) })),
+      finalV: a.finalPhotos.map(p => A.pv(p)), hasFinal: a.finalPhotos.length > 0 || !!a.finalComment, finalComment: a.finalComment, hasFinalComment: !!a.finalComment,
+      hasInv: !!a.inv, invComment: a.inv ? a.inv.comment : '', invV: a.inv ? a.inv.photos.map(p => A.pv(p)) : [],
+      timeline, reviewable: a.status === 'aguardando',
+      approve: review('a'), reprove: review('r'), reviewTxt: S.reviewTxt, onReviewTxt: e => this.setState({ reviewTxt: e.target.value }),
+      approveLabel: a.inviavel ? 'Confirmar inviabilidade' : 'Aprovar conclusão', reproveLabel: a.inviavel ? 'Recusar inviabilidade' : 'Reprovar',
+      reviewTitle: a.inviavel ? 'O prestador marcou como inviável' : 'Confira e decida',
+      hasLast: !!last && !(a.status === 'aguardando'), lastLabel: last ? (last.d === 'a' ? 'Aprovado em ' : 'Reprovado em ') + A.fmtTs(last.at) : '', lastReason: last ? last.reason : '', lastHasReason: !!(last && last.reason),
+      isMine: a.pid === A.ME,
+      openInApp: () => { this.setMode('pa'); this.setState({ pv: 'detail', pId: a.id, openStep: null }); }
+    });
+    return { gd };
+  }
+  vPro() {
+    const A = window.ACD, S = this.state, today = A.iso(A.addD(0));
+    const mine = S.data.acs.filter(a => a.pid === A.ME).map(A.deco).sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
+    const openP = id => () => this.setState({ pv: 'detail', pId: id, pBack: S.pv === 'detail' ? S.pBack : S.pv, openStep: null, sheet: false });
+    const card = a => Object.assign(a, { open: openP(a.id), whenL: a.date === today ? 'Hoje · ' + a.time : a.dm + ' · ' + a.time });
+    const pv = S.pv;
+    const tabs = [['home', 'Início', 'dashboard'], ['agenda', 'Agenda', 'date-time'], ['list', 'Demandas', 'check-done']].map(([id, label, ic]) => ({ label, icon: 'assets/icons/' + ic + '.svg', go: () => this.setState({ pv: id, pId: null }), fg: pv === id ? '#004E8F' : '#61565C', dot: pv === id ? '#0069BD' : 'transparent' }));
+    const todayL = mine.filter(a => a.date === today).map(card);
+    const next = mine.find(a => a.status === 'em_andamento') || mine.find(a => a.status === 'aberto' && a.date >= today);
+    const month = today.slice(0, 7);
+    const rv = mine.flatMap(a => a.reviews), ap = rv.filter(r => r.d === 'a').length;
+    const fix = mine.filter(a => a.status === 'reprovado');
+    const metrics = [
+      { label: 'Hoje', value: String(todayL.length), sub: 'atendimentos' },
+      { label: 'No mês', value: String(mine.filter(a => a.date.startsWith(month) && a.status === 'aprovado' && !a.inviavel).length), sub: 'aprovados' },
+      { label: 'Aprovação', value: (rv.length ? Math.round(ap / rv.length * 100) : 0) + '%', sub: 'de primeira: ' + (() => { const f = mine.filter(a => a.reviews.length); return f.length ? Math.round(f.filter(a => a.reviews[0].d === 'a').length / f.length * 100) + '%' : '—'; })() },
+      { label: 'Para corrigir', value: String(fix.length), sub: 'reprovados', hi: fix.length > 0 }
+    ].map(m => Object.assign(m, { bg: m.hi ? '#FFD7D4' : '#F9F9F9', fg: m.hi ? '#B8342A' : '#262A3B' }));
+    const listGo = f => () => this.setState({ pv: 'list', pFilter: f });
+    const route = todayL.filter(a => a.status === 'aberto' || a.status === 'em_andamento');
+    const shortcuts = [
+      { label: 'Rota do dia', icon: 'assets/icons/pin.svg', go: () => { if (route.length) window.open('https://www.google.com/maps/dir/' + route.map(a => encodeURIComponent(a.address.replace(' · ', ', ') + ', São Paulo')).join('/'), '_blank'); } },
+      { label: 'Agenda', icon: 'assets/icons/date-time.svg', go: () => this.setState({ pv: 'agenda' }) },
+      { label: 'Corrigir', icon: 'assets/icons/priority.svg', go: listGo('corrigir'), badge: fix.length ? String(fix.length) : '' },
+      { label: 'Em análise', icon: 'assets/icons/check-done.svg', go: listGo('analise') }
+    ].map(s => Object.assign(s, { hasBadge: !!s.badge }));
+    const days = []; for (let i = 0; i < 7; i++) { const d = A.addD(i), k = A.iso(d), n = mine.filter(a => a.date === k).length, on = S.aDay === i; days.push({ wd: A.WD[d.getDay()], n: String(d.getDate()), dot: n ? (on ? '#fff' : '#0069BD') : 'transparent', bg: on ? '#0069BD' : '#F9F9F9', fg: on ? '#fff' : '#2C3143', sub: on ? '#fff' : '#8F8D8D', go: () => this.setState({ aDay: i }) }); }
+    const aKey = A.iso(A.addD(S.aDay));
+    const agenda = mine.filter(a => a.date === aKey).map(card);
+    const aLabel = (S.aDay === 0 ? 'Hoje' : S.aDay === 1 ? 'Amanhã' : A.WDL[A.addD(S.aDay).getDay()]) + ', ' + A.br(aKey).slice(0, 5);
+    const fDef = [['ativas', 'Ativas', a => a.status === 'aberto' || a.status === 'em_andamento'], ['corrigir', 'Corrigir', a => a.status === 'reprovado'], ['analise', 'Em análise', a => a.status === 'aguardando'], ['final', 'Finalizadas', a => a.status === 'aprovado']];
+    const cur = fDef.find(x => x[0] === S.pFilter) || fDef[0];
+    const pFilters = fDef.map(([id, l, fn]) => ({ label: l, n: String(mine.filter(fn).length), go: () => this.setState({ pFilter: id }), bg: S.pFilter === id ? '#262A3B' : '#F9F9F9', fg: S.pFilter === id ? '#fff' : '#363853' }));
+    let pList = mine.filter(cur[2]).map(card); if (cur[0] === 'final') pList = pList.reverse().slice(0, 20);
+    const d = new Date();
+    return Object.assign({
+      ptabs: tabs, pHome: pv === 'home', pAgenda: pv === 'agenda', pList: pv === 'list', pDetail: pv === 'detail', pTabsOn: pv !== 'detail',
+      hello: d.getHours() < 12 ? 'Bom dia' : d.getHours() < 18 ? 'Boa tarde' : 'Boa noite', pToday: A.WDL[d.getDay()] + ', ' + A.br(today).slice(0, 5),
+      next: next ? card(next) : null, noNext: !next, nextIsRun: !!next && next.status === 'em_andamento', nextLabel: next && next.status === 'em_andamento' ? 'Em execução agora' : 'Próximo atendimento',
+      metrics, shortcuts, todayL, noToday: todayL.length === 0,
+      days, agenda, noAgenda: agenda.length === 0, aLabel,
+      pFilters, pItems: pList, noPItems: pList.length === 0,
+      toastP: S.toast && S.toast.side === 'p' ? S.toast.m : '', hasToastP: !!(S.toast && S.toast.side === 'p')
+    }, this.vPDetail());
+  }
+  vPDetail() {
+    const A = window.ACD, S = this.state;
+    const raw = S.pv === 'detail' && S.data.acs.find(a => a.id === S.pId);
+    if (!raw) return { pd: null, sheetOn: false };
+    const a = A.deco(raw), id = a.id;
+    const canEdit = a.status === 'em_andamento' || a.status === 'reprovado';
+    const minPh = this.props.photoMin ?? 1, reqAll = this.props.requireAllSteps ?? false;
+    const upd = fn => this.upd(d => fn(this.ac(d, id)));
+    const tiles = (list, t) => list.map((p, i) => A.pv(p, canEdit ? () => upd(x => this.photosOf(x, t).splice(i, 1)) : null));
+    const dems = a.demandas.map(dm => ({ name: dm.typeName, color: dm.color, prog: dm.steps.filter(s => s.done).length + '/' + dm.steps.length,
+      steps: dm.steps.map(s => {
+        const t = { k: 'step', did: dm.id, sid: s.id }, key = dm.id + s.id, open = S.openStep === key;
+        const meta = [s.photos.length ? s.photos.length + (s.photos.length > 1 ? ' fotos' : ' foto') : '', s.comment ? 'comentário' : ''].filter(Boolean).join(' · ');
+        return { text: s.text, done: s.done, notDone: !s.done, open, meta, hasMeta: !!meta, tc: s.done ? '#2C3143' : '#363853', chev: open ? 'rotate(-90deg)' : 'rotate(90deg)',
+          photos: tiles(s.photos, t), comment: s.comment, canEdit, readOnlyEmpty: !canEdit && !s.photos.length && !s.comment,
+          toggle: () => { if (canEdit) upd(x => { const st = x.demandas.find(q => q.id === dm.id).steps.find(q => q.id === s.id); st.done = !st.done; }); },
+          toggleOpen: () => this.setState({ openStep: open ? null : key }),
+          onCam: () => this.addPhoto(id, t, this.cam()),
+          onGal: e => this.gallery(e, p => this.addPhoto(id, t, p)),
+          onCom: e => { const v = e.target.value; upd(x => { x.demandas.find(q => q.id === dm.id).steps.find(q => q.id === s.id).comment = v; }); } };
+      }) }));
+    const allDone = a.done === a.total;
+    const nFinal = a.finalPhotos.length;
+    const ok = nFinal >= minPh && (!reqAll || allDone);
+    const missing = nFinal < minPh ? 'Adicione ' + (minPh - nFinal) + (minPh - nFinal > 1 ? ' fotos' : ' foto') + ' da conclusão para enviar' : (!ok ? 'Conclua todas as etapas para enviar' : '');
+    const last = a.reviews[a.reviews.length - 1];
+    const inv = S.inv, invOk = inv.comment.trim().length > 0 && inv.photos.length > 0;
+    const pd = Object.assign(a, {
+      back: () => this.setState({ pv: S.pBack || 'home', pId: null }),
+      dems, canEdit, isOpen: a.status === 'aberto', isWait: a.status === 'aguardando', isDone: a.status === 'aprovado', isFix: a.status === 'reprovado',
+      doneTitle: a.inviavel ? 'Inviabilidade confirmada pelo gestor' : 'Serviço aprovado pelo gestor',
+      waitTitle: a.inviavel ? 'Inviabilidade enviada para análise' : 'Enviado para aprovação', waitWhen: a.subs.length ? A.fmtTs(a.subs[a.subs.length - 1]) : '',
+      fixReason: last && last.d === 'r' ? last.reason : '',
+      finalV: tiles(a.finalPhotos, { k: 'final' }), finalComment: a.finalComment, showFinal: canEdit || nFinal > 0 || !!a.finalComment, finalReq: minPh + (minPh > 1 ? ' fotos obrigatórias' : ' foto obrigatória'),
+      onFinalCam: () => this.addPhoto(id, { k: 'final' }, this.cam()),
+      onFinalGal: e => this.gallery(e, p => this.addPhoto(id, { k: 'final' }, p)),
+      onFinalCom: e => { const v = e.target.value; upd(x => { x.finalComment = v; }); },
+      hasInv: !!a.inv, invComment: a.inv ? a.inv.comment : '', invV: a.inv ? a.inv.photos.map(p => A.pv(p)) : [],
+      start: () => { upd(x => { x.status = 'em_andamento'; x.startedAt = new Date().toISOString(); }); this.toast('Atendimento iniciado', 'p'); },
+      canSubmit: ok, missing, hasMissing: !!missing, submitBg: ok ? '#0069BD' : '#CCE1F2', submitFg: ok ? '#fff' : '#004E8F',
+      submit: () => { if (!ok) return; upd(x => { x.status = 'aguardando'; x.subs.push(new Date().toISOString()); }); this.toast('Enviado para aprovação', 'p'); },
+      openInv: () => this.setState({ sheet: true, inv: { comment: '', photos: [] } }), canInv: a.status === 'aberto' || canEdit
+    });
+    return {
+      pd, sheetOn: !!S.sheet,
+      invC: inv.comment, onInvC: e => { const v = e.target.value; this.setState(s => ({ inv: Object.assign({}, s.inv, { comment: v }) })); },
+      invTiles: inv.photos.map((p, i) => A.pv(p, () => this.setState(s => ({ inv: Object.assign({}, s.inv, { photos: s.inv.photos.filter((_, j) => j !== i) }) })))),
+      invCam: () => this.setState(s => ({ inv: Object.assign({}, s.inv, { photos: s.inv.photos.concat(this.cam()) }) })),
+      invGal: e => this.gallery(e, p => this.setState(s => ({ inv: Object.assign({}, s.inv, { photos: s.inv.photos.concat(p) }) }))),
+      invBg: invOk ? '#262A3B' : '#EFF1F3', invFg: invOk ? '#fff' : '#A29EB6',
+      closeInv: () => this.setState({ sheet: false }),
+      sendInv: () => { if (!invOk) return; const v = S.inv; upd(x => { x.inviavel = true; x.inv = { comment: v.comment.trim(), photos: v.photos }; x.status = 'aguardando'; if (!x.startedAt) x.startedAt = new Date().toISOString(); x.subs.push(new Date().toISOString()); }); this.setState({ sheet: false }); this.toast('Inviabilidade enviada ao gestor', 'p'); }
+    };
+  }
+  vPros() {
+    const A = window.ACD, S = this.state, D = S.data;
+    const pros = D.pros.filter(p => !p.deleted);
+    const openOf = id => D.acs.filter(a => a.pid === id && ['aberto', 'em_andamento', 'reprovado', 'aguardando'].includes(a.status)).length;
+    const tName = id => (D.types.find(t => t.id === id) || {}).name;
+    const f = S.prFilter || 'all', q = (S.prSearch || '').trim().toLowerCase();
+    const prFilters = [['all', 'Todos'], ['ativo', 'Ativos'], ['inativo', 'Inativos']].map(([id, l]) => ({ label: l, n: String(pros.filter(p => id === 'all' || p.status === id).length), go: () => this.setState({ prFilter: id }), bg: f === id ? '#262A3B' : '#fff', fg: f === id ? '#fff' : '#363853' }));
+    const blank = { id: null, name: '', doc: '', phone: '', email: '', region: '', types: [], status: 'ativo' };
+    const edit = p => () => this.setState({ prForm: Object.assign({}, blank, p ? JSON.parse(JSON.stringify(p)) : {}) });
+    const prRows = pros.filter(p => (f === 'all' || p.status === f) && (!q || (p.name + p.doc + p.region + p.email).toLowerCase().includes(q))).sort((a, b) => a.name.localeCompare(b.name)).map(p => {
+      const on = p.status === 'ativo', names = p.types.map(tName).filter(Boolean), open = openOf(p.id), total = D.acs.filter(a => a.pid === p.id).length;
+      return { name: p.name, ini: p.ini, color: on ? p.color : '#A6A6A6', doc: p.doc, phone: p.phone, email: p.email, region: p.region || '—',
+        chips: names.slice(0, 2).map(n => ({ n })), more: names.length > 2 ? '+' + (names.length - 2) : '', hasMore: names.length > 2,
+        load: open + ' em aberto · ' + total + ' no total', on, stLabel: on ? 'Ativo' : 'Inativo', stFg: on ? '#004E8F' : '#8F8D8D', trackBg: on ? '#0069BD' : '#E5E5E5', knobX: on ? 'translateX(18px)' : 'translateX(0)', op: on ? '1' : '.6',
+        toggle: e => { e && e.stopPropagation(); this.upd(d => { const x = d.pros.find(y => y.id === p.id); x.status = on ? 'inativo' : 'ativo'; }); this.toast(p.name + (on ? ' desativado' : ' reativado'), 'g'); },
+        edit: edit(p), del: e => { e && e.stopPropagation(); this.setState({ prConfirm: { id: p.id, name: p.name, open } }); } };
+    });
+    // form
+    const F = S.prForm;
+    let form = { prFormOn: false };
+    if (F) {
+      const set = k => e => { const v = e.target.value; this.setState(s => ({ prForm: Object.assign({}, s.prForm, { [k]: v }) })); };
+      const dg = A.digits(F.doc), dup = pros.find(p => p.id !== F.id && A.digits(p.doc) === dg && dg);
+      const err = !F.name.trim() ? 'Informe o nome' : ![11, 14].includes(dg.length) ? 'CPF ou CNPJ inválido' : dup ? 'Documento já cadastrado para ' + dup.name : A.digits(F.phone).length < 10 ? 'Informe o telefone com DDD' : '';
+      form = { prFormOn: true, pf: F, pfh: { name: set('name'), doc: set('doc'), phone: set('phone'), email: set('email'), region: set('region') },
+        pfTitle: F.id ? 'Editar prestador' : 'Novo prestador', pfTypes: D.types.map(t => { const on = F.types.includes(t.id); return { name: t.name, color: t.color, bg: on ? '#E6F0FA' : '#fff', bd: on ? '#0069BD' : '#E5E5E5', fg: on ? '#004E8F' : '#363853', toggle: () => this.setState(s => ({ prForm: Object.assign({}, s.prForm, { types: on ? s.prForm.types.filter(x => x !== t.id) : s.prForm.types.concat(t.id) }) })) }; }),
+        pfErr: err, pfHasErr: !!err && !!(F.name || F.doc || F.phone), pfBg: err ? '#CCE1F2' : '#0069BD', pfFg: err ? '#004E8F' : '#fff',
+        pfClose: () => this.setState({ prForm: null }),
+        pfSave: () => { if (err) return; this.upd(d => { const data = { name: F.name.trim(), ini: A.ini(F.name), doc: F.doc.trim(), phone: F.phone.trim(), email: F.email.trim(), region: F.region.trim(), types: F.types }; if (F.id) Object.assign(d.pros.find(x => x.id === F.id), data); else d.pros.push(Object.assign({ id: 'p' + A.uid(), color: A.PCOL[d.pros.length % A.PCOL.length], status: 'ativo', since: A.iso(new Date()), deleted: false }, data)); }); this.setState({ prForm: null }); this.toast(F.id ? 'Cadastro atualizado' : 'Prestador credenciado', 'g'); } };
+    }
+    // confirm delete
+    const C = S.prConfirm;
+    const conf = C ? { prConfOn: true, pcName: C.name, pcBlocked: C.open > 0, pcFree: C.open === 0, pcMsg: C.open > 0 ? C.name + ' tem ' + C.open + (C.open > 1 ? ' acionamentos' : ' acionamento') + ' em aberto. Desative o cadastro para parar de receber novos, ou conclua os atuais antes de excluir.' : 'O histórico de acionamentos é mantido nos relatórios. Essa ação não pode ser desfeita.',
+      pcClose: () => this.setState({ prConfirm: null }),
+      pcDelete: () => { this.upd(d => { const x = d.pros.find(y => y.id === C.id); x.deleted = true; x.status = 'inativo'; }); this.setState({ prConfirm: null }); this.toast(C.name + ' excluído', 'g'); },
+      pcDeactivate: () => { this.upd(d => { d.pros.find(y => y.id === C.id).status = 'inativo'; }); this.setState({ prConfirm: null }); this.toast(C.name + ' desativado', 'g'); } } : { prConfOn: false };
+    // import
+    const I = S.prImport;
+    let imp = { prImpOn: false };
+    if (I) {
+      const docs = I.rows.filter(r => r.ok).map(r => A.digits(r.doc));
+      const missing = pros.filter(p => p.status === 'ativo' && !docs.includes(A.digits(p.doc)));
+      const nNew = I.rows.filter(r => r.action === 'novo').length, nUp = I.rows.filter(r => r.action === 'atualizar').length, nErr = I.rows.filter(r => !r.ok).length;
+      imp = { prImpOn: true, piFile: I.fileName, piRows: I.rows.map(r => ({ name: r.name || '(sem nome)', doc: r.doc || '—', types: r.typeNames, act: r.label, actBg: r.ok ? (r.action === 'novo' ? '#E6F0FA' : '#EFF1F3') : '#FFD7D4', actFg: r.ok ? (r.action === 'novo' ? '#004E8F' : '#363853') : '#B8342A' })),
+        piSummary: nNew + ' novos · ' + nUp + ' atualizados' + (nErr ? ' · ' + nErr + ' com erro (serão ignorados)' : ''),
+        piMissing: missing.length, piHasMissing: missing.length > 0, piMissingL: missing.length + (missing.length > 1 ? ' credenciados ativos não estão na planilha' : ' credenciado ativo não está na planilha') + ': ' + missing.map(p => p.name).join(', '),
+        piDeact: !!I.deactivate, piTrack: I.deactivate ? '#0069BD' : '#E5E5E5', piKnob: I.deactivate ? 'translateX(18px)' : 'translateX(0)',
+        piToggle: () => this.setState(s => ({ prImport: Object.assign({}, s.prImport, { deactivate: !s.prImport.deactivate }) })),
+        piClose: () => this.setState({ prImport: null }),
+        piCan: nNew + nUp > 0, piBg: nNew + nUp > 0 ? '#0069BD' : '#CCE1F2', piFg: nNew + nUp > 0 ? '#fff' : '#004E8F',
+        piApply: () => { if (!(nNew + nUp)) return; this.upd(d => { I.rows.filter(r => r.ok).forEach(r => { const ex = d.pros.find(p => !p.deleted && A.digits(p.doc) === A.digits(r.doc)); const data = { name: r.name, ini: A.ini(r.name), doc: r.doc, phone: r.phone, email: r.email, region: r.region, types: r.typeIds, status: r.status }; if (ex) Object.assign(ex, data); else d.pros.push(Object.assign({ id: 'p' + A.uid(), color: A.PCOL[d.pros.length % A.PCOL.length], since: A.iso(new Date()), deleted: false }, data)); }); if (I.deactivate) missing.forEach(m => { d.pros.find(p => p.id === m.id).status = 'inativo'; }); }); this.setState({ prImport: null }); this.toast('Planilha importada: ' + nNew + ' novos, ' + nUp + ' atualizados', 'g'); } };
+    }
+    const onImport = e => {
+      const file = e.target.files && e.target.files[0]; e.target.value = ''; if (!file) return;
+      A.parseSheet(file).then(raw => {
+        const seen = {};
+        const rows = raw.filter(r => Object.values(r).some(Boolean)).map(r => {
+          const dg = A.digits(r.doc), names = String(r.types || '').split(/[;,/]/).map(s => s.trim()).filter(Boolean);
+          const ids = names.map(n => (D.types.find(t => A.norm(t.name) === A.norm(n)) || {}).id).filter(Boolean);
+          const o = { name: (r.name || '').trim(), doc: (r.doc || '').trim(), phone: r.phone || '', email: r.email || '', region: r.region || '', typeIds: ids, typeNames: names.join(', ') || '—', status: A.norm(r.status).startsWith('inativ') ? 'inativo' : 'ativo', ok: true };
+          if (!o.name) { o.ok = false; o.label = 'Sem nome'; }
+          else if (![11, 14].includes(dg.length)) { o.ok = false; o.label = 'Documento inválido'; }
+          else if (seen[dg]) { o.ok = false; o.label = 'Duplicado na planilha'; }
+          else { seen[dg] = 1; const ex = pros.find(p => A.digits(p.doc) === dg); o.action = ex ? 'atualizar' : 'novo'; o.label = ex ? 'Atualizar' : 'Novo'; }
+          return o;
+        });
+        if (!rows.length) return this.toast('Não encontramos linhas na planilha', 'g');
+        this.setState({ prImport: { fileName: file.name, rows, deactivate: false } });
+      }).catch(() => this.toast('Não foi possível ler o arquivo', 'g'));
+    };
+    const today = A.br(A.iso(new Date())).split('/').join('-');
+    return Object.assign({
+      prFilters, prRows, noPrRows: prRows.length === 0, prSearch: S.prSearch || '', onPrSearch: e => this.setState({ prSearch: e.target.value }),
+      prActive: String(pros.filter(p => p.status === 'ativo').length), prTotal: pros.length + ' credenciados',
+      prNew: edit(null), prImport: onImport,
+      prExport: () => { A.exportPros(D.pros, D.types, 'credenciados-russo-' + today + '.xlsx').then(() => this.toast('Planilha exportada', 'g')).catch(() => this.toast('Falha ao exportar', 'g')); },
+      prTemplate: () => { A.template().catch(() => this.toast('Falha ao baixar modelo', 'g')); }
+    }, form, conf, imp);
+  }
+  renderVals() {
+    const modesDef = [['gw', 'Gestor · Web'], ['gm', 'Gestor · Mobile'], ['pa', 'Prestador · App']];
+    const mode = this.state.mode;
+    const base = {
+      modes: modesDef.map(([id, label]) => ({ label, go: () => this.setMode(id), bg: mode === id ? '#fff' : 'transparent', fg: mode === id ? '#262A3B' : '#50555C', sh: mode === id ? '0 1px 3px rgba(0,0,0,.1)' : 'none' })),
+      reset: () => this.reset(),
+      ready: !!(window.ACD && this.state.data),
+      isG: mode !== 'pa', isP: mode === 'pa', compact: mode === 'gm', wide: mode === 'gw',
+      fr: mode === 'gm' ? { align: 'flex-start', pad: '24px', w: '395px', h: '832px', border: '10px solid #262A3B', radius: '52px', cpad: '16px 16px 24px' } : { align: 'stretch', pad: '0', w: '100%', h: '100%', border: '0', radius: '0', cpad: '28px 32px 40px' },
+      clock: window.ACD ? window.ACD.hm(new Date()) : ''
+    };
+    if (!base.ready) return base;
+    window.ACD.PROS = this.state.data.pros;
+    return Object.assign(base, this.vGestor ? this.vGestor() : {}, this.vPro ? this.vPro() : {});
+  }
+}
+</script>
+</body>
+</html>
