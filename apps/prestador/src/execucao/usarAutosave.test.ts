@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick, ref } from 'vue'
 import { usarAutosave } from './usarAutosave'
 
-function preparar(inicial: string | null = '', salvar = vi.fn(async (_texto: string) => {})) {
+type Salvar = (texto: string) => Promise<unknown>
+
+function preparar(inicial: string | null = '', salvar = vi.fn<Salvar>(async () => {})) {
   const servidor = ref<string | null>(inicial)
   const escopo = effectScope()
   const autosave = escopo.run(() => usarAutosave({ valor: () => servidor.value, salvar }))!
