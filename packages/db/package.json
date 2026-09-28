@@ -1,0 +1,34 @@
+{
+  "name": "@kgb/db",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./seed": "./src/seed/index.ts",
+    "./testes": "./src/testes.ts"
+  },
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate": "prisma migrate dev && prisma generate",
+    "seed": "prisma db seed",
+    "reset": "prisma migrate reset --force && prisma generate && prisma db seed",
+    "studio": "prisma studio",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "better-auth": "1.7.6",
+    "dotenv": "^18.0.4",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@kgb/tsconfig": "workspace:*",
+    "@types/node": "^26.6.3",
+    "@types/pg": "^8.23.1",
+    "prisma": "7.10.0",
+    "tsx": "^4.23.15",
+    "vitest": "^4.1.11"
+  }
+}
