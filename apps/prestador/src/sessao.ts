@@ -49,10 +49,11 @@ export function mensagemDoMotivo(motivo: unknown): string | null {
 
 export type ResultadoLogin = { ok: true } | { ok: false; mensagem: string }
 
-function mensagemDoErroDeLogin(status: number): string {
-  if (status === 400 || status === 401) return MENSAGENS.credenciais
-  if (status === 403) return MENSAGENS.inativo
-  if (status === 429) return MENSAGENS.tentativas
+/** O 403 também vem de origem recusada pela API: só o código diz que o cadastro está inativo. */
+function mensagemDoErroDeLogin(erro: { status: number; code?: string }): string {
+  if (erro.code === 'PRESTADOR_INATIVO') return MENSAGENS.inativo
+  if (erro.status === 400 || erro.status === 401) return MENSAGENS.credenciais
+  if (erro.status === 429) return MENSAGENS.tentativas
   return MENSAGENS.indisponivel
 }
 
@@ -61,7 +62,7 @@ export async function entrar(email: string, senha: string): Promise<ResultadoLog
     const { error } = await comTempoLimite((signal) =>
       auth.signIn.email({ email, password: senha }, { signal }),
     )
-    if (error) return { ok: false, mensagem: mensagemDoErroDeLogin(error.status) }
+    if (error) return { ok: false, mensagem: mensagemDoErroDeLogin(error) }
   } catch {
     return { ok: false, mensagem: MENSAGENS.indisponivel }
   }

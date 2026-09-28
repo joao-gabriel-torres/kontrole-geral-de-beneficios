@@ -71,11 +71,16 @@ describe('sessão do prestador', () => {
   })
 
   it('prestador desativado (403) é avisado de que o cadastro está inativo', async () => {
-    auth.signIn.email.mockResolvedValue({ error: { status: 403 } })
+    auth.signIn.email.mockResolvedValue({ error: { status: 403, code: 'PRESTADOR_INATIVO' } })
     expect(await entrar('c@x', 'x')).toEqual({ ok: false, mensagem: MENSAGENS.inativo })
     expect(MENSAGENS.inativo).toBe(
       'Seu cadastro está inativo. Fale com a Russo Assistência para voltar a atender.',
     )
+  })
+
+  it('outro 403 (origem recusada pela API) não diz que o cadastro está inativo', async () => {
+    auth.signIn.email.mockResolvedValue({ error: { status: 403, code: 'INVALID_ORIGIN' } })
+    expect(await entrar('c@x', 'x')).toEqual({ ok: false, mensagem: MENSAGENS.indisponivel })
   })
 
   it('login que não responde termina com aviso de conexão', async () => {

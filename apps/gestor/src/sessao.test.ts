@@ -49,6 +49,11 @@ describe('sessão do gestor', () => {
     expect(await entrar('r@x', 'errada')).toEqual({ ok: false, mensagem: MENSAGENS.credenciais })
   })
 
+  it('prestador desativado tentando o painel web lê que a conta é de prestador', async () => {
+    auth.signIn.email.mockResolvedValue({ error: { status: 403, code: 'PRESTADOR_INATIVO' } })
+    expect(await entrar('c@x', 'x')).toEqual({ ok: false, mensagem: MENSAGENS.papel })
+  })
+
   it('avisa sobre excesso de tentativas em vez de dizer que a senha está errada', async () => {
     auth.signIn.email.mockResolvedValue({ error: { status: 429 } })
     expect(await entrar('r@x', 'x')).toEqual({ ok: false, mensagem: MENSAGENS.tentativas })
