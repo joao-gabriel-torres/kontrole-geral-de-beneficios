@@ -1,9 +1,11 @@
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { EMAIL_PRESTADOR_DEV, GESTORA_DEV, SENHA_DEV } from '@kgb/db/seed'
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
+import { loginDePrestador } from '../test/dados'
 import { entrar } from '../test/sessao'
 import { criarApp } from './app'
 import type { Ambiente } from './contexto'
+import { prisma } from './db'
 import { exigePapel } from './middlewares/acesso'
 import { sessao } from './middlewares/sessao'
 
@@ -92,5 +94,56 @@ describe('exigePapel', () => {
       headers: await entrar(app, GESTORA_DEV.email),
     })
     expect(r.status).toBe(200)
+  })
+})
+
+describe('prestador inativo ou excluído', () => {
+  const PRESTADOR = 'p-inativo-teste'
+  let email = ''
+
+  const situacao = (dados: { status: 'ativo' | 'inativo'; excluidoEm?: Date | null }) =>
+    prisma.prestador.update({ where: { id: PRESTADOR }, data: { excluidoEm: null, ...dados } })
+
+  const login = () =>
+    app.request('/api/auth/sign-in/email', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'http://localhost:5174' },
+      body: JSON.stringify({ email, password: SENHA_DEV }),
+    })
+
+  beforeAll(async () => {
+    await prisma.prestador.upsert({
+      where: { id: PRESTADOR },
+      update: {},
+      create: {
+        id: PRESTADOR,
+        nome: 'Prestador Inativo',
+        documento: '000.000.000-99',
+        telefone: '(11) 90000-0099',
+        credenciadoDesde: new Date('2024-01-01'),
+        cor: '#8FA3A0',
+      },
+    })
+    email = await loginDePrestador(PRESTADOR)
+  })
+
+  it('recusa o login de prestador inativo com 403', async () => {
+    await situacao({ status: 'inativo' })
+    const r = await login()
+    expect(r.status).toBe(403)
+    expect(await r.json()).toMatchObject({ code: 'PRESTADOR_INATIVO' })
+  })
+
+  it('recusa o login de prestador excluído', async () => {
+    await situacao({ status: 'ativo', excluidoEm: new Date() })
+    expect((await login()).status).toBe(403)
+  })
+
+  it('derruba a sessão aberta antes da desativação', async () => {
+    await situacao({ status: 'ativo' })
+    const headers = await entrar(app, email)
+    expect((await app.request('/api/me', { headers })).status).toBe(200)
+    await situacao({ status: 'inativo' })
+    expect((await app.request('/api/me', { headers })).status).toBe(401)
   })
 })

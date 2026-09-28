@@ -1,8 +1,10 @@
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
+import { APIError } from 'better-auth/api'
 import { bearer } from 'better-auth/plugins'
 import { prisma } from './db'
 import { env } from './env'
+import { prestadorBloqueado } from './prestador-bloqueado'
 
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
@@ -14,6 +16,24 @@ export const auth = betterAuth({
     additionalFields: {
       role: { type: 'string', required: false, defaultValue: 'prestador', input: false },
       prestadorId: { type: 'string', required: false, input: false },
+    },
+  },
+  databaseHooks: {
+    session: {
+      create: {
+        async before(session) {
+          const usuario = await prisma.user.findUnique({
+            where: { id: session.userId },
+            select: { role: true, prestadorId: true },
+          })
+          if (usuario?.role !== 'gestor' && (await prestadorBloqueado(usuario?.prestadorId))) {
+            throw new APIError('FORBIDDEN', {
+              message: 'Seu cadastro de prestador está inativo',
+              code: 'PRESTADOR_INATIVO',
+            })
+          }
+        },
+      },
     },
   },
   plugins: [bearer()],

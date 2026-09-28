@@ -1,6 +1,7 @@
 import { createMiddleware } from 'hono/factory'
 import { auth } from '../auth'
 import type { Ambiente, UsuarioSessao } from '../contexto'
+import { prestadorBloqueado } from '../prestador-bloqueado'
 
 interface UsuarioAuth {
   id: string
@@ -20,9 +21,15 @@ function paraUsuarioSessao(u: UsuarioAuth): UsuarioSessao {
   }
 }
 
-/** Resolve a sessão (cookie ou Bearer) e guarda o usuário no contexto. */
+/**
+ * Resolve a sessão (cookie ou Bearer) e guarda o usuário no contexto. A sessão de um prestador
+ * desativado depois do login deixa de valer.
+ */
 export const sessao = createMiddleware<Ambiente>(async (c, next) => {
   const resultado = await auth.api.getSession({ headers: c.req.raw.headers })
-  c.set('usuario', resultado ? paraUsuarioSessao(resultado.user) : null)
+  const usuario = resultado ? paraUsuarioSessao(resultado.user) : null
+  const bloqueado =
+    usuario?.papel === 'prestador' && (await prestadorBloqueado(usuario.prestadorId))
+  c.set('usuario', bloqueado ? null : usuario)
   await next()
 })
