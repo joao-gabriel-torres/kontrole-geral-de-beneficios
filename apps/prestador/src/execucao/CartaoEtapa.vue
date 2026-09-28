@@ -16,6 +16,8 @@ const props = defineProps<{
   editavel: boolean
   aberta: boolean
   salvarComentario: (texto: string) => Promise<unknown>
+  /** Fotos desta etapa ainda sendo enviadas. */
+  fotosEnviando?: number
 }>()
 const emit = defineEmits<{
   alternar: []
@@ -85,7 +87,12 @@ function alternar() {
           :removivel="editavel"
           @remover="$emit('removerFoto', foto.id)"
         />
-        <BotoesFoto v-if="editavel" cor="azul" @foto="$emit('adicionarFoto', $event)" />
+        <BotoesFoto
+          v-if="editavel"
+          cor="azul"
+          :pendentes="fotosEnviando"
+          @foto="$emit('adicionarFoto', $event)"
+        />
       </div>
       <textarea
         v-if="editavel"

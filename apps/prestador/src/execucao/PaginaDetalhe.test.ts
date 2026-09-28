@@ -166,6 +166,31 @@ describe('PaginaDetalhe', () => {
     })
   })
 
+  describe('envio de foto em andamento', () => {
+    it('mostra um bloco pendente na etapa até a foto nova aparecer', async () => {
+      const d = detalheExemplo({ status: 'em_andamento' })
+      const { wrapper } = await abrir(d)
+      await wrapper.find('.chevron').trigger('click')
+      let responder = (_: unknown) => {}
+      api.POST.mockReturnValue(new Promise((ok) => (responder = ok)))
+      wrapper
+        .findAllComponents(BotoesFoto)[0]!
+        .vm.$emit('foto', { arquivo: new Blob(['j']), tiradaEm: '2026-09-28T15:10:00-03:00' })
+      await flushPromises()
+      expect(wrapper.findAll('.expandido .bloco-pendente')).toHaveLength(1)
+      expect(wrapper.findAll('.conclusao .bloco-pendente')).toHaveLength(0)
+      const comFoto = comEtapas(d, 0, [
+        { ...d.demandas[0]!.etapas[0]!, fotos: [fotoExemplo('f9')] },
+        d.demandas[0]!.etapas[1]!,
+      ])
+      api.GET.mockResolvedValue(ok(comFoto))
+      responder(ok(fotoExemplo('f9'), 201))
+      await flushPromises()
+      expect(wrapper.findAll('.expandido .bloco-pendente')).toHaveLength(0)
+      expect(wrapper.findAll('.expandido .miniatura')).toHaveLength(1)
+    })
+  })
+
   describe('conclusão do serviço', () => {
     it('pede a foto obrigatória e salva o comentário final sozinho', async () => {
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })

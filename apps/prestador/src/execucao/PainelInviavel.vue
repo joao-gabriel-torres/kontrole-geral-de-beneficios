@@ -97,8 +97,8 @@ function enviar() {
       </div>
       <div class="botoes">
         <button type="button" class="cancelar" @click="$emit('fechar')">Cancelar</button>
-        <button type="button" class="enviar" :disabled="!valido" @click="enviar">
-          Enviar ao gestor
+        <button type="button" class="enviar" :disabled="!valido || enviando" @click="enviar">
+          {{ enviando ? 'Enviando…' : 'Enviar ao gestor' }}
         </button>
       </div>
     </div>

@@ -55,4 +55,25 @@ describe('BotoesFoto', () => {
     expect(clicar).toHaveBeenCalled()
     botoes.unmount()
   })
+
+  it('mostra um bloco "Carregando…" enquanto a foto é preparada', async () => {
+    let pronta = (_: unknown) => {}
+    prepararArquivo.mockReturnValue(new Promise((ok) => (pronta = ok)))
+    const botoes = mount(BotoesFoto, { props: { cor: 'azul' } })
+    escolherArquivo(
+      botoes.find('input[data-origem="camera"]').element as HTMLInputElement,
+      new File(['x'], 'foto.jpg', { type: 'image/jpeg' }),
+    )
+    await flushPromises()
+    expect(botoes.findAll('.bloco-pendente')).toHaveLength(1)
+    expect(botoes.find('.bloco-pendente').text()).toBe('Carregando…')
+    pronta({ arquivo: new Blob(['j']), tiradaEm: '2026-09-28T15:10:00-03:00' })
+    await flushPromises()
+    expect(botoes.findAll('.bloco-pendente')).toHaveLength(0)
+  })
+
+  it('também mostra os envios em andamento que a tela informa', () => {
+    const botoes = mount(BotoesFoto, { props: { cor: 'azul', pendentes: 2 } })
+    expect(botoes.findAll('.bloco-pendente')).toHaveLength(2)
+  })
 })

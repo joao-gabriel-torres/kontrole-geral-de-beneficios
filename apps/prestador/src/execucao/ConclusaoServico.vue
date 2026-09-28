@@ -13,6 +13,8 @@ const props = defineProps<{
   comentario: string | null
   editavel: boolean
   fotosMinimas: number
+  /** Fotos da conclusão ainda sendo enviadas. */
+  fotosEnviando?: number
   salvarComentario: (texto: string) => Promise<unknown>
 }>()
 defineEmits<{ adicionarFoto: [foto: FotoCapturada]; removerFoto: [fotoId: string] }>()
@@ -41,7 +43,12 @@ registrarComentarioPendente(descarregar)
         :removivel="editavel"
         @remover="$emit('removerFoto', foto.id)"
       />
-      <BotoesFoto v-if="editavel" cor="azul" @foto="$emit('adicionarFoto', $event)" />
+      <BotoesFoto
+        v-if="editavel"
+        cor="azul"
+        :pendentes="fotosEnviando"
+        @foto="$emit('adicionarFoto', $event)"
+      />
     </div>
     <textarea
       v-if="editavel"

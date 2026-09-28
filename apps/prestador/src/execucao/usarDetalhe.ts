@@ -1,6 +1,6 @@
 import { formularioFoto, formularioInviabilidade, type DetalheAcionamento } from '@kgb/api-client'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import { computed, type Ref } from 'vue'
+import { computed, ref, type Ref } from 'vue'
 import { api } from '../api'
 import { avisar } from '../avisos'
 import { CHAVES, exigir, mensagemDeErro } from '../consultas'
@@ -17,6 +17,14 @@ export function usarDetalhe(id: Ref<string>) {
     queryKey: computed(() => CHAVES.detalhe(id.value)),
     queryFn: async () => exigir(await api.GET('/api/acionamentos/{id}', caminho())),
   })
+
+  const fotosEnviando = ref<Record<string, number>>({})
+  function contarEnvio(chave: string, delta: number) {
+    fotosEnviando.value = {
+      ...fotosEnviando.value,
+      [chave]: (fotosEnviando.value[chave] ?? 0) + delta,
+    }
+  }
 
   function invalidarListas() {
     void cliente.invalidateQueries({ queryKey: CHAVES.lista })
@@ -40,9 +48,10 @@ export function usarDetalhe(id: Ref<string>) {
   function acaoFoto<A>(executar: (args: A) => Promise<unknown>) {
     return useMutation({
       mutationFn: executar,
-      onSuccess: () => {
-        void cliente.invalidateQueries({ queryKey: CHAVES.detalhe(id.value) })
+      // Espera o Detalhe novo chegar: o bloco "Carregando…" só some quando a foto aparece.
+      onSuccess: async () => {
         invalidarListas()
+        await cliente.invalidateQueries({ queryKey: CHAVES.detalhe(id.value) })
       },
       onError: (erro) => avisar(mensagemDeErro(erro)),
     })
@@ -128,8 +137,19 @@ export function usarDetalhe(id: Ref<string>) {
         () => true,
         () => false,
       ),
-    adicionarFoto: (contexto: ContextoFoto, foto: FotoCapturada, etapaId?: string) =>
-      adicionarFoto.mutateAsync({ contexto, foto, etapaId }).catch(() => undefined),
+    /** Envios de foto em andamento, por etapa (id) ou 'conclusao'. */
+    fotosEnviando,
+    adicionarFoto: async (contexto: ContextoFoto, foto: FotoCapturada, etapaId?: string) => {
+      const chave = etapaId ?? 'conclusao'
+      contarEnvio(chave, 1)
+      try {
+        await adicionarFoto.mutateAsync({ contexto, foto, etapaId })
+      } catch {
+        // O aviso com o erro já foi mostrado pela mutação.
+      } finally {
+        contarEnvio(chave, -1)
+      }
+    },
     removerFoto: (fotoId: string) => removerFoto.mutateAsync(fotoId).catch(() => undefined),
   }
 }

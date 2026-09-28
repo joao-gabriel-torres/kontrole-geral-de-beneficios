@@ -5,18 +5,30 @@ import { ref } from 'vue'
 import { avisar } from '../avisos'
 import { capturarNativa, prepararArquivo, type FotoCapturada, type OrigemFoto } from './fotos'
 
-/** azul: etapas e conclusão; coral: painel "Marcar como inviável". */
-defineProps<{ cor: 'azul' | 'coral' }>()
+withDefaults(
+  defineProps<{
+    /** azul: etapas e conclusão; coral: painel "Marcar como inviável". */
+    cor: 'azul' | 'coral'
+    /** Fotos que a tela ainda está enviando: aparecem como blocos "Carregando…". */
+    pendentes?: number
+  }>(),
+  { pendentes: 0 },
+)
 const emit = defineEmits<{ foto: [foto: FotoCapturada] }>()
 
 const nativo = Capacitor.isNativePlatform()
 const inputCamera = ref<HTMLInputElement>()
+/** Fotos sendo preparadas (câmera nativa aberta, redimensionamento). */
+const preparando = ref(0)
 
 async function entregar(obter: () => Promise<FotoCapturada | null>, origem: OrigemFoto) {
+  preparando.value++
   try {
     const foto = await obter()
+    preparando.value--
     if (foto) emit('foto', foto)
   } catch {
+    preparando.value--
     avisar(
       origem === 'camera'
         ? 'Não foi possível usar a câmera. Confira a permissão nos ajustes do aparelho.'
@@ -45,6 +57,14 @@ function aoEscolher(evento: Event, origem: OrigemFoto) {
 </script>
 
 <template>
+  <div
+    v-for="n in preparando + pendentes"
+    :key="`pendente-${n}`"
+    class="bloco-pendente"
+    role="status"
+  >
+    Carregando…
+  </div>
   <button type="button" class="bloco-foto" :class="cor" @click="abrirCamera">
     <RussoIcone nome="camera" :tamanho="20" class="icone" />Câmera
   </button>
@@ -92,6 +112,19 @@ function aoEscolher(evento: Event, origem: OrigemFoto) {
 }
 .icone {
   color: var(--kgb-tinta);
+}
+/* Não existe no protótipo: só aparece enquanto uma foto é preparada ou enviada. */
+.bloco-pendente {
+  width: 68px;
+  height: 68px;
+  border-radius: 12px;
+  background: var(--kgb-superficie2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--kgb-secundario);
 }
 .escondido {
   display: none;

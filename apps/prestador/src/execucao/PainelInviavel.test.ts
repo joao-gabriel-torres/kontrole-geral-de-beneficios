@@ -91,4 +91,13 @@ describe('PainelInviavel', () => {
     await painel.find('.enviar').trigger('click')
     expect(painel.emitted('enviar')).toBeUndefined()
   })
+
+  it('durante o envio, o botão mostra "Enviando…" e fica desabilitado', async () => {
+    const painel = montarPainel()
+    await painel.find('textarea').setValue('Sem acesso')
+    await anexar(painel, 1)
+    await painel.setProps({ enviando: true })
+    expect(painel.find('.enviar').text()).toBe('Enviando…')
+    expect(painel.find('.enviar').attributes('disabled')).toBeDefined()
+  })
 })
