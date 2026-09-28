@@ -22,12 +22,19 @@ Deixar o repositório pronto para desenvolver o sistema de acionamentos da Russo
 | Front gestor | Vue 3 + Vuetify + Vite + vue-router (SPA) |
 | App prestador | Vue 3 + Vuetify + Vite + vue-router, empacotado com Capacitor (iOS/Android), `appId` `br.com.russoassistencia.prestador` |
 | Visual | Tokens da marca Russo (README do handoff). A pasta `docs/design/_ds/` (Vitalize) é só base do protótipo e **não** é usada |
-| Ícones | Lucide (`lucide-vue-next`) registrado como icon set do Vuetify |
+| Ícones | Lucide (`@lucide/vue`; o antigo `lucide-vue-next` foi descontinuado) registrado como icon set do Vuetify |
 | Fonte | Plus Jakarta Sans empacotada via Fontsource (funciona offline no Capacitor) |
 | Qualidade | ESLint flat (typescript-eslint + eslint-plugin-vue) + Prettier, `vue-tsc`, Vitest |
 | CI | GitHub Actions com serviço Postgres 15 |
 | Node | `.nvmrc` 24 (LTS), `engines >=24` (dev local em 26 funciona) |
 | Fuso | Datas e horários de atendimento em `America/Sao_Paulo` |
+
+**Versões fixadas (levantamento de 2026-09-28):**
+- **Vuetify 4** (MD3), com tema `light` explícito, porque o padrão virou `system`. Os estilos da Russo entram na camada `vuetify-overrides`. O breakpoint `md` agora começa em 840px.
+- **Prisma 7.10.0**, fixado exato. O `latest` do npm aponta para um RC da v8, incompatível com o Better Auth. A v7 exige `prisma.config.ts`, o generator `prisma-client` com `output` e o adapter `@prisma/adapter-pg`, e é só ESM.
+- **TypeScript ~5.9**. O TS 7 (nativo) ainda quebra typescript-eslint, vue-tsc e openapi-typescript.
+- **CLI do Better Auth:** o pacote `auth` (`npx auth generate`). O `@better-auth/cli` foi descontinuado.
+- **pnpm 10.32.1**, fixado em `packageManager`.
 
 Por que API separada e não Nuxt/Nitro: o gestor é ferramenta interna logada (sem ganho de SSR), o prestador precisa ser SPA estática para o Capacitor, e uma API independente com contrato OpenAPI serve os dois fronts do mesmo jeito.
 
@@ -103,7 +110,7 @@ Senha de dev única documentada no README raiz. O seed se recusa a rodar com `NO
 
 **Gestor**
 - `/login`: logo Russo, e-mail, senha, "Entrar"; erro "E-mail ou senha incorretos".
-- Layout autenticado: no desktop (`mdAndUp`), sidebar permanente de 232px ("GESTÃO DE DEMANDAS", 5 itens de 44px com raio 12, item ativo `#E6F0FA`/`#004E8F`, badge laranja em Aprovações escondido quando 0, cartão do usuário no rodapé com iniciais + nome + "Gestora"); no mobile, barra inferior de 76px com os mesmos 5 itens e ponto de 4px no ativo. Área de conteúdo `#F9F9F9` com os paddings do handoff.
+- Layout autenticado: no desktop (`mdAndUp`, ≥ 840px), sidebar permanente de 232px ("GESTÃO DE DEMANDAS", 5 itens de 44px com raio 12, item ativo `#E6F0FA`/`#004E8F`, badge laranja em Aprovações escondido quando 0, cartão do usuário no rodapé com iniciais + nome + "Gestora"); no mobile, barra inferior de 76px com os mesmos 5 itens e ponto de 4px no ativo. Área de conteúdo `#F9F9F9` com os paddings do handoff.
 - Rotas: `/painel` (padrão), `/acionamentos`, `/aprovacoes`, `/prestadores`, `/checklists`, cada uma com título e estado vazio "Em construção".
 
 **Prestador**
