@@ -28,6 +28,12 @@ export const rotas: RouteRecordRaw[] = [
         name: 'demandas',
         component: () => import('./paginas/PaginaDemandas.vue'),
       },
+      {
+        path: 'demandas/:id',
+        name: 'detalhe',
+        component: () => import('./execucao/PaginaDetalhe.vue'),
+        meta: { semAbas: true },
+      },
     ],
   },
   { path: '/:caminho(.*)*', redirect: { name: 'inicio' } },
