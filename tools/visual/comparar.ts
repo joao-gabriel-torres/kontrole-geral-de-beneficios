@@ -112,6 +112,34 @@ async function abrirApp(navegador: Browser, caso: Caso): Promise<[Page, Ponto]> 
   return [pagina, { x: 0, y: 0 }]
 }
 
+/** Raio interno da moldura do telefone no protótipo (52px de raio − 10px de borda). */
+const RAIO_MOLDURA = 42
+
+/**
+ * A moldura do telefone do protótipo arredonda os cantos inferiores da tela: isso é simulação do
+ * aparelho, não interface. Os pixels fora desse arredondamento são zerados nas duas imagens.
+ */
+function mascararCantosDaMoldura(imgs: PNG[], caso: Caso, r: Regiao): void {
+  if (caso.modo === 'gw') return
+  const { width: largura, height: altura } = VIEWPORT_APP[caso.modo]
+  const centroY = altura - RAIO_MOLDURA
+  for (let j = 0; j < r.altura; j++) {
+    const py = r.y + j + 0.5
+    if (py <= centroY) continue
+    for (let i = 0; i < r.largura; i++) {
+      const px = r.x + i + 0.5
+      const centroX =
+        px < RAIO_MOLDURA
+          ? RAIO_MOLDURA
+          : px > largura - RAIO_MOLDURA
+            ? largura - RAIO_MOLDURA
+            : null
+      if (centroX === null || Math.hypot(px - centroX, py - centroY) <= RAIO_MOLDURA - 1) continue
+      for (const img of imgs) img.data.writeUInt32BE(0, (j * r.largura + i) * 4)
+    }
+  }
+}
+
 async function recortar(pagina: Page, origem: Ponto, r: Regiao): Promise<PNG> {
   const buffer = await pagina.screenshot({
     clip: { x: origem.x + r.x, y: origem.y + r.y, width: r.largura, height: r.altura },
@@ -163,6 +191,7 @@ try {
     for (const regiao of caso.regioes) {
       const imgP = await recortar(prototipo, origemP, regiao)
       const imgA = await recortar(app, origemA, regiao)
+      mascararCantosDaMoldura([imgP, imgA], caso, regiao)
       const base = join(SAIDA, `${caso.nome}--${regiao.nome}`)
       writeFileSync(`${base}--prototipo.png`, PNG.sync.write(imgP))
       writeFileSync(`${base}--app.png`, PNG.sync.write(imgA))
@@ -174,6 +203,7 @@ try {
       )
       if (sanidade) {
         const deslocada = await recortar(prototipo, { x: origemP.x + 1, y: origemP.y }, regiao)
+        mascararCantosDaMoldura([deslocada], caso, regiao)
         const dd = diferenca(imgP, deslocada)
         const detectou = !dentroDoLimite(dd)
         if (!detectou) falhas++
