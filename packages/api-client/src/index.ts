@@ -5,6 +5,12 @@ export type { components, paths }
 export type Usuario = components['schemas']['Usuario']
 export type ContagemAcionamentos = components['schemas']['ContagemAcionamentos']
 export type CorpoErro = components['schemas']['Erro']
+export type ResumoAcionamento = components['schemas']['ResumoAcionamento']
+export type DetalheAcionamento = components['schemas']['DetalheAcionamento']
+export type Foto = components['schemas']['Foto']
+export type TipoDemanda = components['schemas']['TipoDemanda']
+export type PrestadorOpcao = components['schemas']['PrestadorOpcao']
+export type InicioPrestador = components['schemas']['InicioPrestador']
 
 export interface OpcoesClienteApi {
   baseUrl?: string

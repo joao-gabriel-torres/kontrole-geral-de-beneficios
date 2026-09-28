@@ -16,6 +16,8 @@ import {
   type Regras,
   type StatusAcionamento,
 } from '../dominio/acionamento'
+import { dataSP } from '../dominio/datas'
+import { calcularInicio } from '../dominio/inicio-prestador'
 import { ErroHttp, naoEncontrado } from '../erros'
 import {
   incluirDetalhe,
@@ -422,4 +424,37 @@ export async function marcarInviavel(
     throw erro
   }
   return detalharAcionamento(u, id)
+}
+
+export async function inicioDoPrestador(u: UsuarioSessao) {
+  const vazio = {
+    proximo: null,
+    hoje: [],
+    metricas: { hoje: 0, noMes: 0, aprovacao: { taxa: 0, dePrimeira: null }, paraCorrigir: 0 },
+    rotaDoDia: [],
+  }
+  if (!u.prestadorId) return vazio
+  const lista = await prisma.acionamento.findMany({
+    where: { prestadorId: u.prestadorId },
+    include: { ...incluirResumo, revisoes: { orderBy: { em: 'asc' }, select: { decisao: true } } },
+  })
+  const resumos = new Map(lista.map((a) => [a.id, paraResumo(a)]))
+  const calculo = calcularInicio(
+    lista.map((a) => ({
+      id: a.id,
+      data: a.data.toISOString().slice(0, 10),
+      inicio: a.inicio,
+      status: a.status,
+      inviavel: a.inviavel,
+      endereco: a.endereco,
+      revisoes: a.revisoes.map((r) => r.decisao),
+    })),
+    dataSP(new Date()),
+  )
+  return {
+    proximo: calculo.proximoId ? resumos.get(calculo.proximoId)! : null,
+    hoje: calculo.hojeIds.map((id) => resumos.get(id)!),
+    metricas: calculo.metricas,
+    rotaDoDia: calculo.rotaDoDia,
+  }
 }

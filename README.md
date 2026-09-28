@@ -30,6 +30,8 @@ pnpm db:seed
 pnpm dev
 ```
 
+As fotos enviadas pelo app ficam em `var/uploads` (`ARQUIVOS_DIR` no `.env`, fora do git). Em produção, S3 ou Cloudflare R2 entram como outra implementação da interface `Armazenamento` da API, sem mudar os apps.
+
 ### Usuários de desenvolvimento
 
 O seed recria os dados de exemplo do protótipo, com datas relativas ao dia em que roda.
