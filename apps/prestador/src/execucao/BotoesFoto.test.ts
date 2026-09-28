@@ -57,7 +57,7 @@ describe('BotoesFoto', () => {
   })
 
   it('mostra um bloco "Carregando…" enquanto a foto é preparada', async () => {
-    let pronta = (_: unknown) => {}
+    let pronta: (foto: unknown) => void = () => {}
     prepararArquivo.mockReturnValue(new Promise((ok) => (pronta = ok)))
     const botoes = mount(BotoesFoto, { props: { cor: 'azul' } })
     escolherArquivo(

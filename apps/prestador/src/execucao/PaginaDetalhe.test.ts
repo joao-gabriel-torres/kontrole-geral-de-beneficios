@@ -171,7 +171,7 @@ describe('PaginaDetalhe', () => {
       const d = detalheExemplo({ status: 'em_andamento' })
       const { wrapper } = await abrir(d)
       await wrapper.find('.chevron').trigger('click')
-      let responder = (_: unknown) => {}
+      let responder: (resposta: unknown) => void = () => {}
       api.POST.mockReturnValue(new Promise((ok) => (responder = ok)))
       wrapper
         .findAllComponents(BotoesFoto)[0]!
