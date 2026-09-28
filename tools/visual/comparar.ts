@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import pixelmatch from 'pixelmatch'
 import { PNG } from 'pngjs'
 import { chromium, type Browser, type Page } from 'playwright'
-import { CASOS, VIEWPORT_APP, type Caso, type Modo, type Regiao } from './casos'
+import { CASOS, VIEWPORT_APP, type Caso, type Modo, type Passo, type Regiao } from './casos'
 
 type Ponto = { x: number; y: number }
 
@@ -33,6 +33,7 @@ const TIPOS: Record<string, string> = {
 const argumentos = process.argv.slice(2)
 const sanidade = argumentos.includes('--sanidade')
 const filtro = argumentos.find((a) => a.startsWith('--caso='))?.slice('--caso='.length)
+const filtroApp = argumentos.find((a) => a.startsWith('--app='))?.slice('--app='.length)
 
 function servirPrototipo(): Promise<{ url: string; fechar: () => void }> {
   const servidor = createServer((req, res) => {
@@ -55,6 +56,18 @@ function servirPrototipo(): Promise<{ url: string; fechar: () => void }> {
   )
 }
 
+async function aplicarPassos(pagina: Page, passos: readonly Passo[] = []) {
+  for (const passo of passos) {
+    const alvo =
+      passo.papel === 'text'
+        ? pagina.getByText(passo.clicar, { exact: true })
+        : pagina.getByRole(passo.papel ?? 'button', { name: passo.clicar, exact: true })
+    await alvo.first().click()
+    await pagina.waitForTimeout(250)
+  }
+  await pagina.mouse.move(1, 1)
+}
+
 async function abrirPrototipo(navegador: Browser, url: string, caso: Caso): Promise<[Page, Ponto]> {
   const viewport = caso.modo === 'gw' ? { width: 1440, height: 900 } : { width: 443, height: 936 }
   const pagina = await (await navegador.newContext({ viewport, deviceScaleFactor: 1 })).newPage()
@@ -70,7 +83,7 @@ async function abrirPrototipo(navegador: Browser, url: string, caso: Caso): Prom
       .first()
       .click()
   }
-  await pagina.mouse.move(1, 1)
+  await aplicarPassos(pagina, caso.passos)
   await pagina.evaluate(() => document.fonts.ready)
   await pagina.waitForTimeout(300)
   return [pagina, await origemPrototipo(pagina, caso.modo)]
@@ -106,7 +119,8 @@ async function abrirApp(navegador: Browser, caso: Caso): Promise<[Page, Ponto]> 
   await pagina.waitForURL((u) => !u.pathname.startsWith('/login'))
   await pagina.goto(`${base}${caso.rota}`)
   await pagina.waitForLoadState('networkidle')
-  await pagina.mouse.move(1, 1)
+  await aplicarPassos(pagina, caso.passos)
+  await pagina.waitForLoadState('networkidle')
   await pagina.evaluate(() => document.fonts.ready)
   await pagina.waitForTimeout(300)
   return [pagina, { x: 0, y: 0 }]
@@ -183,7 +197,9 @@ const navegador = await chromium.launch()
 mkdirSync(SAIDA, { recursive: true })
 let falhas = 0
 try {
-  for (const caso of CASOS.filter((c) => !filtro || c.nome === filtro)) {
+  for (const caso of CASOS.filter(
+    (c) => (!filtro || c.nome === filtro) && (!filtroApp || c.app === filtroApp),
+  )) {
     const [prototipo, origemP] = await abrirPrototipo(navegador, url, caso)
     const [app, origemA] = sanidade
       ? await abrirPrototipo(navegador, url, caso)
