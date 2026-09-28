@@ -1,4 +1,4 @@
-import { telaInteira, type Caso, type Regiao } from './tipos'
+import { telaInteira, type Caso, type Passo, type Regiao } from './tipos'
 
 const sidebar: Regiao = { nome: 'sidebar', x: 0, y: 0, largura: 232, altura: 844 }
 const abasGestor: Regiao = { nome: 'abas', x: 0, y: 692, largura: 375, altura: 76 }
@@ -11,6 +11,34 @@ const cabecalhoWeb = (altura: number): Regiao => ({
 })
 const telaWeb = telaInteira('gw')
 const telaMobile = telaInteira('gm')
+
+/**
+ * Abre um acionamento pelo título a partir de um filtro da lista. O protótipo reaproveita a
+ * rolagem da lista no Detalhe; o segundo clique no título (já no Detalhe) faz o navegador rolar até
+ * ele, e o protótipo e o app ficam os dois no topo.
+ */
+function abrirPeloTitulo(filtro: string, titulo: string): Passo[] {
+  return [{ clicar: filtro }, { clicar: titulo, papel: 'text' }, { clicar: titulo, papel: 'text' }]
+}
+
+const DETALHES = [
+  { caso: 'aguardando', filtro: 'Aguardando 3', titulo: 'Revisão elétrica e troca de disjuntor' },
+  { caso: 'reprovado', filtro: 'Reprovados 2', titulo: 'Revisão elétrica anual' },
+  { caso: 'aprovado', filtro: 'Finalizados 57', titulo: 'Reparo no forro da sala' },
+  { caso: 'inviavel', filtro: 'Finalizados 57', titulo: 'Ponto de luz na garagem' },
+]
+
+const casosDetalhe: Caso[] = (['gw', 'gm'] as const).flatMap((modo) =>
+  DETALHES.map((d) => ({
+    nome: `gestor-${modo === 'gw' ? 'web' : 'mobile'}-detalhe-${d.caso}`,
+    modo,
+    navegarPrototipo: 'Acionamentos',
+    app: 'gestor' as const,
+    rota: '/acionamentos',
+    passos: abrirPeloTitulo(d.filtro, d.titulo),
+    regioes: [telaInteira(modo)],
+  })),
+)
 
 export const CASOS_GESTOR: Caso[] = [
   {
@@ -94,4 +122,5 @@ export const CASOS_GESTOR: Caso[] = [
     passos: [{ clicar: 'Aguardando 3' }],
     regioes: [telaMobile],
   },
+  ...casosDetalhe,
 ]
