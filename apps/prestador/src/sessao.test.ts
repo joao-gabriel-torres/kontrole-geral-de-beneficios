@@ -70,6 +70,14 @@ describe('sessão do prestador', () => {
     expect(await entrar('c@x', 'x')).toEqual({ ok: false, mensagem: MENSAGENS.tentativas })
   })
 
+  it('prestador desativado (403) é avisado de que o cadastro está inativo', async () => {
+    auth.signIn.email.mockResolvedValue({ error: { status: 403 } })
+    expect(await entrar('c@x', 'x')).toEqual({ ok: false, mensagem: MENSAGENS.inativo })
+    expect(MENSAGENS.inativo).toBe(
+      'Seu cadastro está inativo. Fale com a Russo Assistência para voltar a atender.',
+    )
+  })
+
   it('login que não responde termina com aviso de conexão', async () => {
     vi.useFakeTimers()
     auth.signIn.email.mockReturnValue(new Promise(() => {}))

@@ -8,6 +8,7 @@ export const MENSAGENS = {
   tentativas: 'Muitas tentativas. Aguarde alguns segundos e tente de novo.',
   indisponivel: 'Não foi possível entrar. Verifique sua conexão e tente de novo.',
   papel: 'Esta conta é de gestor. Use o painel web.',
+  inativo: 'Seu cadastro está inativo. Fale com a Russo Assistência para voltar a atender.',
 } as const
 
 const estado = reactive<{ usuario: Usuario | null; carregada: boolean; indisponivel: boolean }>({
@@ -50,6 +51,7 @@ export type ResultadoLogin = { ok: true } | { ok: false; mensagem: string }
 
 function mensagemDoErroDeLogin(status: number): string {
   if (status === 400 || status === 401) return MENSAGENS.credenciais
+  if (status === 403) return MENSAGENS.inativo
   if (status === 429) return MENSAGENS.tentativas
   return MENSAGENS.indisponivel
 }
