@@ -19,6 +19,9 @@ const web = (nome: string, passos: Caso['passos'], regioes: Regiao[]): Caso => (
   rota: '/checklists',
   passos,
   regioes,
+  // As linhas das etapas divergem do protótipo a pedido do usuário (29/09): alça de arrastar,
+  // "Subir" e "Descer", e o texto com cara de campo. O resto da tela continua comparado.
+  ocultarNoApp: ['.etapas'],
 })
 const mobile = (nome: string, passos: Caso['passos'], regioes: Regiao[]): Caso => ({
   ...web(nome, passos, regioes),

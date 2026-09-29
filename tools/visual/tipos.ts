@@ -33,6 +33,11 @@ export interface Caso {
   rota: string
   passos?: Passo[]
   regioes: Regiao[]
+  /**
+   * Seletores do app cujas caixas (medidas no app, depois dos passos) ficam fora da comparação nas
+   * duas imagens. Só para divergências pedidas pelo usuário, registradas no caso.
+   */
+  ocultarNoApp?: string[]
 }
 
 /** Área útil do app, igual à área do protótipo sem a barra do topo e sem a barra de status falsa. */

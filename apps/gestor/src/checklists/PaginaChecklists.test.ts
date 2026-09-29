@@ -9,6 +9,17 @@ import { toastGestor } from '../toast'
 import PaginaChecklists from './PaginaChecklists.vue'
 import { tipoSelecionado } from './selecao'
 
+/** O SortableJS mexe no DOM de verdade; aqui só guardamos as opções para simular o "soltar". */
+const sortable = vi.hoisted(() => ({ opcoes: null as null | Record<string, unknown> }))
+vi.mock('sortablejs', () => ({
+  default: {
+    create: (_el: HTMLElement, opcoes: Record<string, unknown>) => {
+      sortable.opcoes = opcoes
+      return { destroy: () => {} }
+    },
+  },
+}))
+
 vi.mock('../api', () => ({
   api: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn(), DELETE: vi.fn() },
   auth: {},
@@ -171,6 +182,71 @@ describe('PaginaChecklists', () => {
     expect(api.chamadas('PATCH', '/api/tipos/{id}')).toEqual([
       { params: { path: { id: 't1' } }, body: { checklist: [a, c, b, d, e] } },
     ])
+  })
+
+  it('"Descer" troca com a seguinte; na última fica apagado e não faz nada', async () => {
+    const api = servidorFalso()
+    const tela = await abrir()
+    const descer = tela.findAll('button[title="Descer"]')
+    expect(descer.at(-1)!.attributes('style')).toContain('opacity: 0.3')
+    await descer.at(-1)!.trigger('click')
+    await vi.advanceTimersByTimeAsync(600)
+    await aguardar()
+    expect(api.chamadas('PATCH', '/api/tipos/{id}')).toHaveLength(0)
+    await tela.findAll('button[title="Descer"]')[0]!.trigger('click')
+    const [a, b, c, d, e] = TIPOS[0]!.checklist
+    expect(etapas(tela)).toEqual([b, a, c, d, e])
+    await vi.advanceTimersByTimeAsync(600)
+    await aguardar()
+    expect(api.chamadas('PATCH', '/api/tipos/{id}')).toEqual([
+      { params: { path: { id: 't1' } }, body: { checklist: [b, a, c, d, e] } },
+    ])
+  })
+
+  it('Alt+↓ e Alt+↑ no campo movem a etapa pelo teclado', async () => {
+    servidorFalso()
+    const tela = await abrir()
+    const [a, b, c, d, e] = TIPOS[0]!.checklist
+    await tela.findAll('.etapa input')[1]!.trigger('keydown', { key: 'ArrowDown', altKey: true })
+    expect(etapas(tela)).toEqual([a, c, b, d, e])
+    await tela.findAll('.etapa input')[2]!.trigger('keydown', { key: 'ArrowUp', altKey: true })
+    expect(etapas(tela)).toEqual([a, b, c, d, e])
+    // Sem o Alt, as setas ficam com o cursor do campo.
+    await tela.findAll('.etapa input')[0]!.trigger('keydown', { key: 'ArrowDown' })
+    expect(etapas(tela)).toEqual([a, b, c, d, e])
+  })
+
+  it('arrastar pela alça leva a etapa para onde foi solta', async () => {
+    const api = servidorFalso()
+    const tela = await abrir()
+    expect(sortable.opcoes).toMatchObject({ handle: '.alca', draggable: '.etapa' })
+    expect(tela.findAll('.etapa .alca')).toHaveLength(5)
+    const lista = tela.get('.etapas').element
+    const item = lista.children[0] as HTMLElement
+    // O SortableJS já moveu o nó; o componente devolve o DOM e reordena pelos dados.
+    lista.appendChild(item)
+    ;(sortable.opcoes!.onEnd as (e: unknown) => void)({
+      oldIndex: 0,
+      newIndex: 4,
+      item,
+      from: lista,
+    })
+    await aguardar()
+    const [a, b, c, d, e] = TIPOS[0]!.checklist
+    expect(etapas(tela)).toEqual([b, c, d, e, a])
+    await vi.advanceTimersByTimeAsync(600)
+    await aguardar()
+    expect(api.chamadas('PATCH', '/api/tipos/{id}')).toEqual([
+      { params: { path: { id: 't1' } }, body: { checklist: [b, c, d, e, a] } },
+    ])
+  })
+
+  it('o texto da etapa aparece como campo editável', async () => {
+    servidorFalso()
+    const tela = await abrir()
+    const campo = tela.findAll('.etapa input')[0]!
+    expect(campo.attributes('aria-label')).toBe('Etapa 1')
+    expect(campo.attributes('title')).toBe('Clique para editar a etapa')
   })
 
   it('"Remover" tira a etapa; sem etapas aparece "Nenhum item ainda."', async () => {

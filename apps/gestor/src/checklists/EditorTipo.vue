@@ -1,21 +1,60 @@
 <script setup lang="ts">
 import type { TipoDemanda } from '@kgb/api-client'
 import { RussoIcone } from '@kgb/ui'
+import Sortable from 'sortablejs'
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { LIMITE_ETAPA, LIMITE_NOME, rotuloItens } from './regras'
 
-defineProps<{ tipo: TipoDemanda }>()
+const props = defineProps<{ tipo: TipoDemanda }>()
 const novaEtapa = defineModel<string>('novaEtapa', { required: true })
 const emit = defineEmits<{
   renomear: [nome: string]
   soltarNome: []
   editar: [indice: number, texto: string]
-  subir: [indice: number]
+  mover: [de: number, para: number]
   remover: [indice: number]
   adicionar: []
   excluir: []
 }>()
 
 const valor = (evento: Event) => (evento.target as HTMLInputElement).value
+const lista = ref<HTMLElement>()
+
+/** Nas pontas, "Subir" e "Descer" ficam apagados (sem disabled, como no protótipo) e não fazem nada. */
+function mover(de: number, para: number): boolean {
+  if (para < 0 || para >= props.tipo.checklist.length) return false
+  emit('mover', de, para)
+  return true
+}
+
+/** Alt+↑ e Alt+↓ no campo movem a etapa; o foco vai junto com ela. */
+async function teclar(evento: KeyboardEvent, i: number) {
+  if (!evento.altKey || (evento.key !== 'ArrowUp' && evento.key !== 'ArrowDown')) return
+  evento.preventDefault()
+  const para = evento.key === 'ArrowUp' ? i - 1 : i + 1
+  if (!mover(i, para)) return
+  await nextTick()
+  lista.value?.querySelectorAll<HTMLInputElement>('.etapa .texto')[para]?.focus()
+}
+
+let arrastar: Sortable | null = null
+onMounted(() => {
+  if (!lista.value) return
+  // Arrastar pela alça (mouse ou toque). O SortableJS move o nó; ele volta ao lugar e quem
+  // redesenha a lista é o Vue, a partir dos dados.
+  arrastar = Sortable.create(lista.value, {
+    handle: '.alca',
+    draggable: '.etapa',
+    animation: 150,
+    onEnd({ oldIndex, newIndex, item, from }) {
+      if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) return
+      from.removeChild(item)
+      from.insertBefore(item, from.children[oldIndex] ?? null)
+      mover(oldIndex, newIndex)
+    },
+  })
+})
+onBeforeUnmount(() => arrastar?.destroy())
 </script>
 
 <template>
@@ -33,26 +72,39 @@ const valor = (evento: Event) => (evento.target as HTMLInputElement).value
       <button type="button" class="excluir" @click="emit('excluir')">Excluir tipo</button>
     </div>
     <div class="rotulo">Checklist · {{ rotuloItens(tipo.checklist.length) }}</div>
-    <div class="etapas">
-      <!-- A chave é a posição, como no protótipo: depois de "Subir", o foco fica na mesma linha. -->
+    <div ref="lista" class="etapas">
+      <!-- A chave é a posição, como no protótipo: depois de mover, o foco fica na mesma linha. -->
       <div v-for="(texto, i) in tipo.checklist" :key="i" class="etapa">
+        <span class="alca" title="Arraste para mudar a ordem" aria-hidden="true">
+          <span v-for="n in 6" :key="n" class="ponto" />
+        </span>
         <span class="numero">{{ i + 1 }}</span>
         <input
           class="texto"
           :value="texto"
           :aria-label="`Etapa ${i + 1}`"
+          title="Clique para editar a etapa"
           :maxlength="LIMITE_ETAPA"
           @input="emit('editar', i, valor($event))"
+          @keydown="teclar($event, i)"
         />
-        <!-- Na 1ª etapa, "Subir" fica apagado mas não desabilitado (protótipo): o clique não faz nada. -->
         <button
           type="button"
           class="acao"
           title="Subir"
           :style="{ opacity: i ? 1 : 0.3 }"
-          @click="emit('subir', i)"
+          @click="mover(i, i - 1)"
         >
-          <RussoIcone nome="chevron-right" :tamanho="18" class="seta" />
+          <RussoIcone nome="chevron-right" :tamanho="18" class="seta subir" />
+        </button>
+        <button
+          type="button"
+          class="acao"
+          title="Descer"
+          :style="{ opacity: i < tipo.checklist.length - 1 ? 1 : 0.3 }"
+          @click="mover(i, i + 1)"
+        >
+          <RussoIcone nome="chevron-right" :tamanho="18" class="seta descer" />
         </button>
         <button type="button" class="acao remover" title="Remover" @click="emit('remover', i)">
           <RussoIcone nome="cancel" :tamanho="18" />
@@ -135,9 +187,31 @@ const valor = (evento: Event) => (evento.target as HTMLInputElement).value
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 4px 4px 12px;
+  padding: 4px 4px 4px 8px;
   border-radius: 12px;
   background: var(--kgb-superficie1);
+}
+/* A ordem muda pela alça (arrastar), pelas setas ou por Alt+↑/↓: pedido do usuário, fora do protótipo. */
+.alca {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(2, 4px);
+  gap: 3px 4px;
+  padding: 6px 2px;
+  cursor: grab;
+  touch-action: none;
+}
+.ponto {
+  width: 4px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--kgb-terciario);
+}
+.etapa.sortable-ghost {
+  opacity: 0.4;
+}
+.etapa.sortable-chosen .alca {
+  cursor: grabbing;
 }
 .numero {
   width: 22px;
@@ -145,17 +219,25 @@ const valor = (evento: Event) => (evento.target as HTMLInputElement).value
   font-weight: 700;
   color: var(--kgb-terciario);
 }
-/* Sem padding explícito no protótipo: vale o padrão do navegador para input (1px 2px). */
+/* O texto da etapa aparece como campo, para ficar claro que dá para editar (fora do protótipo). */
 .texto {
   flex: 1;
   min-width: 0;
+  /* 40px como o campo do protótipo: a linha mantém a altura e nada abaixo dela se desloca. */
   height: 40px;
-  border: 0;
-  background: transparent;
+  border: 1px solid var(--kgb-divisor);
+  border-radius: 10px;
+  background: var(--kgb-branco);
   outline: 0;
-  padding: 1px 2px;
+  padding: 0 10px;
   font-size: 14px;
   font-weight: 500;
+}
+.texto:hover {
+  border-color: var(--kgb-terciario);
+}
+.texto:focus {
+  border-color: var(--kgb-primaria);
 }
 .acao {
   width: 36px;
@@ -171,8 +253,11 @@ const valor = (evento: Event) => (evento.target as HTMLInputElement).value
 .remover:hover {
   background: var(--kgb-perigo-fundo);
 }
-.seta {
+.seta.subir {
   transform: rotate(-90deg);
+}
+.seta.descer {
+  transform: rotate(90deg);
 }
 .vazio {
   font-size: 14px;

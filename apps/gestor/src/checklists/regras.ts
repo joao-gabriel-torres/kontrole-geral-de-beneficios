@@ -13,12 +13,19 @@ export function editarEtapa(lista: readonly string[], i: number, texto: string):
 }
 
 /** Troca a etapa com a anterior. Na primeira não há o que fazer: `null`. */
-export function subirEtapa(lista: readonly string[], i: number): string[] | null {
-  if (i <= 0) return null
+/** Leva a etapa da posição `de` para `para` (arrastar), empurrando as do meio. */
+export function moverEtapa(lista: readonly string[], de: number, para: number): string[] | null {
+  const fora = (i: number) => i < 0 || i >= lista.length
+  if (de === para || fora(de) || fora(para)) return null
   const nova = [...lista]
-  ;[nova[i - 1], nova[i]] = [nova[i]!, nova[i - 1]!]
+  const [etapa] = nova.splice(de, 1)
+  nova.splice(para, 0, etapa!)
   return nova
 }
+
+export const subirEtapa = (lista: readonly string[], i: number) => moverEtapa(lista, i, i - 1)
+
+export const descerEtapa = (lista: readonly string[], i: number) => moverEtapa(lista, i, i + 1)
 
 export function removerEtapa(lista: readonly string[], i: number): string[] {
   return lista.filter((_, j) => j !== i)

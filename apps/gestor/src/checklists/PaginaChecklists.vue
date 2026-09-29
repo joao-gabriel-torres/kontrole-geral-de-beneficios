@@ -13,7 +13,7 @@ import {
   editarEtapa,
   escolherSelecionado,
   removerEtapa,
-  subirEtapa,
+  moverEtapa,
 } from './regras'
 import { tipoSelecionado } from './selecao'
 
@@ -104,7 +104,7 @@ function adicionarEtapa() {
         @renomear="(nome) => edicao.renomear(selecionado!.id, nome)"
         @soltar-nome="edicao.soltarNome(selecionado!.id)"
         @editar="(i, texto) => alterarChecklist((lista) => editarEtapa(lista, i, texto))"
-        @subir="(i) => alterarChecklist((lista) => subirEtapa(lista, i))"
+        @mover="(de, para) => alterarChecklist((lista) => moverEtapa(lista, de, para))"
         @remover="(i) => alterarChecklist((lista) => removerEtapa(lista, i))"
         @adicionar="adicionarEtapa"
         @excluir="excluirTipo"

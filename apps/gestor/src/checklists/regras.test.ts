@@ -6,6 +6,8 @@ import {
   removerEtapa,
   rotuloItens,
   subirEtapa,
+  descerEtapa,
+  moverEtapa,
 } from './regras'
 
 describe('rotuloItens', () => {
@@ -28,6 +30,19 @@ describe('etapas', () => {
     expect(subirEtapa(lista, 0)).toBeNull()
   })
 
+  it('descer troca com a seguinte; na última não faz nada', () => {
+    expect(descerEtapa(lista, 0)).toEqual(['b', 'a', 'c'])
+    expect(descerEtapa(lista, 2)).toBeNull()
+  })
+
+  it('mover leva a etapa de uma posição a outra (arrastar), empurrando as do meio', () => {
+    expect(moverEtapa(lista, 0, 2)).toEqual(['b', 'c', 'a'])
+    expect(moverEtapa(lista, 2, 0)).toEqual(['c', 'a', 'b'])
+    expect(moverEtapa(lista, 1, 1)).toBeNull()
+    expect(moverEtapa(lista, 0, 3)).toBeNull()
+    expect(moverEtapa(lista, -1, 0)).toBeNull()
+  })
+
   it('remover tira a posição', () => {
     expect(removerEtapa(lista, 0)).toEqual(['b', 'c'])
   })
@@ -39,6 +54,8 @@ describe('etapas', () => {
 
   it('nenhuma operação muda a lista recebida', () => {
     subirEtapa(lista, 1)
+    descerEtapa(lista, 1)
+    moverEtapa(lista, 0, 2)
     removerEtapa(lista, 1)
     editarEtapa(lista, 1, 'x')
     acrescentarEtapa(lista, 'y')

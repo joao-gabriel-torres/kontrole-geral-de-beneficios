@@ -179,6 +179,35 @@ function mascararCantosDaMoldura(imgs: PNG[], caso: Caso, r: Regiao): void {
   }
 }
 
+type Caixa = { x: number; y: number; largura: number; altura: number }
+
+/** Caixas dos seletores `ocultarNoApp`, em coordenadas da área útil do app. */
+async function caixasOcultas(pagina: Page, seletores: readonly string[] = []): Promise<Caixa[]> {
+  const caixas: Caixa[] = []
+  for (const seletor of seletores) {
+    for (const el of await pagina.locator(seletor).all()) {
+      const c = await el.boundingBox()
+      if (c) caixas.push({ x: c.x, y: c.y, largura: c.width, altura: c.height })
+    }
+  }
+  return caixas
+}
+
+/** Zera nas duas imagens os pixels da região que caem numa caixa oculta. */
+function ocultar(imgs: PNG[], r: Regiao, caixas: readonly Caixa[]): void {
+  for (const c of caixas) {
+    const x0 = Math.max(Math.floor(c.x) - r.x, 0)
+    const y0 = Math.max(Math.floor(c.y) - r.y, 0)
+    const x1 = Math.min(Math.ceil(c.x + c.largura) - r.x, r.largura)
+    const y1 = Math.min(Math.ceil(c.y + c.altura) - r.y, r.altura)
+    for (let j = y0; j < y1; j++) {
+      for (let i = x0; i < x1; i++) {
+        for (const img of imgs) img.data.writeUInt32BE(0, (j * r.largura + i) * 4)
+      }
+    }
+  }
+}
+
 async function recortar(pagina: Page, origem: Ponto, r: Regiao): Promise<PNG> {
   const buffer = await pagina.screenshot({
     clip: { x: origem.x + r.x, y: origem.y + r.y, width: r.largura, height: r.altura },
@@ -229,10 +258,12 @@ try {
     const [app, origemA] = sanidade
       ? await abrirPrototipo(navegador, url, caso)
       : await abrirApp(navegador, caso)
+    const ocultas = sanidade ? [] : await caixasOcultas(app, caso.ocultarNoApp)
     for (const regiao of caso.regioes) {
       const imgP = await recortar(prototipo, origemP, regiao)
       const imgA = await recortar(app, origemA, regiao)
       mascararCantosDaMoldura([imgP, imgA], caso, regiao)
+      ocultar([imgP, imgA], regiao, ocultas)
       const base = join(SAIDA, `${caso.nome}--${regiao.nome}`)
       writeFileSync(`${base}--prototipo.png`, PNG.sync.write(imgP))
       writeFileSync(`${base}--app.png`, PNG.sync.write(imgA))
