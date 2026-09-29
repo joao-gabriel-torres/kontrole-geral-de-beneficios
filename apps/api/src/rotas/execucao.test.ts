@@ -254,6 +254,35 @@ describe('fotos', () => {
       expect.any(Error),
     )
   })
+
+  it('id com barra codificada responde 404, não 500', async () => {
+    const r = await req(
+      'POST',
+      '/api/acionamentos/..%2F..%2Fx/fotos',
+      carlos,
+      formularioFoto({ contexto: 'conclusao' }),
+    )
+    expect(r.status).toBe(404)
+    expect(await r.json()).toMatchObject({ erro: { codigo: 'nao_encontrado' } })
+  })
+
+  it('falha ao gravar a foto: a limpeza não troca o erro original', async () => {
+    const id = await novoIniciado()
+    const original = new Error('disco cheio')
+    vi.spyOn(armazenamento, 'salvar').mockRejectedValueOnce(original)
+    vi.spyOn(armazenamento, 'remover').mockRejectedValueOnce(new Error('armazenamento fora do ar'))
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const r = await req(
+      'POST',
+      `/api/acionamentos/${id}/fotos`,
+      carlos,
+      formularioFoto({ contexto: 'conclusao' }),
+    )
+    expect(r.status).toBe(500)
+    // o onError da app loga o erro que chegou até ele: tem de ser o original
+    expect(log).toHaveBeenCalledWith(original)
+    expect(await prisma.foto.count({ where: { acionamentoId: id } })).toBe(0)
+  })
 })
 
 describe('enviar para aprovação', () => {
@@ -329,5 +358,15 @@ describe('marcar como inviável', () => {
         await req('POST', `/api/acionamentos/${id}/inviavel`, carlos, formulario('x', 0))
       ).json(),
     ).toMatchObject({ erro: { codigo: 'fotos_insuficientes' } })
+  })
+
+  it('id com barra codificada responde 404', async () => {
+    const r = await req(
+      'POST',
+      '/api/acionamentos/..%2F..%2Fx/inviavel',
+      carlos,
+      formulario('Sem acesso', 1),
+    )
+    expect(r.status).toBe(404)
   })
 })
