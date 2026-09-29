@@ -47,7 +47,8 @@ apps/gestor/
   src/acionamentos/novo/ModalNovoAcionamento.test.ts
   src/acionamentos/detalhe/CartaoDecisao.vue     G4: enviando: Decisao | null
   src/acionamentos/detalhe/CartaoDecisao.test.ts
-  src/acionamentos/detalhe/PaginaDetalhe.vue     G4 (variables da mutação) e G6 (watch do id)
+  src/acionamentos/detalhe/PaginaDetalhe.vue     G4 (variables da mutação), G6 (watch do id) e o
+                                                 aviso só sem dado (Task 8, revisão)
   src/acionamentos/detalhe/PaginaDetalhe.test.ts
   src/layouts/LayoutGestor.vue                   G2: guarda e restaura a rolagem
   src/layouts/LayoutGestor.test.ts
@@ -542,7 +543,103 @@ watch(
 
 ---
 
-### Task 8: Verificação final
+### Task 8: Revisão — o Detalhe continua na tela quando uma busca em segundo plano falha
+
+Achado da revisão independente. Com o G5, uma busca do Detalhe que demora vira `ErroTempoEsgotado` depois de 8 s. No vue-query 5, uma nova busca que falha deixa `status = 'error'` e **mantém** o `data` do cache. Como o `PaginaDetalhe.vue` trocava tudo pelo cartão de erro quando `isError`, bastava um `refetchOnWindowFocus` (depois do `staleTime` de 5 s) ou o `onSettled` de uma revisão, com a API lenta, para sumirem as fotos, as informações, o `CartaoDecisao` e a observação que a gestora digitava. O critério é o mesmo do G8 (Task 4): **a mensagem só aparece quando falta o dado**. Com o dado em cache, o Detalhe continua visível.
+
+**Decisões:**
+- **Sem aviso na falha em segundo plano (nem toast).** Depois de uma revisão, o `onSettled` invalida e busca o Detalhe de novo. Um toast de falha nessa busca apagaria o "Conclusão aprovada" que acabou de aparecer. A gestora fica sabendo da conexão quando agir: a mutação tem o próprio toast de erro. A lista e as Aprovações também mantêm as linhas do cache.
+- **Sem cláusula de 404 com dado em cache.** A API não apaga acionamentos (não há rota nem `excluidoEm` em acionamento), então um 404 numa nova busca não acontece. Quando a rota muda de id, o `data` da chave nova é `undefined` (o Detalhe não usa `placeholderData`), e o aviso "Acionamento não encontrado." continua aparecendo.
+
+**Files:**
+- Modify: `apps/gestor/src/acionamentos/detalhe/PaginaDetalhe.vue:79` (condição do cartão de erro)
+- Test: `apps/gestor/src/acionamentos/detalhe/PaginaDetalhe.test.ts`
+
+**Interfaces:**
+- Consumes: `montar()` devolve `{ tela, router, consultas }` (`test/montar.ts`); `simularApi`, `erroApi` e `nuncaResponde` (`test/api-falsa.ts`); `CHAVES.detalhe(id)` e `CHAVES.acionamentos` (`src/consultas.ts`).
+- Produces: nada novo.
+
+- [ ] **Step 1: Write the failing tests** (acrescentar ao `describe('PaginaDetalhe')`; importar `afterEach` do vitest, `nuncaResponde` de `test/api-falsa` e `CHAVES` de `../../consultas`)
+
+```ts
+describe('busca em segundo plano que falha, com o Detalhe já carregado', () => {
+  const estado = (consultas: QueryClient) => consultas.getQueryState(CHAVES.detalhe('a1059'))?.status
+
+  function detalheContinua(tela: VueWrapper) {
+    expect(tela.find('.aviso').exists()).toBe(false)
+    expect(tela.find('h1').text()).toBe('Revisão elétrica e troca de disjuntor')
+    expect(tela.find('.info').text()).toContain('Colégio Aprender')
+  }
+
+  it('500: o Detalhe, a decisão e a observação digitada continuam na tela', async () => {
+    const { tela, consultas } = await abrir('aprovacoes')
+    await tela.find('.decisao textarea').setValue('Falta a foto do quadro')
+    simularApi(api, {
+      'GET /api/acionamentos/{id}': () => erroApi(500, 'erro_interno', 'Erro interno'),
+    })
+    await consultas.invalidateQueries({ queryKey: CHAVES.acionamentos })
+    await aguardar()
+    expect(estado(consultas)).toBe('error')
+    detalheContinua(tela)
+    expect((tela.find('.decisao textarea').element as HTMLTextAreaElement).value).toBe(
+      'Falta a foto do quadro',
+    )
+  })
+
+  describe('com a API travada', () => {
+    beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }))
+    afterEach(() => vi.useRealTimers())
+
+    it('depois de 8 s sem resposta, o Detalhe continua (sem o cartão de erro)', async () => {
+      const { tela, consultas } = await abrir('aprovacoes')
+      simularApi(api, { 'GET /api/acionamentos/{id}': nuncaResponde })
+      void consultas.invalidateQueries({ queryKey: CHAVES.acionamentos })
+      await vi.advanceTimersByTimeAsync(8_000)
+      await aguardar()
+      expect(estado(consultas)).toBe('error')
+      detalheContinua(tela)
+      expect(tela.find('.decisao .aprovar').text()).toBe('Aprovar conclusão')
+    })
+  })
+
+  it('depois de aprovar, a nova busca que falha não esconde a decisão nem troca o aviso', async () => {
+    const { tela, consultas } = await abrir()
+    simularApi(api, {
+      'GET /api/acionamentos/{id}': () => erroApi(500, 'erro_interno', 'Erro interno'),
+      'POST /api/acionamentos/{id}/revisao': (o: { body?: unknown }) =>
+        revisao(o.body as { decisao: string; motivo?: string }),
+    })
+    await tela.find('.decisao .aprovar').trigger('click')
+    await aguardar()
+    expect(estado(consultas)).toBe('error')
+    detalheContinua(tela)
+    expect(tela.find('.ultima').text()).toContain('Aprovado em 28/09 · 09:00')
+    expect(toastGestor.mensagem.value).toBe('Conclusão aprovada')
+  })
+})
+```
+
+- [ ] **Step 2: Run** `pnpm --filter @kgb/gestor exec vitest run src/acionamentos/detalhe/PaginaDetalhe.test.ts` — Expected: FAIL nos três (`.aviso` existe; o `h1` some).
+
+- [ ] **Step 3: Implement** em `PaginaDetalhe.vue`:
+
+```ts
+// Uma nova busca que falha (foco na janela, revisão, API lenta) mantém o dado do cache: o aviso
+// só substitui o Detalhe quando não há o que mostrar.
+const semDetalhe = computed(() => isError.value && !acionamento.value)
+```
+
+```html
+<div v-if="semDetalhe" class="cartao aviso">{{ aviso }}</div>
+<template v-else-if="acionamento">
+```
+
+- [ ] **Step 4: Run** — Expected: PASS, e o teste "acionamento inexistente mostra o aviso" continua passando.
+- [ ] **Step 5: Commit** `fix(gestor): Detalhe não some quando uma busca em segundo plano falha`
+
+---
+
+### Task 9: Verificação final
 
 - [ ] `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 - [ ] `pnpm api:generate` e `git status --porcelain` sem diferença.
