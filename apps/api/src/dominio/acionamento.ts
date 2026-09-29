@@ -1,3 +1,7 @@
+import type { CodigoErroPlanilha } from './erros-planilha'
+import type { CodigoErroPrestadores } from './erros-prestadores'
+import type { CodigoErroTipos } from './erros-tipos'
+
 export type StatusAcionamento = 'aberto' | 'em_andamento' | 'aguardando' | 'reprovado' | 'aprovado'
 export type Decisao = 'aprovado' | 'reprovado'
 
@@ -7,6 +11,9 @@ export interface Regras {
 }
 
 export type CodigoErroDominio =
+  | CodigoErroPrestadores
+  | CodigoErroPlanilha
+  | CodigoErroTipos
   | 'transicao_invalida'
   | 'fotos_insuficientes'
   | 'etapas_pendentes'
