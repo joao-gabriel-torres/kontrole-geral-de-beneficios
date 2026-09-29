@@ -151,6 +151,19 @@ describe('PaginaDetalhe', () => {
     expect(tela.find('.ultima').text()).toContain('Falta a foto do quadro')
   })
 
+  it('trocar de acionamento (mesmo componente, outro id) zera a observação', async () => {
+    const { tela } = await abrir()
+    await tela.find('.decisao textarea').setValue('Falta a foto do quadro')
+    await tela.setProps({ id: 'a2' })
+    await aguardar()
+    const observacao = tela.find('.decisao textarea').element as HTMLTextAreaElement
+    expect(observacao.value).toBe('')
+    await tela.find('.decisao .reprovar').trigger('click')
+    await aguardar()
+    expect(toastGestor.mensagem.value).toBe('Escreva o motivo da reprovação')
+    expect(simulada.chamadas('POST', '/api/acionamentos/{id}/revisao')).toHaveLength(0)
+  })
+
   it('dois cliques em aprovar enviam uma revisão só', async () => {
     const { tela } = await abrir()
     await tela.find('.decisao .aprovar').trigger('click')

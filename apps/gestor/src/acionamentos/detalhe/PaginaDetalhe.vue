@@ -8,7 +8,7 @@ import {
   StatusChip,
   urlMapa,
 } from '@kgb/ui'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import PaginaGestor from '../../componentes/PaginaGestor.vue'
 import { ErroApi, mensagemDeErro } from '../../erros'
 import { toastGestor } from '../../toast'
@@ -25,6 +25,13 @@ const { mutateAsync: revisar, isPending, variables } = usarRevisao(() => props.i
 /** A decisão em envio, para o rótulo do botão clicado; null em repouso. */
 const enviando = computed(() => (isPending.value ? (variables.value?.decisao ?? null) : null))
 const observacao = ref('')
+// O componente é reaproveitado entre acionamentos (só o :id muda): a nota de um nunca vai para outro.
+watch(
+  () => props.id,
+  () => {
+    observacao.value = ''
+  },
+)
 
 const voltar = computed(() =>
   props.origem === 'aprovacoes'
