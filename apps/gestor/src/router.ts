@@ -21,7 +21,19 @@ export const rotas: RouteRecordRaw[] = [
     component: () => import('./layouts/LayoutGestor.vue'),
     children: [
       { path: '', redirect: { name: 'painel' } },
-      { path: 'painel', name: 'painel', component: () => import('./paginas/PaginaPainel.vue') },
+      {
+        path: 'painel',
+        children: [
+          { path: '', name: 'painel', component: () => import('./painel/PaginaPainel.vue') },
+          {
+            // Detalhe aberto pela Fila de aprovação do Painel: o item "Painel" segue ativo.
+            path: ':id',
+            name: 'painel-acionamento',
+            component: () => import('./acionamentos/detalhe/PaginaDetalhe.vue'),
+            props: (r) => ({ id: String(r.params.id), origem: 'painel' }),
+          },
+        ],
+      },
       {
         path: 'acionamentos',
         children: [
@@ -57,12 +69,12 @@ export const rotas: RouteRecordRaw[] = [
       {
         path: 'prestadores',
         name: 'prestadores',
-        component: () => import('./paginas/PaginaPrestadores.vue'),
+        component: () => import('./prestadores/PaginaPrestadores.vue'),
       },
       {
         path: 'checklists',
         name: 'checklists',
-        component: () => import('./paginas/PaginaChecklists.vue'),
+        component: () => import('./checklists/PaginaChecklists.vue'),
       },
     ],
   },

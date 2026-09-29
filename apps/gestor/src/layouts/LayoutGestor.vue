@@ -8,6 +8,7 @@ import ModalNovoAcionamento from '../acionamentos/novo/ModalNovoAcionamento.vue'
 import { novoAcionamento } from '../acionamentos/novo/estado'
 import NavInferior from '../componentes/NavInferior.vue'
 import NavLateral from '../componentes/NavLateral.vue'
+import { modaisAbertos } from '../modais'
 import { ITENS_NAVEGACAO } from '../navegacao'
 import { usarSaida } from '../saida'
 import { sessao } from '../sessao'
@@ -20,6 +21,7 @@ const { data: contagem, refetch } = usarContagem()
 const aprovacoes = computed(() => contagem.value?.aguardando ?? 0)
 const { mensagem } = toastGestor
 const modalAberto = novoAcionamento.aberto
+const telaInerte = computed(() => modalAberto.value || modaisAbertos.value > 0)
 const conteudo = ref<HTMLElement>()
 
 // A fila muda também pelas ações do prestador: o badge se atualiza a cada troca de tela.
@@ -46,15 +48,17 @@ watch(
       @sair="encerrarSessao"
     />
     <div class="coluna">
-      <!-- Com o modal aberto, a tela por trás dele fica inerte: o Tab não chega nela. -->
-      <main ref="conteudo" class="conteudo" :inert="modalAberto || undefined"><RouterView /></main>
+      <!-- Com um modal aberto, a tela por trás dele fica inerte: o Tab não chega nela. -->
+      <main ref="conteudo" class="conteudo" :inert="telaInerte || undefined"><RouterView /></main>
       <NavInferior
         v-if="!mdAndUp"
         :itens="ITENS_NAVEGACAO"
         :aprovacoes="aprovacoes"
-        :inert="modalAberto || undefined"
+        :inert="telaInerte || undefined"
       />
       <ModalNovoAcionamento v-if="modalAberto" @fechar="novoAcionamento.fechar()" />
+      <!-- Destino dos modais das telas (usarModalAberto + Teleport). -->
+      <div id="modais-gestor" />
       <AvisoToast :mensagem="mensagem" variante="gestor" />
     </div>
   </div>

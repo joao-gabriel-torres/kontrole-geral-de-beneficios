@@ -45,7 +45,7 @@ describe('PaginaDetalhe', () => {
     })
   })
 
-  const abrir = (origem: 'acionamentos' | 'aprovacoes' = 'acionamentos') =>
+  const abrir = (origem: 'acionamentos' | 'aprovacoes' | 'painel' = 'acionamentos') =>
     montar(PaginaDetalhe, { props: { id: 'a1059', origem } })
 
   it('volta para a tela de origem', async () => {
@@ -56,6 +56,8 @@ describe('PaginaDetalhe', () => {
     ])
     const pelaFila = (await abrir('aprovacoes')).tela.find('a.voltar')
     expect([pelaFila.text(), pelaFila.attributes('href')]).toEqual(['Aprovações', '/aprovacoes'])
+    const peloPainel = (await abrir('painel')).tela.find('a.voltar')
+    expect([peloPainel.text(), peloPainel.attributes('href')]).toEqual(['Painel', '/painel'])
   })
 
   it('mostra código, título, status e o cartão de informações', async () => {

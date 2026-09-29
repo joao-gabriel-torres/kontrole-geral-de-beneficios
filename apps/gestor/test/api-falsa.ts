@@ -11,14 +11,21 @@ export interface RespostaFalsa {
 }
 type Manipulador = (opcoes: OpcoesChamada) => RespostaFalsa | Promise<RespostaFalsa>
 
+type Metodo = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
+const METODOS: readonly Metodo[] = ['GET', 'POST', 'PATCH', 'PUT', 'DELETE']
+
 /**
- * Liga os mocks de `api.GET` e `api.POST` (de `vi.mock('…/api')`) a respostas por rota, no formato
- * do openapi-fetch. A chave é "MÉTODO caminho" ("GET /api/tipos"); o valor é o `data` da resposta
- * ou uma função que recebe as opções da chamada e devolve `{ data } | { error, status }`.
+ * Liga os mocks de `api.GET`, `api.POST` e, quando existirem, `api.PATCH`, `api.PUT` e
+ * `api.DELETE` (de `vi.mock('…/api')`) a respostas por rota, no formato do openapi-fetch. A chave é
+ * "MÉTODO caminho" ("GET /api/tipos"); o valor é o `data` da resposta ou uma função que recebe as
+ * opções da chamada e devolve `{ data } | { error, status }`.
  */
-export function simularApi(api: { GET: unknown; POST: unknown }, rotas: Record<string, unknown>) {
+export function simularApi(
+  api: { GET: unknown; POST: unknown } & Partial<Record<Metodo, unknown>>,
+  rotas: Record<string, unknown>,
+) {
   const responder =
-    (metodo: 'GET' | 'POST') =>
+    (metodo: Metodo) =>
     async (caminho: string, opcoes: OpcoesChamada = {}) => {
       const chave = `${metodo} ${caminho}`
       if (!(chave in rotas)) throw new Error(`Rota não simulada: ${chave}`)
@@ -28,15 +35,18 @@ export function simularApi(api: { GET: unknown; POST: unknown }, rotas: Record<s
       const status = r.status ?? (r.error === undefined ? 200 : 422)
       return { data: r.data, error: r.error, response: { status, ok: status < 400 } }
     }
-  const get = api.GET as Mock
-  const post = api.POST as Mock
-  get.mockReset()
-  post.mockReset()
-  get.mockImplementation(responder('GET'))
-  post.mockImplementation(responder('POST'))
+  const mocks = new Map<Metodo, Mock>()
+  for (const metodo of METODOS) {
+    const mock = api[metodo] as Mock | undefined
+    if (!mock) continue
+    mock.mockReset()
+    mock.mockImplementation(responder(metodo))
+    mocks.set(metodo, mock)
+  }
   return {
-    chamadas(metodo: 'GET' | 'POST', caminho: string): OpcoesChamada[] {
-      const mock = metodo === 'GET' ? get : post
+    chamadas(metodo: Metodo, caminho: string): OpcoesChamada[] {
+      const mock = mocks.get(metodo)
+      if (!mock) throw new Error(`api.${metodo} não foi simulado`)
       return mock.mock.calls
         .filter(([c]) => c === caminho)
         .map(([, o]) => (o ?? {}) as OpcoesChamada)

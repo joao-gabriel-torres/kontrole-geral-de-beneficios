@@ -18,7 +18,7 @@ import { MENSAGENS_REVISAO, prepararRevisao, ultimaDecisao, type Decisao } from 
 import { urlFoto } from './fotos'
 import { montarLinhaDoTempo } from './linhaDoTempo'
 
-const props = defineProps<{ id: string; origem: 'acionamentos' | 'aprovacoes' }>()
+const props = defineProps<{ id: string; origem: 'acionamentos' | 'aprovacoes' | 'painel' }>()
 
 const { data: acionamento, isError, error } = usarDetalhe(() => props.id)
 const { mutateAsync: revisar, isPending: enviando } = usarRevisao(() => props.id)
@@ -27,7 +27,9 @@ const observacao = ref('')
 const voltar = computed(() =>
   props.origem === 'aprovacoes'
     ? { rota: 'aprovacoes', rotulo: 'Aprovações' }
-    : { rota: 'acionamentos', rotulo: 'Acionamentos' },
+    : props.origem === 'painel'
+      ? { rota: 'painel', rotulo: 'Painel' }
+      : { rota: 'acionamentos', rotulo: 'Acionamentos' },
 )
 const historico = computed(() => montarLinhaDoTempo(acionamento.value?.eventos ?? []))
 const decisaoAnterior = computed(() =>

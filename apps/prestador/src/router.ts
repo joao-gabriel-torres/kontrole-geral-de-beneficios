@@ -22,7 +22,7 @@ export const rotas: RouteRecordRaw[] = [
     children: [
       { path: '', redirect: { name: 'inicio' } },
       { path: 'inicio', name: 'inicio', component: () => import('./inicio/PaginaInicio.vue') },
-      { path: 'agenda', name: 'agenda', component: () => import('./paginas/PaginaAgenda.vue') },
+      { path: 'agenda', name: 'agenda', component: () => import('./agenda/PaginaAgenda.vue') },
       {
         path: 'demandas',
         name: 'demandas',
