@@ -410,7 +410,67 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        /** Cria um tipo de demanda (checklist vazio, cor pela paleta) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["NovoTipo"];
+                };
+            };
+            responses: {
+                /** @description Tipo de demanda */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TipoDemanda"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Já existe um tipo com esse nome */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Dados inválidos */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -1176,33 +1236,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/painel": {
+    "/api/tipos/{id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** KPIs, volume por dia, reprovações por tipo e ranking do período */
-        get: {
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Exclui o tipo (os acionamentos já criados não mudam) */
+        delete: {
             parameters: {
-                query?: {
-                    /** @description Últimos 7 ou 30 dias */
-                    periodo?: "7" | "30";
-                };
+                query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    id: string;
+                };
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description Painel do gestor */
+                /** @description Excluído */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["PainelGestor"];
+                        "application/json": {
+                            /** @enum {boolean} */
+                            ok: true;
+                        };
                     };
                 };
                 /** @description Sem sessão */
@@ -1223,7 +1288,90 @@ export interface paths {
                         "application/json": components["schemas"]["Erro"];
                     };
                 };
-                /** @description Período inválido */
+                /** @description Tipo não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Último tipo ativo */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Renomeia o tipo e/ou grava o checklist inteiro */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AtualizacaoTipo"];
+                };
+            };
+            responses: {
+                /** @description Tipo de demanda */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TipoDemanda"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Tipo não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Já existe um tipo com esse nome */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Dados inválidos */
                 422: {
                     headers: {
                         [name: string]: unknown;
@@ -1234,12 +1382,6 @@ export interface paths {
                 };
             };
         };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
 }
@@ -1388,7 +1530,7 @@ export interface components {
             comentario: string;
         };
         InicioPrestador: {
-            proximo: components["schemas"]["ResumoAcionamento"] | null;
+            proximo: components["schemas"]["ResumoAcionamento"] & (Record<string, never> | null);
             hoje: components["schemas"]["ResumoAcionamento"][];
             metricas: {
                 hoje: number;
@@ -1401,56 +1543,13 @@ export interface components {
             };
             rotaDoDia: string[];
         };
-        PainelGestor: {
-            /** @example 2026-09-29 */
-            hoje: string;
-            periodo: 7 | 30;
-            /** @description Aberto, em execução ou reprovado */
-            emAberto: number;
-            /** @description Atendimentos de hoje não aprovados */
-            paraHoje: number;
-            aguardando: number;
-            aprovacao: {
-                aprovadas: number;
-                total: number;
-            };
-            /**
-             * @description Média de (1º envio − início) em minutos, com fração; null sem dados
-             * @example 106.15
-             */
-            tempoMedioMin: number | null;
-            inviaveis: {
-                quantidade: number;
-                totalPeriodo: number;
-            };
-            volume: {
-                /** @example 2026-09-29 */
-                data: string;
-                total: number;
-                aprovados: number;
-            }[];
-            reprovacoesPorTipo: {
-                tipoNome: string;
-                reprovacoes: number;
-                demandas: number;
-            }[];
-            ranking: {
-                prestador: {
-                    id: string;
-                    nome: string;
-                    cor: string;
-                };
-                concluidos: number;
-                revisoes: {
-                    aprovadas: number;
-                    total: number;
-                };
-                /**
-                 * @description Média de (1º envio − início) em minutos, com fração; null sem dados
-                 * @example 106.15
-                 */
-                tempoMedioMin: number | null;
-            }[];
+        NovoTipo: {
+            nome: string;
+        };
+        AtualizacaoTipo: {
+            nome?: string;
+            /** @description O checklist inteiro, na ordem (etapas vazias são descartadas) */
+            checklist?: string[];
         };
     };
     responses: never;

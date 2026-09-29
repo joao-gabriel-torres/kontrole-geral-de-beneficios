@@ -641,12 +641,15 @@
         "type": "object",
         "properties": {
           "proximo": {
-            "anyOf": [
+            "allOf": [
               {
                 "$ref": "#/components/schemas/ResumoAcionamento"
               },
               {
-                "type": "null"
+                "type": [
+                  "object",
+                  "null"
+                ]
               }
             ]
           },
@@ -708,196 +711,35 @@
           "rotaDoDia"
         ]
       },
-      "PainelGestor": {
+      "NovoTipo": {
         "type": "object",
         "properties": {
-          "hoje": {
+          "nome": {
             "type": "string",
-            "example": "2026-09-29"
-          },
-          "periodo": {
-            "anyOf": [
-              {
-                "type": "number",
-                "enum": [
-                  7
-                ]
-              },
-              {
-                "type": "number",
-                "enum": [
-                  30
-                ]
-              }
-            ]
-          },
-          "emAberto": {
-            "type": "integer",
-            "description": "Aberto, em execução ou reprovado"
-          },
-          "paraHoje": {
-            "type": "integer",
-            "description": "Atendimentos de hoje não aprovados"
-          },
-          "aguardando": {
-            "type": "integer"
-          },
-          "aprovacao": {
-            "type": "object",
-            "properties": {
-              "aprovadas": {
-                "type": "integer"
-              },
-              "total": {
-                "type": "integer"
-              }
-            },
-            "required": [
-              "aprovadas",
-              "total"
-            ]
-          },
-          "tempoMedioMin": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "description": "Média de (1º envio − início) em minutos, com fração; null sem dados",
-            "example": 106.15
-          },
-          "inviaveis": {
-            "type": "object",
-            "properties": {
-              "quantidade": {
-                "type": "integer"
-              },
-              "totalPeriodo": {
-                "type": "integer"
-              }
-            },
-            "required": [
-              "quantidade",
-              "totalPeriodo"
-            ]
-          },
-          "volume": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "data": {
-                  "type": "string",
-                  "example": "2026-09-29"
-                },
-                "total": {
-                  "type": "integer"
-                },
-                "aprovados": {
-                  "type": "integer"
-                }
-              },
-              "required": [
-                "data",
-                "total",
-                "aprovados"
-              ]
-            }
-          },
-          "reprovacoesPorTipo": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "tipoNome": {
-                  "type": "string"
-                },
-                "reprovacoes": {
-                  "type": "integer"
-                },
-                "demandas": {
-                  "type": "integer"
-                }
-              },
-              "required": [
-                "tipoNome",
-                "reprovacoes",
-                "demandas"
-              ]
-            }
-          },
-          "ranking": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "prestador": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "nome": {
-                      "type": "string"
-                    },
-                    "cor": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "nome",
-                    "cor"
-                  ]
-                },
-                "concluidos": {
-                  "type": "integer"
-                },
-                "revisoes": {
-                  "type": "object",
-                  "properties": {
-                    "aprovadas": {
-                      "type": "integer"
-                    },
-                    "total": {
-                      "type": "integer"
-                    }
-                  },
-                  "required": [
-                    "aprovadas",
-                    "total"
-                  ]
-                },
-                "tempoMedioMin": {
-                  "type": [
-                    "number",
-                    "null"
-                  ],
-                  "description": "Média de (1º envio − início) em minutos, com fração; null sem dados",
-                  "example": 106.15
-                }
-              },
-              "required": [
-                "prestador",
-                "concluidos",
-                "revisoes",
-                "tempoMedioMin"
-              ]
-            }
+            "maxLength": 500
           }
         },
         "required": [
-          "hoje",
-          "periodo",
-          "emAberto",
-          "paraHoje",
-          "aguardando",
-          "aprovacao",
-          "tempoMedioMin",
-          "inviaveis",
-          "volume",
-          "reprovacoesPorTipo",
-          "ranking"
+          "nome"
         ]
+      },
+      "AtualizacaoTipo": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "checklist": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "maxItems": 100,
+            "description": "O checklist inteiro, na ordem (etapas vazias são descartadas)"
+          }
+        }
       }
     },
     "parameters": {}
@@ -1297,6 +1139,79 @@
           },
           "401": {
             "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Cria um tipo de demanda (checklist vazio, cor pela paleta)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoTipo"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tipo de demanda",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipoDemanda"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Já existe um tipo com esse nome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dados inválidos",
             "content": {
               "application/json": {
                 "schema": {
@@ -2155,12 +2070,12 @@
         }
       }
     },
-    "/api/painel": {
-      "get": {
+    "/api/tipos/{id}": {
+      "patch": {
         "tags": [
-          "Painel"
+          "Catálogo"
         ],
-        "summary": "KPIs, volume por dia, reprovações por tipo e ranking do período",
+        "summary": "Renomeia o tipo e/ou grava o checklist inteiro",
         "security": [
           {
             "Bearer": []
@@ -2169,27 +2084,30 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "enum": [
-                "7",
-                "30"
-              ],
-              "default": "7",
-              "description": "Últimos 7 ou 30 dias"
+              "type": "string"
             },
-            "required": false,
-            "description": "Últimos 7 ou 30 dias",
-            "name": "periodo",
-            "in": "query"
+            "required": true,
+            "name": "id",
+            "in": "path"
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AtualizacaoTipo"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "Painel do gestor",
+            "description": "Tipo de demanda",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PainelGestor"
+                  "$ref": "#/components/schemas/TipoDemanda"
                 }
               }
             }
@@ -2214,8 +2132,112 @@
               }
             }
           },
+          "404": {
+            "description": "Tipo não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Já existe um tipo com esse nome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
           "422": {
-            "description": "Período inválido",
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Exclui o tipo (os acionamentos já criados não mudam)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Excluído",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tipo não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Último tipo ativo",
             "content": {
               "application/json": {
                 "schema": {
