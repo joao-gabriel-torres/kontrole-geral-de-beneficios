@@ -366,6 +366,20 @@ describe('PaginaPrestadores', () => {
       expect(toastGestor.mensagem.value).toBe('Cadastro atualizado')
     })
 
+    it('os modais recebem o foco sem rolar (no telefone o painel começa acima da tela)', async () => {
+      const foco = vi.spyOn(HTMLElement.prototype, 'focus')
+      const { tela } = await abrirNovo()
+      const painel = modal(tela).find('[role="dialog"]').element
+      expect(foco.mock.contexts).toContain(painel)
+      expect(foco.mock.calls[foco.mock.contexts.indexOf(painel)]).toEqual([{ preventScroll: true }])
+      await botao(modal(tela), 'Cancelar').trigger('click')
+      await linhaDe(tela, 'Ana Ribeiro').find('button[title="Excluir"]').trigger('click')
+      await aguardar()
+      const alerta = confirmacao(tela).find('[role="alertdialog"]').element
+      expect(foco.mock.calls[foco.mock.contexts.indexOf(alerta)]).toEqual([{ preventScroll: true }])
+      foco.mockRestore()
+    })
+
     it('Cancelar e o X fecham sem gravar', async () => {
       const { tela } = await abrirNovo()
       await botao(modal(tela), 'Cancelar').trigger('click')

@@ -70,7 +70,8 @@ function aoTeclar(e: KeyboardEvent) {
   if (e.key === 'Escape') emit('fechar')
 }
 onMounted(() => {
-  painel.value?.focus()
+  // Sem rolar: no telefone o painel começa acima da tela, como no protótipo.
+  painel.value?.focus({ preventScroll: true })
   document.addEventListener('keydown', aoTeclar)
 })
 onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
