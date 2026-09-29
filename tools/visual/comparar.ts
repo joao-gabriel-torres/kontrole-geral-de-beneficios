@@ -11,6 +11,7 @@ type Ponto = { x: number; y: number }
 
 const PASTA_PROTOTIPO = fileURLToPath(new URL('../../docs/design/', import.meta.url))
 const SAIDA = fileURLToPath(new URL('./.saida/', import.meta.url))
+const PASTA_FIXTURES = fileURLToPath(new URL('./fixtures/', import.meta.url))
 /** Fração máxima de pixels diferentes na região inteira. */
 const LIMITE = Number(process.env.LIMITE_DIFERENCA ?? '0.002')
 /** Fração máxima de pixels diferentes em relação aos pixels de conteúdo (não-fundo) do protótipo. */
@@ -56,13 +57,35 @@ function servirPrototipo(): Promise<{ url: string; fechar: () => void }> {
   )
 }
 
+const escapar = (texto: string) => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 async function aplicarPassos(pagina: Page, passos: readonly Passo[] = []) {
+  // A fonte muda a largura dos textos: clicar antes de ela chegar mede e rola diferente.
+  await pagina.evaluate(() => document.fonts.ready)
   for (const passo of passos) {
-    const alvo =
-      passo.papel === 'text'
-        ? pagina.getByText(passo.clicar, { exact: true })
-        : pagina.getByRole(passo.papel ?? 'button', { name: passo.clicar, exact: true })
-    await alvo.first().click()
+    if ('esperar' in passo) {
+      await pagina.waitForTimeout(passo.esperar)
+      continue
+    }
+    if ('preencher' in passo) {
+      const porPlaceholder = pagina.getByPlaceholder(passo.preencher, { exact: true })
+      const campo = (await porPlaceholder.count())
+        ? porPlaceholder
+        : pagina.getByLabel(passo.preencher, { exact: true })
+      await campo.first().fill(passo.com)
+    } else if ('anexar' in passo) {
+      await pagina
+        .locator('input[type="file"]')
+        .first()
+        .setInputFiles(join(PASTA_FIXTURES, passo.anexar))
+    } else {
+      const nome = passo.inicio ? new RegExp(`^${escapar(passo.clicar)}(\\s|$)`) : passo.clicar
+      const alvo =
+        passo.papel === 'text'
+          ? pagina.getByText(nome, { exact: true })
+          : pagina.getByRole(passo.papel ?? 'button', { name: nome, exact: true })
+      await alvo.first().click()
+    }
     await pagina.waitForTimeout(250)
   }
   await pagina.mouse.move(1, 1)
@@ -75,8 +98,10 @@ async function abrirPrototipo(navegador: Browser, url: string, caso: Caso): Prom
     localStorage.removeItem('acionamentos_v3')
     localStorage.setItem('acionamentos_v3_mode', modo)
   }, caso.modo)
-  await pagina.goto(url)
-  await pagina.getByText('Restaurar exemplo').waitFor()
+  // O protótipo busca fontes e scripts em CDN: esperar o "load" deixa a rodada à mercê da rede.
+  // A fonte é aguardada antes dos passos (document.fonts.ready).
+  await pagina.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 })
+  await pagina.getByText('Restaurar exemplo').waitFor({ timeout: 60_000 })
   if (caso.navegarPrototipo) {
     await pagina
       .getByRole('button', { name: new RegExp(`^\\s*${caso.navegarPrototipo}`) })

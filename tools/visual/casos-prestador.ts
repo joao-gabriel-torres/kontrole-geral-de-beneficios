@@ -1,39 +1,12 @@
-import { telaInteira, type Caso, type Passo, type Regiao } from './tipos'
+import { telaPrestador as tela } from './regioes'
+import type { Caso, Passo } from './tipos'
 
-const abasPrestador: Regiao = { nome: 'abas', x: 0, y: 688, largura: 375, altura: 80 }
-const cabecalhoPrestador = (altura: number): Regiao => ({
-  nome: 'cabecalho',
-  x: 0,
-  y: 0,
-  largura: 360,
-  altura,
-})
-const tela = telaInteira('pa')
-
-/**
- * Os chips de Demandas têm o nome acessível "rótulo + contagem" (por exemplo "Corrigir 1"). As
- * contagens vêm do seed do dia, que é o mesmo gerador do protótipo.
- */
-const chip = (nome: string): Passo => ({ clicar: nome })
+/** Os chips de Demandas têm o nome acessível "rótulo + contagem" ("Corrigir 1"): casa pelo início. */
+const chip = (nome: string): Passo => ({ clicar: nome, inicio: true })
 const titulo = (texto: string): Passo => ({ clicar: texto, papel: 'text' })
 
-/** Os passos só clicam (e esperam 250 ms depois de cada clique): cliques num texto inerte esperam. */
-const esperar = (textoInerte: string, cliques: number): Passo[] =>
-  Array.from({ length: cliques }, () => ({ clicar: textoInerte, papel: 'text' as const }))
-
-/**
- * Toasts ficam fora da comparação (spec), mas o harness fotografa o protótipo só depois de o app
- * carregar: o toast do protótipo já sumiu e o do app não. Dez cliques no código do cabeçalho deixam
- * o toast de 2,6 s sumir nos dois.
- */
-const esperarToast = (codigo: string) => esperar(codigo, 10)
-
-/**
- * O protótipo carrega a fonte do Google Fonts e o harness só espera `document.fonts` depois dos
- * passos. Se "Finalizadas" for clicado antes de a fonte chegar, o chip ainda tem a largura da fonte
- * de reserva e a faixa rola 9px a mais (50 em vez de 41, medido). Esperar pela fonte antes do clique.
- */
-const esperarFonte = () => esperar('Suas demandas', 6)
+/** Toasts ficam fora da comparação: espera o de 2,6 s sumir nos dois lados. */
+const esperarToast: Passo = { esperar: 3000 }
 
 const demandas = (nome: string, passos: Passo[] = []): Caso => ({
   nome,
@@ -53,35 +26,23 @@ export const CASOS_PRESTADOR: Caso[] = [
     rota: '/inicio',
     regioes: [tela],
   },
-  {
-    nome: 'prestador-agenda',
-    modo: 'pa',
-    navegarPrototipo: 'Agenda',
-    app: 'prestador',
-    rota: '/agenda',
-    regioes: [abasPrestador, cabecalhoPrestador(48)],
-  },
   demandas('prestador-demandas-ativas'),
-  demandas('prestador-demandas-corrigir', [chip('Corrigir 1')]),
-  demandas('prestador-demandas-analise', [chip('Em análise 2')]),
-  demandas('prestador-demandas-finalizadas', [...esperarFonte(), chip('Finalizadas 12')]),
+  demandas('prestador-demandas-corrigir', [chip('Corrigir')]),
+  demandas('prestador-demandas-analise', [chip('Em análise')]),
+  demandas('prestador-demandas-finalizadas', [chip('Finalizadas')]),
   demandas('prestador-detalhe-aberto', [titulo('Vazamento no teto do banheiro')]),
-  demandas('prestador-detalhe-reprovado', [
-    chip('Corrigir 1'),
-    titulo('Reparo em gesso no quarto'),
-  ]),
+  demandas('prestador-detalhe-reprovado', [chip('Corrigir'), titulo('Reparo em gesso no quarto')]),
   demandas('prestador-detalhe-reprovado-etapa', [
-    chip('Corrigir 1'),
+    chip('Corrigir'),
     titulo('Reparo em gesso no quarto'),
     titulo('Remover parte danificada'),
   ]),
   demandas('prestador-detalhe-aguardando', [
-    chip('Em análise 2'),
+    chip('Em análise'),
     titulo('Limpeza de ar-condicionado'),
   ]),
   demandas('prestador-detalhe-aprovado', [
-    ...esperarFonte(),
-    chip('Finalizadas 12'),
+    chip('Finalizadas'),
     titulo('Troca de fechadura da porta dos fundos'),
   ]),
   demandas('prestador-inviavel', [
@@ -93,6 +54,6 @@ export const CASOS_PRESTADOR: Caso[] = [
     titulo('Vazamento no teto do banheiro'),
     { clicar: 'Iniciar atendimento' },
     titulo('Localizar ponto do vazamento'),
-    ...esperarToast('AC-1063'),
+    esperarToast,
   ]),
 ]

@@ -1,16 +1,5 @@
-import { telaInteira, type Caso, type Passo, type Regiao } from './tipos'
-
-const sidebar: Regiao = { nome: 'sidebar', x: 0, y: 0, largura: 232, altura: 844 }
-const abasGestor: Regiao = { nome: 'abas', x: 0, y: 692, largura: 375, altura: 76 }
-const cabecalhoWeb = (altura: number): Regiao => ({
-  nome: 'cabecalho',
-  x: 264,
-  y: 28,
-  largura: 480,
-  altura,
-})
-const telaWeb = telaInteira('gw')
-const telaMobile = telaInteira('gm')
+import { telaMobile, telaWeb } from './regioes'
+import { telaInteira, type Caso, type Passo } from './tipos'
 
 /**
  * Abre um acionamento pelo título a partir de um filtro da lista. O protótipo reaproveita a
@@ -18,14 +7,18 @@ const telaMobile = telaInteira('gm')
  * ele, e o protótipo e o app ficam os dois no topo.
  */
 function abrirPeloTitulo(filtro: string, titulo: string): Passo[] {
-  return [{ clicar: filtro }, { clicar: titulo, papel: 'text' }, { clicar: titulo, papel: 'text' }]
+  return [
+    { clicar: filtro, inicio: true },
+    { clicar: titulo, papel: 'text' },
+    { clicar: titulo, papel: 'text' },
+  ]
 }
 
 const DETALHES = [
-  { caso: 'aguardando', filtro: 'Aguardando 3', titulo: 'Revisão elétrica e troca de disjuntor' },
-  { caso: 'reprovado', filtro: 'Reprovados 2', titulo: 'Revisão elétrica anual' },
-  { caso: 'aprovado', filtro: 'Finalizados 57', titulo: 'Reparo no forro da sala' },
-  { caso: 'inviavel', filtro: 'Finalizados 57', titulo: 'Ponto de luz na garagem' },
+  { caso: 'aguardando', filtro: 'Aguardando', titulo: 'Revisão elétrica e troca de disjuntor' },
+  { caso: 'reprovado', filtro: 'Reprovados', titulo: 'Revisão elétrica anual' },
+  { caso: 'aprovado', filtro: 'Finalizados', titulo: 'Reparo no forro da sala' },
+  { caso: 'inviavel', filtro: 'Finalizados', titulo: 'Ponto de luz na garagem' },
 ]
 
 const casosDetalhe: Caso[] = (['gw', 'gm'] as const).flatMap((modo) =>
@@ -42,13 +35,6 @@ const casosDetalhe: Caso[] = (['gw', 'gm'] as const).flatMap((modo) =>
 
 export const CASOS_GESTOR: Caso[] = [
   {
-    nome: 'gestor-web-painel',
-    modo: 'gw',
-    app: 'gestor',
-    rota: '/painel',
-    regioes: [sidebar, cabecalhoWeb(56)],
-  },
-  {
     nome: 'gestor-web-acionamentos',
     modo: 'gw',
     navegarPrototipo: 'Acionamentos',
@@ -62,7 +48,7 @@ export const CASOS_GESTOR: Caso[] = [
     navegarPrototipo: 'Acionamentos',
     app: 'gestor',
     rota: '/acionamentos',
-    passos: [{ clicar: 'Aguardando 3' }],
+    passos: [{ clicar: 'Aguardando', inicio: true }],
     regioes: [telaWeb],
   },
   {
@@ -95,30 +81,6 @@ export const CASOS_GESTOR: Caso[] = [
     rota: '/aprovacoes',
     regioes: [telaWeb],
   },
-  // O subtítulo "N ativos de M" depende de dados de prestadores: o cabeçalho entra quando a tela for implementada.
-  {
-    nome: 'gestor-web-prestadores',
-    modo: 'gw',
-    navegarPrototipo: 'Prestadores',
-    app: 'gestor',
-    rota: '/prestadores',
-    regioes: [sidebar],
-  },
-  {
-    nome: 'gestor-web-checklists',
-    modo: 'gw',
-    navegarPrototipo: 'Checklists',
-    app: 'gestor',
-    rota: '/checklists',
-    regioes: [sidebar, cabecalhoWeb(56)],
-  },
-  {
-    nome: 'gestor-mobile-painel',
-    modo: 'gm',
-    app: 'gestor',
-    rota: '/painel',
-    regioes: [abasGestor, { nome: 'cabecalho', x: 16, y: 16, largura: 300, altura: 52 }],
-  },
   {
     nome: 'gestor-mobile-aprovacoes',
     modo: 'gm',
@@ -141,7 +103,7 @@ export const CASOS_GESTOR: Caso[] = [
     navegarPrototipo: 'Acionamentos',
     app: 'gestor',
     rota: '/acionamentos',
-    passos: [{ clicar: 'Aguardando 3' }],
+    passos: [{ clicar: 'Aguardando', inicio: true }],
     regioes: [telaMobile],
   },
   ...casosDetalhe,

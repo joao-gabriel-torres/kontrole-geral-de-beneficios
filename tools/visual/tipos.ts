@@ -8,12 +8,21 @@ export interface Regiao {
   altura: number
 }
 
-/** Clique aplicado do mesmo jeito no protótipo e no app, em ordem, depois de abrir a tela. */
-export interface Passo {
-  clicar: string
-  /** Como achar o alvo: botão pelo nome acessível (padrão), link ou texto exato. */
-  papel?: 'button' | 'link' | 'text'
-}
+/** Ação aplicada do mesmo jeito no protótipo e no app, em ordem, depois de abrir a tela. */
+export type Passo =
+  | {
+      /** Clica no alvo achado pelo nome acessível: botão (padrão), link ou texto exato. */
+      clicar: string
+      papel?: 'button' | 'link' | 'text'
+      /** Aceita nome que só começa com o texto: "Corrigir" acha "Corrigir 1" (contagens mudam). */
+      inicio?: boolean
+    }
+  /** Preenche o campo achado pelo placeholder (ou, se não houver, pelo rótulo). */
+  | { preencher: string; com: string }
+  /** Anexa um arquivo de `tools/visual/fixtures/` ao primeiro campo de arquivo da tela. */
+  | { anexar: string }
+  /** Espera em ms, por exemplo até um toast sumir (toasts ficam fora da comparação). */
+  | { esperar: number }
 
 export interface Caso {
   nome: string
