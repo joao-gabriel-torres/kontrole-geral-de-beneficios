@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { AvisoToast } from '@kgb/ui'
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { usarContagem } from '../acionamentos/dados'
@@ -29,12 +29,35 @@ watch(
   () => rota.name,
   () => void refetch(),
 )
-// A área de conteúdo é a mesma entre as telas: cada tela nova começa no topo.
+/** Rota do Detalhe → rota da tela de onde ele foi aberto (a do "voltar"). */
+const ORIGEM_DO_DETALHE: Record<string, string> = {
+  acionamento: 'acionamentos',
+  aprovacao: 'aprovacoes',
+  'painel-acionamento': 'painel',
+}
+const TELAS_DE_ORIGEM = new Set(Object.values(ORIGEM_DO_DETALHE))
+/** Rolagem de cada tela de origem na última vez em que a gestora saiu dela. */
+const rolagens = new Map<string, number>()
+const telaAtual = () => [rota.path, String(rota.name ?? '')] as const
+
+// A área de conteúdo é a mesma entre as telas: cada tela nova começa no topo. Antes de desenhar a
+// tela nova (flush 'pre'), a rolagem ainda é a da anterior: a da lista fica guardada.
+watch(telaAtual, (_, [caminhoAnterior, nomeAnterior]) => {
+  if (!conteudo.value) return
+  if (TELAS_DE_ORIGEM.has(nomeAnterior)) rolagens.set(caminhoAnterior, conteudo.value.scrollTop)
+  conteudo.value.scrollTop = 0
+})
+// Voltando do Detalhe para a lista de onde ele foi aberto, ela reabre na mesma rolagem (os dados
+// vêm do cache, então as linhas já estão lá depois do desenho).
 watch(
-  () => rota.path,
-  () => {
-    if (conteudo.value) conteudo.value.scrollTop = 0
+  telaAtual,
+  async ([caminho, nome], [, nomeAnterior]) => {
+    const rolagem = rolagens.get(caminho)
+    if (ORIGEM_DO_DETALHE[nomeAnterior] !== nome || rolagem === undefined) return
+    await nextTick()
+    if (conteudo.value) conteudo.value.scrollTop = rolagem
   },
+  { flush: 'post' },
 )
 </script>
 
