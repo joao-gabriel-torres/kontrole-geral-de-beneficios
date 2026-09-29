@@ -140,7 +140,9 @@ export const InviavelFormSchema = z.object({
 
 export const InicioPrestadorSchema = z
   .object({
-    proximo: ResumoAcionamentoSchema.nullable(),
+    // `union` com null gera `anyOf: [$ref, null]`, que o openapi-typescript lê como `T | null`
+    // (o `.nullable()` gera `allOf` com `type: ["object","null"]` e vira uma interseção inútil).
+    proximo: z.union([ResumoAcionamentoSchema, z.null()]),
     hoje: z.array(ResumoAcionamentoSchema),
     metricas: z.object({
       hoje: z.number().int(),

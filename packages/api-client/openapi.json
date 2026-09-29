@@ -641,15 +641,12 @@
         "type": "object",
         "properties": {
           "proximo": {
-            "allOf": [
+            "anyOf": [
               {
                 "$ref": "#/components/schemas/ResumoAcionamento"
               },
               {
-                "type": [
-                  "object",
-                  "null"
-                ]
+                "type": "null"
               }
             ]
           },

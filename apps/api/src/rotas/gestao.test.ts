@@ -1,5 +1,5 @@
 import { EMAIL_PRESTADOR_DEV, GESTORA_DEV } from '@kgb/db/seed'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { criarAcionamento, formularioFoto } from '../../test/dados'
 import { entrar } from '../../test/sessao'
 import { criarApp } from '../app'
@@ -14,6 +14,8 @@ beforeAll(async () => {
   gestora = await entrar(app, GESTORA_DEV.email)
   carlos = await entrar(app, EMAIL_PRESTADOR_DEV)
 })
+
+afterEach(() => vi.restoreAllMocks())
 
 const post = (caminho: string, headers: Record<string, string>, corpo?: unknown) =>
   app.request(caminho, {
@@ -181,6 +183,27 @@ describe('POST /api/acionamentos/:id/revisao', () => {
       await prisma.foto.count({ where: { acionamentoId: id, contexto: 'inviabilidade' } }),
     ).toBe(0)
     expect(await armazenamento.abrir(chave)).toBeNull()
+  })
+
+  it('recusar a inviabilidade grava mesmo se o arquivo não puder ser apagado', async () => {
+    const id = await criarAcionamento(app, gestora)
+    const formulario = new FormData()
+    formulario.set('comentario', 'Sem acesso ao local')
+    formulario.append('arquivos', formularioFoto({}).get('arquivo') as File)
+    const inviavel = await app.request(`/api/acionamentos/${id}/inviavel`, {
+      method: 'POST',
+      headers: carlos,
+      body: formulario,
+    })
+    expect(inviavel.status).toBe(200)
+    vi.spyOn(armazenamento, 'remover').mockRejectedValueOnce(new Error('armazenamento fora do ar'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const r = await post(`/api/acionamentos/${id}/revisao`, gestora, {
+      decisao: 'reprovado',
+      motivo: 'Dá para fazer',
+    })
+    expect(r.status).toBe(200)
+    expect(await r.json()).toMatchObject({ status: 'reprovado', inviavel: false })
   })
 
   it('só a gestão revisa', async () => {

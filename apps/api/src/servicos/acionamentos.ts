@@ -114,10 +114,19 @@ export async function travar(
   return linha ?? null
 }
 
+/**
+ * Apaga os arquivos em melhor esforço: roda depois do commit ou para desfazer um envio, e uma falha
+ * do armazenamento não pode virar erro de uma ação já gravada nem trocar o erro original. Cada
+ * falha fica no log.
+ */
 export async function removerArquivos(chaves: readonly string[]): Promise<void> {
-  await Promise.all(
-    chaves.filter((c) => !c.startsWith(PREFIXO_PLACEHOLDER)).map((c) => armazenamento.remover(c)),
-  )
+  const reais = chaves.filter((c) => !c.startsWith(PREFIXO_PLACEHOLDER))
+  const resultados = await Promise.allSettled(reais.map((c) => armazenamento.remover(c)))
+  resultados.forEach((r, i) => {
+    if (r.status === 'rejected') {
+      console.error('Não foi possível remover o arquivo', reais[i], r.reason)
+    }
+  })
 }
 
 export async function criarAcionamento(u: UsuarioSessao, dados: DadosNovoAcionamento) {
@@ -300,23 +309,26 @@ export async function adicionarFoto(
     throw new ErroHttp(422, 'etapa_obrigatoria', 'Informe a etapa da foto')
   }
   const fotoId = randomUUID()
-  const chave = `${id}/${fotoId}.${tipo.extensao}`
+  // A chave só existe depois de travar a linha, e usa o id dela: um id malformado na URL cai no
+  // 404 sem nunca virar caminho de arquivo.
+  let chave: string | null = null
   try {
     const foto = await prisma.$transaction(async (tx) => {
       const a = await travarDoPrestador(tx, u, id)
       exigirStatus('editar', a.status)
       if (entrada.contexto === 'etapa') {
         const etapa = await tx.etapa.findFirst({
-          where: { id: entrada.etapaId, demanda: { acionamentoId: id } },
+          where: { id: entrada.etapaId, demanda: { acionamentoId: a.id } },
           select: { id: true },
         })
         if (!etapa) throw naoEncontrado('Etapa')
       }
+      chave = `${a.id}/${fotoId}.${tipo.extensao}`
       await armazenamento.salvar(chave, dados, tipo.mime)
       return tx.foto.create({
         data: {
           id: fotoId,
-          acionamentoId: id,
+          acionamentoId: a.id,
           contexto: entrada.contexto,
           etapaId: entrada.contexto === 'etapa' ? entrada.etapaId! : null,
           storageKey: chave,
@@ -326,7 +338,7 @@ export async function adicionarFoto(
     })
     return paraFoto(foto)
   } catch (erro) {
-    await armazenamento.remover(chave)
+    if (chave) await removerArquivos([chave])
     throw erro
   }
 }
@@ -386,13 +398,13 @@ export async function marcarInviavel(
       const agora = new Date()
       for (const imagem of imagens) {
         const fotoId = randomUUID()
-        const chave = `${id}/${fotoId}.${imagem.tipo.extensao}`
-        await armazenamento.salvar(chave, imagem.dados, imagem.tipo.mime)
+        const chave = `${a.id}/${fotoId}.${imagem.tipo.extensao}`
         chaves.push(chave)
+        await armazenamento.salvar(chave, imagem.dados, imagem.tipo.mime)
         await tx.foto.create({
           data: {
             id: fotoId,
-            acionamentoId: id,
+            acionamentoId: a.id,
             contexto: 'inviabilidade',
             storageKey: chave,
             tiradaEm: agora,

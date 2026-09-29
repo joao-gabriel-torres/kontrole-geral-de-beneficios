@@ -2,7 +2,7 @@ import { OpenAPIHono } from '@hono/zod-openapi'
 import { Scalar } from '@scalar/hono-api-reference'
 import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
-import { auth } from './auth'
+import { auth, guardaAuth } from './auth'
 import type { Ambiente } from './contexto'
 import { ErroDominio } from './dominio/acionamento'
 import { env } from './env'
@@ -52,7 +52,10 @@ export function criarApp() {
       exposeHeaders: ['set-auth-token'],
     }),
   )
-  app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
+  // A foto assinada responde sem ler a sessão: a <img> do gestor web leva cookie, e cada miniatura
+  // faria uma consulta à toa.
+  app.route('/', rotasArquivos)
+  app.on(['GET', 'POST'], '/api/auth/*', guardaAuth, (c) => auth.handler(c.req.raw))
   app.use('/api/*', sessao)
 
   app.openAPIRegistry.registerComponent('securitySchemes', 'Bearer', {
@@ -64,7 +67,6 @@ export function criarApp() {
   app.route('/', rotasAcionamentos)
   app.route('/', rotasCatalogo)
   app.route('/', rotasExecucao)
-  app.route('/', rotasArquivos)
   app.route('/', rotasPrestador)
   app.route('/', rotasPainel)
   app.route('/', rotasTipos)
