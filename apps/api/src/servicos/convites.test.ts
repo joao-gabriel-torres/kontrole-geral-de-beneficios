@@ -1,6 +1,7 @@
 import { semear } from '@kgb/db/seed'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { criarCorreioEmMemoria, trocarCorreio, type CorreioEmMemoria } from '../correio'
+import { criarCorreioSmtp } from '../correio/smtp'
 import { prisma } from '../db'
 import { env } from '../env'
 import { acessosDosPrestadores, enviarConvite, ErroEnvioConvite } from './convites'
@@ -207,6 +208,19 @@ describe('enviarConvite', () => {
     expect((await acessosDosPrestadores(['p-conv-falha'])).get('p-conv-falha')).toBe('pendente')
     vi.restoreAllMocks()
   })
+  it('servidor de e-mail que não responde: 502 dentro do limite e o token sai', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const mudo = { sendMail: () => new Promise<never>(() => {}) }
+    trocarCorreio(criarCorreioSmtp('smtp://mudo', 'n@russo.dev', mudo, 100))
+    await novoPrestador('p-conv-mudo')
+
+    const erro = await enviarConvite('p-conv-mudo', GESTOR).catch((e: unknown) => e)
+
+    expect(erro).toBeInstanceOf(ErroEnvioConvite)
+    const usuario = await prisma.user.findUniqueOrThrow({ where: { prestadorId: 'p-conv-mudo' } })
+    expect(await convitesDoUsuario(usuario.id)).toEqual([])
+    vi.restoreAllMocks()
+  }, 5_000)
 })
 
 describe('acessosDosPrestadores', () => {

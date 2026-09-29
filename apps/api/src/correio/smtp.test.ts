@@ -1,6 +1,10 @@
+import { createServer, type AddressInfo, type Socket } from 'node:net'
 import { createTransport } from 'nodemailer'
 import { describe, expect, it } from 'vitest'
-import { criarCorreioSmtp, type TransporteSmtp } from './smtp'
+import { criarCorreioSmtp, criarTransporteSmtp, LIMITES_SMTP, type TransporteSmtp } from './smtp'
+
+/** Os fronts desistem da chamada em 8 s (TEMPO_LIMITE_PADRAO do @kgb/api-client). */
+const TEMPO_LIMITE_DO_CLIENTE = 8_000
 
 const mensagem = {
   para: 'ana@teste.dev',
@@ -44,5 +48,41 @@ describe('correio SMTP (produção)', () => {
     await expect(
       criarCorreioSmtp('smtp://x', 'n@russo.dev', transporte).enviar(mensagem),
     ).rejects.toThrow('535')
+  })
+})
+
+describe('tempos limite do SMTP', () => {
+  it('servidor que aceita a conexão e nunca cumprimenta: o transporte desiste antes do cliente', async () => {
+    const conexoes = new Set<Socket>()
+    const mudo = createServer((socket) => conexoes.add(socket))
+    await new Promise<void>((pronto) => mudo.listen(0, '127.0.0.1', pronto))
+    const { port } = mudo.address() as AddressInfo
+    const inicio = Date.now()
+    try {
+      await expect(
+        criarTransporteSmtp(`smtp://127.0.0.1:${port}`).sendMail({
+          from: 'n@russo.dev',
+          to: 'ana@teste.dev',
+          subject: 'assunto',
+          text: 'texto',
+          html: '<p>html</p>',
+        }),
+      ).rejects.toThrow()
+      expect(Date.now() - inicio).toBeLessThan(TEMPO_LIMITE_DO_CLIENTE)
+    } finally {
+      for (const socket of conexoes) socket.destroy()
+      mudo.close()
+    }
+  }, 10_000)
+
+  it('transporte que nunca responde: enviar rejeita no limite total', async () => {
+    const nuncaResponde: TransporteSmtp = { sendMail: () => new Promise(() => {}) }
+    await expect(
+      criarCorreioSmtp('smtp://x', 'n@russo.dev', nuncaResponde, 50).enviar(mensagem),
+    ).rejects.toThrow('O servidor de e-mail não respondeu')
+  }, 2_000)
+
+  it('o limite total cabe no tempo em que os fronts desistem', () => {
+    expect(LIMITES_SMTP.totalMs).toBeLessThan(TEMPO_LIMITE_DO_CLIENTE)
   })
 })
