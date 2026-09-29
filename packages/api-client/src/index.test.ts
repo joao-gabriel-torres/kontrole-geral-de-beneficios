@@ -1,5 +1,11 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { comTempoLimite, criarClienteApi, ErroTempoEsgotado } from './index'
+import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
+import {
+  comTempoLimite,
+  criarClienteApi,
+  ErroTempoEsgotado,
+  type InicioPrestador,
+  type ResumoAcionamento,
+} from './index'
 
 function fetchFalso() {
   const chamadas: Request[] = []
@@ -65,5 +71,12 @@ describe('comTempoLimite', () => {
 
   it('devolve o resultado quando a API responde', async () => {
     await expect(comTempoLimite(async () => 'ok', 8000)).resolves.toBe('ok')
+  })
+})
+
+describe('tipos gerados', () => {
+  // eslint-disable-next-line vitest/expect-expect -- verificação só de tipo, feita pelo vue-tsc no typecheck
+  it('o próximo atendimento do Início é um resumo ou null', () => {
+    expectTypeOf<InicioPrestador['proximo']>().toEqualTypeOf<ResumoAcionamento | null>()
   })
 })

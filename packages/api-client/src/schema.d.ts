@@ -1322,7 +1322,7 @@ export interface components {
             comentario: string;
         };
         InicioPrestador: {
-            proximo: components["schemas"]["ResumoAcionamento"] & (Record<string, never> | null);
+            proximo: components["schemas"]["ResumoAcionamento"] | null;
             hoje: components["schemas"]["ResumoAcionamento"][];
             metricas: {
                 hoje: number;
