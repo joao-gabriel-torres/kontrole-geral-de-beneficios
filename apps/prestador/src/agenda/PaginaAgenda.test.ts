@@ -2,6 +2,7 @@ import type { ResumoAcionamento } from '@kgb/api-client'
 import type { VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { montar } from '../../test/montar'
+import { CHAVES } from '../consultas'
 
 const { api, sessao } = vi.hoisted(() => ({
   api: { GET: vi.fn() },
@@ -80,6 +81,7 @@ const botoes = (w: VueWrapper) => w.findAll('.dia')
 const nomes = (w: VueWrapper) =>
   botoes(w).map((b) => `${b.find('.dia-semana').text()} ${b.find('.numero').text()}`)
 const rotulo = (w: VueWrapper) => w.find('.rotulo-dia').text()
+const horas = (w: VueWrapper) => w.findAll('.hora').map((h) => h.text())
 
 describe('PaginaAgenda', () => {
   beforeEach(() => {
@@ -200,5 +202,81 @@ describe('PaginaAgenda', () => {
     expect(wrapper.findAll('.com-atendimento')).toHaveLength(0)
     expect(rotulo(wrapper)).toBe('Hoje, 29/09')
     expect(wrapper.text()).not.toContain('Dia livre.')
+  })
+
+  it('lista os acionamentos de hoje por início, com hora, título, horário e tipos, endereço e chip', async () => {
+    const { wrapper } = await abrirAgenda()
+    expect(api.GET).toHaveBeenCalledWith('/api/acionamentos')
+    expect(horas(wrapper)).toEqual(['07:30', '10:30', '15:00'])
+    const [primeiro, segundo] = wrapper.findAll('.cartao')
+    expect(primeiro!.find('.titulo-cartao').text()).toBe('Limpeza de ar-condicionado')
+    expect(primeiro!.find('.horario').text()).toBe('07:30–09:00 · Limpeza de ar-condicionado')
+    expect(primeiro!.find('.endereco').text()).toBe('Rua Pamplona, 145 · Jardim Paulista')
+    expect(primeiro!.find('.endereco svg').exists()).toBe(true)
+    expect(primeiro!.find('.chip').text()).toBe('Aguardando aprovação')
+    expect(segundo!.find('.horario').text()).toBe('10:30–12:30 · Vazamento + Reparo em gesso')
+    expect(segundo!.find('.chip').text()).toBe('Agendado')
+    expect(wrapper.text()).not.toContain('Dia livre.')
+  })
+
+  it('usa a mesma consulta de Demandas (as mutações do Detalhe atualizam a Agenda)', async () => {
+    const { cliente } = await abrirAgenda()
+    expect(cliente.getQueryData(CHAVES.lista)).toEqual(LISTA)
+  })
+
+  it('entram todos os status, inclusive reprovado, aprovado e inviável', async () => {
+    api.GET.mockResolvedValue(
+      ok([
+        resumo('2', { inicio: '09:00', status: 'aprovado', inviavel: true }),
+        resumo('1', { inicio: '08:00', status: 'reprovado' }),
+        resumo('3', { inicio: '10:00', status: 'em_andamento' }),
+        resumo('4', { inicio: '11:00', status: 'aprovado' }),
+      ]),
+    )
+    const { wrapper } = await abrirAgenda()
+    expect(wrapper.findAll('.chip').map((c) => c.text())).toEqual([
+      'Reprovado',
+      'Inviável',
+      'Em execução',
+      'Aprovado',
+    ])
+  })
+
+  it('escolher outro dia mostra a lista dele; dia sem nada mostra "Dia livre."', async () => {
+    const { wrapper } = await abrirAgenda()
+    await botoes(wrapper)[1]!.trigger('click')
+    expect(horas(wrapper)).toEqual(['09:00', '13:00'])
+    await botoes(wrapper)[3]!.trigger('click')
+    expect(rotulo(wrapper)).toBe('Sexta-feira, 02/10')
+    expect(wrapper.findAll('.linha')).toHaveLength(0)
+    expect(wrapper.find('.livre').text()).toBe('Dia livre.')
+  })
+
+  it('o cartão abre o Detalhe pelo clique e pelo teclado; a hora não abre', async () => {
+    const { wrapper, router } = await abrirAgenda()
+    await wrapper.findAll('.hora')[0]!.trigger('click')
+    expect(router.currentRoute.value.name).toBe('agenda')
+    await wrapper.findAll('.cartao')[0]!.trigger('click')
+    await vi.waitFor(() => expect(router.currentRoute.value.params.id).toBe('1013'))
+    expect(router.currentRoute.value.name).toBe('detalhe')
+    await router.push('/agenda')
+    await wrapper.findAll('.cartao')[1]!.trigger('keydown', { key: 'Enter' })
+    await vi.waitFor(() => expect(router.currentRoute.value.params.id).toBe('1014'))
+    await router.push('/agenda')
+    await wrapper.findAll('.cartao')[2]!.trigger('keydown', { key: ' ' })
+    await vi.waitFor(() => expect(router.currentRoute.value.params.id).toBe('1015'))
+  })
+
+  it('erro ao carregar mostra a mensagem da API no lugar da lista, sem "Dia livre."', async () => {
+    api.GET.mockResolvedValue({
+      data: undefined,
+      error: { erro: { codigo: 'erro_interno', mensagem: 'Serviço indisponível' } },
+      response: new Response(null, { status: 503 }),
+    })
+    const { wrapper } = await abrirAgenda()
+    await vi.waitFor(() => expect(wrapper.find('.aviso').exists()).toBe(true))
+    expect(wrapper.find('.aviso').text()).toBe('Serviço indisponível')
+    expect(wrapper.text()).not.toContain('Dia livre.')
+    expect(rotulo(wrapper)).toBe('Hoje, 29/09')
   })
 })
