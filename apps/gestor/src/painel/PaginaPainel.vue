@@ -74,8 +74,8 @@ onUnmounted(() => clearInterval(relogio))
         </MenuUsuario>
       </div>
     </div>
-    <div v-if="erro" class="erro">{{ mensagemDeErro(erro) }}</div>
-    <template v-else-if="painel.data.value && fila.data.value">
+    <!-- Com os números na tela, uma atualização que falha não os tira: a próxima tenta de novo. -->
+    <template v-if="painel.data.value && fila.data.value">
       <KpisPainel :kpis="kpisDoPainel(painel.data.value)" />
       <div class="linha">
         <VolumePeriodo :barras="barrasDoVolume(painel.data.value)" />
@@ -86,6 +86,7 @@ onUnmounted(() => clearInterval(relogio))
         <RankingPrestadores :linhas="linhasDoRanking(painel.data.value)" />
       </div>
     </template>
+    <div v-else-if="erro" class="erro">{{ mensagemDeErro(erro) }}</div>
   </PaginaGestor>
 </template>
 

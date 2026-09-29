@@ -222,6 +222,17 @@ describe('PaginaPainel', () => {
     expect(simulada.chamadas('GET', '/api/acionamentos').length).toBe(filaAntes + 1)
   })
 
+  it('uma atualização que falha mantém os números que já estavam na tela', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    const { tela } = await montar(PaginaPainel, { rota: '/painel' })
+    painel = () => erroApi(500, 'interno', 'Erro interno')
+    vi.advanceTimersByTime(30_000)
+    await aguardar()
+    expect(simulada.chamadas('GET', '/api/painel')).toHaveLength(2)
+    expect(tela.find('.erro').exists()).toBe(false)
+    expect(tela.find('.kpi .valor').text()).toBe('10')
+  })
+
   it('no celular, o avatar abre o menu com "Sair", que volta ao login', async () => {
     telaDe(375)
     const { tela, router } = await montar(PaginaPainel, { rota: '/painel' })
