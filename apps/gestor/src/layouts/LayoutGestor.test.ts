@@ -36,6 +36,62 @@ describe('LayoutGestor', () => {
     expect(tela.find('.badge').text()).toBe('2')
   })
 
+  describe('rolagem ao trocar de tela', () => {
+    async function naLista(rota: string, rolagem: number) {
+      const montado = await montar(LayoutGestor, { rota })
+      const conteudo = montado.tela.find('main.conteudo').element as HTMLElement
+      conteudo.scrollTop = rolagem
+      const ir = async (destino: string) => {
+        await montado.router.push(destino)
+        await aguardar()
+      }
+      return { ...montado, conteudo, ir }
+    }
+
+    it.each([
+      ['/acionamentos', '/acionamentos/a1059'],
+      ['/aprovacoes', '/aprovacoes/a1059'],
+      ['/painel', '/painel/a1059'],
+    ])('volta do Detalhe para %s na rolagem de onde saiu', async (lista, detalhe) => {
+      const { conteudo, ir } = await naLista(lista, 500)
+      await ir(detalhe)
+      expect(conteudo.scrollTop).toBe(0)
+      await ir(lista)
+      expect(conteudo.scrollTop).toBe(500)
+    })
+
+    it('pelo Voltar do navegador (histórico) também restaura', async () => {
+      const { conteudo, ir, router } = await naLista('/acionamentos', 640)
+      await ir('/acionamentos/a1059')
+      router.back()
+      await aguardar()
+      expect(router.currentRoute.value.path).toBe('/acionamentos')
+      expect(conteudo.scrollTop).toBe(640)
+    })
+
+    it('guarda a rolagem da última saída da lista', async () => {
+      const { conteudo, ir } = await naLista('/acionamentos', 500)
+      await ir('/acionamentos/a1059')
+      await ir('/acionamentos')
+      conteudo.scrollTop = 900
+      await ir('/acionamentos/a1060')
+      await ir('/acionamentos')
+      expect(conteudo.scrollTop).toBe(900)
+    })
+
+    it('nas outras trocas, a tela abre no topo', async () => {
+      const { conteudo, ir } = await naLista('/acionamentos', 500)
+      await ir('/acionamentos/a1059')
+      await ir('/aprovacoes')
+      expect(conteudo.scrollTop).toBe(0)
+      conteudo.scrollTop = 300
+      await ir('/painel')
+      expect(conteudo.scrollTop).toBe(0)
+      await ir('/acionamentos')
+      expect(conteudo.scrollTop).toBe(0)
+    })
+  })
+
   it('mostra o aviso do gestor', async () => {
     const { tela } = await montar(LayoutGestor, { rota: '/painel' })
     toastGestor.mostrar('Conclusão aprovada')

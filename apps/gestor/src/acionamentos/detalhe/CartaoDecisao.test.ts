@@ -1,8 +1,9 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import CartaoDecisao from './CartaoDecisao.vue'
+import type { Decisao } from './decisao'
 
-const montar = (inviavel: boolean, enviando = false) =>
+const montar = (inviavel: boolean, enviando: Decisao | null = null) =>
   mount(CartaoDecisao, { props: { inviavel, enviando, observacao: '' } })
 
 describe('CartaoDecisao', () => {
@@ -31,9 +32,26 @@ describe('CartaoDecisao', () => {
       ['aprovado', 'Falta a foto do quadro'],
     ])
   })
-  it('enquanto envia, os botões ficam travados', () => {
-    const c = montar(false, true)
+  it('em repouso, nada travado nem ocupado', () => {
+    const c = montar(false)
+    for (const botao of [c.find('.aprovar'), c.find('.reprovar')]) {
+      expect(botao.attributes('disabled')).toBeUndefined()
+      expect(botao.attributes('aria-busy')).toBeUndefined()
+    }
+  })
+  it('enquanto envia, os dois botões travam e só o clicado diz "Enviando…"', () => {
+    const c = montar(false, 'reprovado')
     expect(c.find('.aprovar').attributes('disabled')).toBeDefined()
     expect(c.find('.reprovar').attributes('disabled')).toBeDefined()
+    expect(c.find('.reprovar').text()).toBe('Enviando…')
+    expect(c.find('.reprovar').attributes('aria-busy')).toBe('true')
+    expect(c.find('.aprovar').text()).toBe('Aprovar conclusão')
+    expect(c.find('.aprovar').attributes('aria-busy')).toBeUndefined()
+  })
+  it('inviabilidade: confirmando, o botão de confirmar diz "Enviando…"', () => {
+    const c = montar(true, 'aprovado')
+    expect(c.find('.aprovar').text()).toBe('Enviando…')
+    expect(c.find('.aprovar').attributes('aria-busy')).toBe('true')
+    expect(c.find('.reprovar').text()).toBe('Recusar inviabilidade')
   })
 })

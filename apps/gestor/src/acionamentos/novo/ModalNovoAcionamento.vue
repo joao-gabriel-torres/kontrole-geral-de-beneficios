@@ -19,8 +19,17 @@ import {
 
 const emit = defineEmits<{ fechar: [] }>()
 const router = useRouter()
-const { data: tipos } = usarTipos()
-const { data: prestadores } = usarPrestadoresAtivos()
+const { data: tipos, isError: erroTipos, error: falhaTipos, refetch: recarregarTipos } = usarTipos()
+const {
+  data: prestadores,
+  isError: erroPrestadores,
+  error: falhaPrestadores,
+  refetch: recarregarPrestadores,
+} = usarPrestadoresAtivos()
+// Sem a lista, a falha vira mensagem com "Tentar de novo". Com a lista já carregada, uma nova busca
+// que falhe não esconde o que a gestora está vendo.
+const semTipos = computed(() => erroTipos.value && !tipos.value)
+const semPrestadores = computed(() => erroPrestadores.value && !prestadores.value)
 const { mutateAsync: criar, isPending: criando } = usarCriarAcionamento()
 
 const form = reactive(formularioInicial(dataISO(new Date()), prestadores.value ?? []))
@@ -46,11 +55,20 @@ async function enviar() {
   }
 }
 
+/**
+ * X, Cancelar e Esc. Durante o envio não fecham: num erro o formulário se perderia, e reabrir e
+ * enviar de novo duplicaria o acionamento.
+ */
+function fechar() {
+  if (criando.value) return
+  emit('fechar')
+}
+
 const painel = ref<HTMLElement>()
 // Quem abriu o modal (o botão "Novo acionamento") recebe o foco de volta ao fechar.
 const focoAnterior = document.activeElement instanceof HTMLElement ? document.activeElement : null
 function aoTeclar(e: KeyboardEvent) {
-  if (e.key === 'Escape') emit('fechar')
+  if (e.key === 'Escape') fechar()
 }
 onMounted(() => {
   painel.value?.focus()
@@ -72,7 +90,13 @@ onUnmounted(() => focoAnterior?.focus())
     >
       <div class="cabecalho">
         <h2 id="novo-titulo" class="titulo">Novo acionamento</h2>
-        <button type="button" class="fechar" aria-label="Fechar" @click="emit('fechar')">
+        <button
+          type="button"
+          class="fechar"
+          aria-label="Fechar"
+          :aria-disabled="criando || undefined"
+          @click="fechar"
+        >
           <RussoIcone nome="cancel" :tamanho="18" />
         </button>
       </div>
@@ -88,7 +112,13 @@ onUnmounted(() => focoAnterior?.focus())
           </label>
           <div class="grupo-tipos">
             <div id="novo-tipos" class="rotulo">Tipos de demanda</div>
-            <div class="tipos" role="group" aria-labelledby="novo-tipos">
+            <div v-if="semTipos" class="falha" role="alert">
+              {{ mensagemDeErro(falhaTipos) }}
+              <button type="button" class="tentar" @click="recarregarTipos()">
+                Tentar de novo
+              </button>
+            </div>
+            <div v-else class="tipos" role="group" aria-labelledby="novo-tipos">
               <button
                 v-for="t in tipos ?? []"
                 :key="t.id"
@@ -124,7 +154,16 @@ onUnmounted(() => focoAnterior?.focus())
               <input v-model="form.fim" type="time" class="entrada compacta" />
             </label>
           </div>
-          <label class="campo"
+          <div v-if="semPrestadores" class="campo">
+            Prestador
+            <div class="falha" role="alert">
+              {{ mensagemDeErro(falhaPrestadores) }}
+              <button type="button" class="tentar" @click="recarregarPrestadores()">
+                Tentar de novo
+              </button>
+            </div>
+          </div>
+          <label v-else class="campo"
             >Prestador
             <select v-model="form.prestadorId" class="entrada compacta selecao">
               <option v-for="p in prestadores ?? []" :key="p.id" :value="p.id">
@@ -153,15 +192,23 @@ onUnmounted(() => focoAnterior?.focus())
         </div>
       </div>
       <div class="acoes">
-        <button type="button" class="cancelar" @click="emit('fechar')">Cancelar</button>
+        <button
+          type="button"
+          class="cancelar"
+          :aria-disabled="criando || undefined"
+          @click="fechar"
+        >
+          Cancelar
+        </button>
         <button
           type="button"
           class="enviar"
-          :class="{ inativo: !valido }"
+          :class="{ inativo: !valido || criando }"
           :aria-disabled="bloqueado"
+          :aria-busy="criando || undefined"
           @click="enviar"
         >
-          Enviar ao prestador
+          {{ criando ? 'Enviando…' : 'Enviar ao prestador' }}
         </button>
       </div>
     </div>
@@ -384,5 +431,33 @@ onUnmounted(() => focoAnterior?.focus())
 .enviar.inativo {
   background: var(--kgb-primaria-tint-forte);
   color: var(--kgb-primaria-escura);
+}
+/* Falha ao carregar tipos ou prestadores: não existe em repouso. */
+.falha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--kgb-perigo-texto);
+}
+.tentar {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kgb-primaria);
+  text-decoration: underline;
+}
+/* Estados do envio: os atributos não existem em repouso, então o visual parado não muda. */
+.enviar[aria-busy='true'] {
+  cursor: progress;
+}
+.fechar[aria-disabled='true'],
+.cancelar[aria-disabled='true'] {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

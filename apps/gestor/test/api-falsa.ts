@@ -3,6 +3,7 @@ import type { Mock } from 'vitest'
 export interface OpcoesChamada {
   params?: { path?: Record<string, string>; query?: Record<string, unknown> }
   body?: unknown
+  signal?: AbortSignal
 }
 export interface RespostaFalsa {
   data?: unknown
@@ -58,3 +59,15 @@ export const erroApi = (status: number, codigo: string, mensagem: string): Respo
   status,
   error: { erro: { codigo, mensagem } },
 })
+
+/**
+ * API travada: a resposta nunca chega. Como o `fetch`, só termina quando o `signal` da chamada é
+ * abortado, rejeitando com o motivo do aborto.
+ */
+export const nuncaResponde = (opcoes: OpcoesChamada): Promise<RespostaFalsa> =>
+  new Promise((_, rejeitar) => {
+    const sinal = opcoes.signal
+    if (!sinal) return
+    if (sinal.aborted) return rejeitar(sinal.reason)
+    sinal.addEventListener('abort', () => rejeitar(sinal.reason), { once: true })
+  })
