@@ -29,6 +29,12 @@ export function normalizarEmail(email: string | null | undefined): string | null
   return limpo === '' ? null : limpo
 }
 
+/** Mesmo critério do sign-in do Better Auth (`z.email()`), sobre o e-mail normalizado. */
+export function emailValido(email: string): boolean {
+  const normalizado = normalizarEmail(email)
+  return !!normalizado && z.email().safeParse(normalizado).success
+}
+
 export function expiracaoDoConvite(agora: Date): Date {
   return new Date(agora.getTime() + VALIDADE_CONVITE_DIAS * 24 * 60 * 60 * 1000)
 }
@@ -50,7 +56,7 @@ export function verificarConvite(dados: {
 }): string {
   const email = normalizarEmail(dados.email)
   if (!email) throw new ErroDominio('prestador_sem_email', MENSAGENS_CONVITE.semEmail, 409)
-  if (!z.email().safeParse(email).success) {
+  if (!emailValido(email)) {
     throw new ErroDominio('email_invalido', MENSAGENS_CONVITE.emailInvalido, 409)
   }
   if (dados.contaDoEmail && dados.contaDoEmail.prestadorId !== dados.prestadorId) {

@@ -5,6 +5,7 @@ import {
   telefoneValido,
   tipoDeDocumento,
 } from './documentos'
+import { emailValido } from './convites'
 
 /**
  * Planilha de credenciados (importação e exportação), regras puras. O formato, os aliases e os
@@ -197,6 +198,7 @@ export type Selo =
   | 'Documento inválido'
   | 'Duplicado na planilha'
   | 'Telefone inválido'
+  | 'E-mail inválido'
 
 /** O que a conferência mostra de cada linha: os textos como vieram e o selo. */
 export interface LinhaPrevia {
@@ -235,7 +237,7 @@ export interface Previa {
 
 /**
  * Selos na ordem do protótipo (sem nome, tamanho do documento, duplicado), mais o dígito
- * verificador nas linhas novas e o telefone com DDD. Só as linhas válidas contam como vistas:
+ * verificador nas linhas novas, o telefone com DDD e o e-mail. Só as linhas válidas contam como vistas:
  * a primeira linha válida de um documento vence.
  */
 export function montarPrevia(
@@ -267,9 +269,11 @@ export function montarPrevia(
             ? 'Documento inválido'
             : !telefoneValido(telefone)
               ? 'Telefone inválido'
-              : existente
-                ? 'Atualizar'
-                : 'Novo'
+              : l.email.trim() && !emailValido(l.email)
+                ? 'E-mail inválido'
+                : existente
+                  ? 'Atualizar'
+                  : 'Novo'
     const acao: AcaoLinha = selo === 'Novo' ? 'novo' : selo === 'Atualizar' ? 'atualizar' : 'erro'
     linhas.push({ nome: l.nome, documento: l.documento, especialidades: nomes, acao, selo })
     if (acao === 'erro') continue
@@ -282,7 +286,7 @@ export function montarPrevia(
       nome: l.nome,
       documento,
       telefone,
-      email: l.email || null,
+      email: l.email.trim() || null,
       regiao: l.regiao || null,
       especialidades: [...new Set(ids)],
       status: normalizarTexto(l.status).startsWith('inativ') ? 'inativo' : 'ativo',

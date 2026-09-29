@@ -1,8 +1,9 @@
 import { EMAIL_PRESTADOR_DEV, GESTORA_DEV, semear } from '@kgb/db/seed'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { corpo, hojeSP, loginDePrestador } from '../../test/dados'
 import { entrar } from '../../test/sessao'
 import { criarApp } from '../app'
+import { criarCorreioEmMemoria, trocarCorreio, type CorreioEmMemoria } from '../correio'
 import { prisma } from '../db'
 import { corDoPrestador } from '../dominio/documentos'
 import { mensagemBloqueio } from '../dominio/prestadores'
@@ -24,6 +25,14 @@ interface Cadastro {
   especialidades: { id: string; nome: string }[]
   emAberto: number
   total: number
+  acesso: 'sem_email' | 'pendente' | 'convidado' | 'ativo'
+}
+interface Criado extends Cadastro {
+  convite: {
+    situacao: 'enviado' | 'falhou' | 'sem_email'
+    email: string | null
+    mensagem: string | null
+  }
 }
 interface Erro {
   erro: { codigo: string; mensagem: string }
@@ -37,6 +46,13 @@ async function preparar() {
 }
 beforeAll(preparar)
 afterAll(() => semear(prisma))
+
+let caixa: CorreioEmMemoria
+beforeEach(() => {
+  caixa = criarCorreioEmMemoria()
+  trocarCorreio(caixa)
+})
+afterEach(() => trocarCorreio(null))
 
 const json = (metodo: string, headers: Record<string, string>, dados?: unknown): RequestInit => ({
   method: metodo,
@@ -86,6 +102,14 @@ describe('GET /api/prestadores/cadastro', () => {
     ])
   })
 
+  it('mostra a situação do acesso de cada um (o Carlos já tem senha)', async () => {
+    const lista = await listar()
+    expect(Object.fromEntries(lista.map((p) => [p.nome, p.acesso]))).toMatchObject({
+      'Carlos Mendes': 'ativo',
+      'Ana Ribeiro': 'pendente',
+    })
+  })
+
   it('traz os campos do cadastro, com as especialidades na ordem gravada', async () => {
     const lista = await listar()
     expect(lista.find((p) => p.id === 'p1')).toEqual({
@@ -106,6 +130,7 @@ describe('GET /api/prestadores/cadastro', () => {
       ],
       emAberto: 8,
       total: 20,
+      acesso: 'ativo',
     })
     expect(lista.find((p) => p.id === 'p6')!.especialidades.map((e) => e.nome)).toEqual([
       'Reparo em gesso',
@@ -154,8 +179,66 @@ describe('POST /api/prestadores', () => {
       total: 0,
     })
     expect((await listar()).map((p) => p.nome)).toContain('Pedro Lima')
-    // Criar o cadastro não cria login (decisão de produto pendente).
-    expect(await prisma.user.count({ where: { prestadorId: criado.id } })).toBe(0)
+  })
+
+  it('com e-mail, o cadastro já sai com o convite de acesso', async () => {
+    const r = await criar({
+      ...NOVO,
+      nome: 'Paula Dias',
+      documento: '935.411.347-80',
+      email: ' Paula@Dias.com ',
+    })
+    expect(r.status).toBe(201)
+    const criado = await corpo<Criado>(r)
+    expect(criado.convite).toEqual({ situacao: 'enviado', email: 'paula@dias.com', mensagem: null })
+    expect(caixa.enviados.map((e) => e.para)).toEqual(['paula@dias.com'])
+    expect(criado.acesso).toBe('convidado')
+  })
+
+  it('sem e-mail, credencia sem convite', async () => {
+    const r = await criar({ ...NOVO, nome: 'Sem Email', documento: '741.852.963-55', email: '' })
+    expect(r.status).toBe(201)
+    const criado = await corpo<Criado>(r)
+    expect(criado.convite).toEqual({ situacao: 'sem_email', email: null, mensagem: null })
+    expect(criado.acesso).toBe('sem_email')
+    expect(caixa.enviados).toEqual([])
+  })
+
+  it('se o e-mail não sai, o cadastro fica e a resposta avisa', async () => {
+    trocarCorreio({
+      enviar: () => Promise.reject(new Error('SMTP fora do ar')),
+    })
+    const r = await criar({
+      ...NOVO,
+      nome: 'Rita Souza',
+      documento: '862.057.194-01',
+      email: 'rita@souza.com',
+    })
+    expect(r.status).toBe(201)
+    const criado = await corpo<Criado>(r)
+    expect(criado.convite).toEqual({
+      situacao: 'falhou',
+      email: 'rita@souza.com',
+      mensagem: 'Não foi possível enviar o e-mail do convite. Tente de novo.',
+    })
+    expect(criado.acesso).toBe('pendente')
+    expect(await prisma.prestador.count({ where: { id: criado.id } })).toBe(1)
+  })
+
+  it('e-mail de outra conta: credencia e avisa que o convite não saiu', async () => {
+    const r = await criar({
+      ...NOVO,
+      nome: 'Duplica Renata',
+      documento: '503.162.487-62',
+      email: GESTORA_DEV.email,
+    })
+    expect(r.status).toBe(201)
+    expect((await corpo<Criado>(r)).convite).toEqual({
+      situacao: 'falhou',
+      email: GESTORA_DEV.email,
+      mensagem: 'Este e-mail já é usado por outra conta',
+    })
+    expect(caixa.enviados).toEqual([])
   })
 
   it('a cor conta também os excluídos', async () => {
@@ -173,6 +256,7 @@ describe('POST /api/prestadores', () => {
     [{ documento: '000.000.000-00' }, 'documento_invalido', 'CPF ou CNPJ inválido'],
     [{ telefone: '91234-5678' }, 'telefone_invalido', 'Informe o telefone com DDD'],
     [{ especialidades: ['t1', 'nao-existe'] }, 'tipo_invalido', 'Tipo de demanda inválido'],
+    [{ email: 'a@x.com; b@y.com' }, 'email_invalido', 'Informe um e-mail válido'],
   ])('recusa %j com 422 %s', async (troca, codigo, mensagem) => {
     const r = await criar({ ...NOVO, documento: '390.533.447-05', ...troca })
     expect(r.status).toBe(422)

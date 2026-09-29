@@ -5,3 +5,4 @@ export type CodigoErroPrestadores =
   | 'documento_duplicado'
   | 'telefone_invalido'
   | 'prestador_com_acionamentos'
+  | 'email_invalido'

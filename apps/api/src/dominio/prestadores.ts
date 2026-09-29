@@ -1,4 +1,5 @@
 import { ErroDominio, type StatusAcionamento } from './acionamento'
+import { emailValido } from './convites'
 import {
   digitosVerificadoresValidos,
   soDigitos,
@@ -47,8 +48,8 @@ export interface ContextoValidacao {
 
 /**
  * Valida na ordem do protótipo e mostra só o primeiro erro: nome, tamanho do documento,
- * duplicado, dígitos verificadores (só em documento novo ou alterado; os do seed não passam) e
- * telefone com DDD.
+ * duplicado, dígitos verificadores (só em documento novo ou alterado; os do seed não passam),
+ * telefone com DDD e, quando informado, o e-mail.
  */
 export function validarPrestador(
   p: PrestadorNormalizado,
@@ -70,6 +71,10 @@ export function validarPrestador(
   }
   if (!telefoneValido(p.telefone)) {
     throw new ErroDominio('telefone_invalido', 'Informe o telefone com DDD')
+  }
+  // O e-mail vira o login do convite: um texto como "a@x.com; b@y.com" levaria o link a outro.
+  if (p.email && !emailValido(p.email)) {
+    throw new ErroDominio('email_invalido', 'Informe um e-mail válido')
   }
 }
 

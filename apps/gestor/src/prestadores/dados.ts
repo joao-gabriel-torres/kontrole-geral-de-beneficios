@@ -72,6 +72,16 @@ export function usarAlterarStatus() {
   })
 }
 
+/** Envia (ou reenvia) o convite de acesso ao app para o e-mail salvo no cadastro. */
+export function usarEnviarConvite() {
+  const invalidar = usarInvalidar()
+  return useMutation({
+    mutationFn: (id: string) =>
+      exigir(api.POST('/api/prestadores/{id}/convite', { params: { path: { id } } })),
+    onSuccess: () => void invalidar(),
+  })
+}
+
 export function usarExcluirPrestador() {
   const invalidar = usarInvalidar()
   return useMutation({

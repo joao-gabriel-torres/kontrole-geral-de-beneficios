@@ -235,6 +235,16 @@ describe('montarPrevia', () => {
     ).toEqual(['Telefone inválido', 'Telefone inválido', 'Novo', 'Documento inválido'])
   })
 
+  it('e-mail preenchido que não é um endereço, depois do telefone', () => {
+    expect(
+      selos(
+        { nome: 'Pedro', documento: '52998224725', email: 'pedro@x.com; ana@y.com' },
+        { nome: 'Ana', documento: '11144477735', email: '' },
+        { nome: 'Sem telefone', documento: '11222333000181', telefone: '', email: 'x' },
+      ),
+    ).toEqual(['E-mail inválido', 'Novo', 'Telefone inválido'])
+  })
+
   it('só linha válida conta como vista: a primeira válida vence', () => {
     expect(
       selos(

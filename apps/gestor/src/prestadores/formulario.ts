@@ -3,6 +3,8 @@ import { formatarDocumento, formatarTelefone } from '@kgb/ui'
 import type { PrestadorCadastro } from './lista'
 
 export type DadosPrestador = components['schemas']['DadosPrestador']
+export type AcessoPrestador = PrestadorCadastro['acesso']
+export type ConviteAoCredenciar = components['schemas']['PrestadorCredenciado']['convite']
 
 /** O modal Novo/Editar. Os campos são texto puro, sem máscara, como no protótipo. */
 export interface FormularioPrestador {
@@ -37,6 +39,7 @@ export const formularioDe = (p: PrestadorCadastro): FormularioPrestador => ({
 })
 
 const digitos = (texto: string) => texto.replace(/\D/g, '')
+const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/
 
 /**
  * O primeiro erro, na ordem do protótipo. Os dígitos verificadores ficam com a API (só para
@@ -53,6 +56,9 @@ export function erroDoFormulario(
   if (dono) return `Documento já cadastrado para ${dono.nome}`
   const telefone = digitos(f.telefone).length
   if (telefone < 10 || telefone > 11) return 'Informe o telefone com DDD'
+  // O e-mail vira o login do convite; a API confere de novo com o critério do Better Auth.
+  const email = f.email.trim()
+  if (email && !EMAIL.test(email)) return 'Informe um e-mail válido'
   return ''
 }
 
@@ -78,6 +84,7 @@ export const ERROS_DO_FORMULARIO: ReadonlySet<string> = new Set([
   'documento_invalido',
   'documento_duplicado',
   'telefone_invalido',
+  'email_invalido',
   'tipo_invalido',
   'validacao',
 ])
@@ -90,4 +97,22 @@ export function textoExclusao(nome: string, emAberto: number): string {
   }
   const acionamentos = emAberto === 1 ? 'acionamento' : 'acionamentos'
   return `${nome} tem ${emAberto} ${acionamentos} em aberto. Desative o cadastro para parar de receber novos, ou conclua os atuais antes de excluir.`
+}
+
+/** O aviso depois de credenciar diz o que aconteceu com o convite de acesso ao app. */
+export function avisoAoCredenciar(convite?: ConviteAoCredenciar): string {
+  if (convite?.situacao === 'enviado') {
+    return `Prestador credenciado. Convite enviado para ${convite.email}`
+  }
+  if (convite?.situacao === 'falhou') {
+    return `Prestador credenciado, mas o convite não saiu: ${convite.mensagem}`
+  }
+  return 'Prestador credenciado'
+}
+
+/** O botão de convite do Editar: só para quem tem e-mail e ainda não criou a senha. */
+export function rotuloDoConvite(acesso?: AcessoPrestador): string | null {
+  if (acesso === 'pendente') return 'Enviar convite de acesso'
+  if (acesso === 'convidado') return 'Reenviar convite'
+  return null
 }

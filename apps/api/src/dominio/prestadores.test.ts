@@ -114,6 +114,19 @@ describe('validarPrestador (ordem do protótipo)', () => {
     })
   })
 
+  it('e-mail, quando informado, precisa ser um endereço (ele vira o login do convite)', () => {
+    for (const email of ['a@x.com; b@y.com', 'carlos', 'carlos@', 'a b@x.com']) {
+      const e = erroDe(() => validar({ email }))
+      expect([e.codigo, e.message, e.status]).toEqual([
+        'email_invalido',
+        'Informe um e-mail válido',
+        422,
+      ])
+    }
+    expect(() => validar({ email: ' Carlos.Mendes@Email.com ' })).not.toThrow()
+    expect(() => validar({ email: '' })).not.toThrow()
+  })
+
   it('aceita CNPJ válido e telefone fixo', () => {
     expect(() =>
       validar({ documento: '11.222.333/0001-81', telefone: '(11) 3456-7890' }),

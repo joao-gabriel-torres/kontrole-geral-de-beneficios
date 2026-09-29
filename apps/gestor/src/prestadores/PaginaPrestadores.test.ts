@@ -7,6 +7,7 @@ import { toastGestor } from '../toast'
 import { estadoPrestadores, reiniciarPrestadores } from './estado'
 import ModalExcluir from './ModalExcluir.vue'
 import ModalPrestador from './ModalPrestador.vue'
+import type { PrestadorCadastro } from './lista'
 import PaginaPrestadores from './PaginaPrestadores.vue'
 import ModalImportacao from './planilha/ModalImportacao.vue'
 import { baixarModeloPlanilha, exportarPlanilha } from './planilha/acoes'
@@ -36,6 +37,7 @@ describe('PaginaPrestadores', () => {
   let excluir: () => RespostaFalsa
   let previa: () => RespostaFalsa | Promise<RespostaFalsa>
   let importar: () => RespostaFalsa | Promise<RespostaFalsa>
+  let convidar: () => RespostaFalsa
   let alvo: HTMLElement
 
   beforeEach(() => {
@@ -50,6 +52,9 @@ describe('PaginaPrestadores', () => {
     excluir = () => ({ data: { ok: true } })
     previa = () => ({ data: PREVIA_EXEMPLO })
     importar = () => ({ data: { novos: 2, atualizados: 3, desativados: 0 } })
+    convidar = () => ({
+      data: { email: 'ana@ribeiroreparos.com.br', expiraEm: '2026-10-06T12:00:00Z' },
+    })
     simulada = simularApi(api, {
       'GET /api/prestadores/cadastro': () => cadastro(),
       'GET /api/tipos': TIPOS_SEED,
@@ -61,6 +66,7 @@ describe('PaginaPrestadores', () => {
       'DELETE /api/prestadores/{id}': () => excluir(),
       'POST /api/prestadores/planilha/previa': () => previa(),
       'POST /api/prestadores/planilha/importacao': () => importar(),
+      'POST /api/prestadores/{id}/convite': () => convidar(),
     })
   })
   afterEach(() => alvo.remove())
@@ -329,6 +335,58 @@ describe('PaginaPrestadores', () => {
       expect(modal(tela).exists()).toBe(false)
     })
 
+    async function credenciarPedro(tela: Tela, email = '') {
+      await campo(tela, 'Nome').setValue('Pedro Lima')
+      await campo(tela, '000.000.000-00').setValue('529.982.247-25')
+      await campo(tela, '(11) 90000-0000').setValue('(11) 91234-5678')
+      await campo(tela, 'email@exemplo.com').setValue(email)
+      await salvarBotao(tela).trigger('click')
+      await aguardar()
+    }
+
+    it('com e-mail, avisa que o convite de acesso foi enviado', async () => {
+      salvar = () => ({
+        data: {
+          ...prestador({ id: 'p7', nome: 'Pedro Lima', acesso: 'convidado' }),
+          convite: { situacao: 'enviado', email: 'pedro@lima.com', mensagem: null },
+        },
+      })
+      const { tela } = await abrirNovo()
+      await credenciarPedro(tela, 'pedro@lima.com')
+      expect(toastGestor.mensagem.value).toBe(
+        'Prestador credenciado. Convite enviado para pedro@lima.com',
+      )
+    })
+
+    it('se o convite não sai, o cadastro fica e o aviso diz por quê', async () => {
+      salvar = () => ({
+        data: {
+          ...prestador({ id: 'p7', nome: 'Pedro Lima', acesso: 'pendente' }),
+          convite: {
+            situacao: 'falhou',
+            email: 'pedro@lima.com',
+            mensagem: 'Não foi possível enviar o e-mail do convite. Tente de novo.',
+          },
+        },
+      })
+      const { tela } = await abrirNovo()
+      await credenciarPedro(tela, 'pedro@lima.com')
+      expect(toastGestor.mensagem.value).toBe(
+        'Prestador credenciado, mas o convite não saiu: Não foi possível enviar o e-mail do convite. Tente de novo.',
+      )
+      expect(modal(tela).exists()).toBe(false)
+    })
+
+    it('e-mail que não é um endereço aparece na linha de erro', async () => {
+      const { tela } = await abrirNovo()
+      await campo(tela, 'Nome').setValue('Pedro Lima')
+      await campo(tela, '000.000.000-00').setValue('529.982.247-25')
+      await campo(tela, '(11) 90000-0000').setValue('(11) 91234-5678')
+      await campo(tela, 'email@exemplo.com').setValue('pedro@lima.com; ana@x.com')
+      expect(modal(tela).find('.erro').text()).toBe('Informe um e-mail válido')
+      expect(salvarBotao(tela).classes()).toContain('inativo')
+    })
+
     it('erro de validação da API aparece na linha de erro e some ao editar', async () => {
       salvar = () => erroApi(422, 'documento_invalido', 'CPF ou CNPJ inválido')
       const { tela } = await abrirNovo()
@@ -396,6 +454,63 @@ describe('PaginaPrestadores', () => {
       await modal(tela).find('button[aria-label="Fechar"]').trigger('click')
       expect(modal(tela).exists()).toBe(false)
       expect(simulada.chamadas('POST', '/api/prestadores')).toHaveLength(0)
+    })
+  })
+
+  describe('convite de acesso no Editar', () => {
+    const botaoConvite = (tela: Tela) =>
+      modal(tela)
+        .findAll('button')
+        .find((b) => /convite/i.test(b.text()))
+    async function editar(nome: string, acesso: PrestadorCadastro['acesso']) {
+      cadastro = () => ({
+        data: SEED_PRESTADORES.map((p) => (p.nome === nome ? { ...p, acesso } : p)),
+      })
+      const r = await abrir()
+      await linhaDe(r.tela, nome).find('.nome').trigger('click')
+      await aguardar()
+      return r
+    }
+
+    it('quem já tem senha não vê o botão (o Carlos do seed)', async () => {
+      const { tela } = await editar('Carlos Mendes', 'ativo')
+      expect(botaoConvite(tela)).toBeUndefined()
+    })
+
+    it('sem e-mail não há o que enviar', async () => {
+      const { tela } = await editar('Carlos Mendes', 'sem_email')
+      expect(botaoConvite(tela)).toBeUndefined()
+    })
+
+    it('pendente: "Enviar convite de acesso" manda o convite e avisa', async () => {
+      const { tela } = await editar('Ana Ribeiro', 'pendente')
+      expect(botaoConvite(tela)!.text()).toBe('Enviar convite de acesso')
+      await botaoConvite(tela)!.trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('POST', '/api/prestadores/{id}/convite')).toEqual([
+        { params: { path: { id: 'p2' } } },
+      ])
+      expect(toastGestor.mensagem.value).toBe('Convite enviado para ana@ribeiroreparos.com.br')
+      expect(modal(tela).exists()).toBe(true)
+    })
+
+    it('convidado: "Reenviar convite"', async () => {
+      const { tela } = await editar('Ana Ribeiro', 'convidado')
+      expect(botaoConvite(tela)!.text()).toBe('Reenviar convite')
+    })
+
+    it('com o e-mail alterado e ainda não salvo, o botão some (iria para o antigo)', async () => {
+      const { tela } = await editar('Ana Ribeiro', 'pendente')
+      await modal(tela).find('input[placeholder="email@exemplo.com"]').setValue('nova@ana.com')
+      expect(botaoConvite(tela)).toBeUndefined()
+    })
+
+    it('erro da API vira aviso', async () => {
+      convidar = () => erroApi(409, 'email_em_uso', 'Este e-mail já é usado por outra conta')
+      const { tela } = await editar('Ana Ribeiro', 'pendente')
+      await botaoConvite(tela)!.trigger('click')
+      await aguardar()
+      expect(toastGestor.mensagem.value).toBe('Este e-mail já é usado por outra conta')
     })
   })
 

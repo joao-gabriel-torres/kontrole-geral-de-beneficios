@@ -44,6 +44,7 @@ export function prestador(dados: Partial<PrestadorCadastro> = {}): PrestadorCada
     especialidades: especialidades('t1', 't2', 't3', 't4'),
     emAberto: 8,
     total: 20,
+    acesso: 'ativo',
     ...dados,
   }
 }

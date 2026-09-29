@@ -968,7 +968,8 @@
                     "Sem nome",
                     "Documento inválido",
                     "Duplicado na planilha",
-                    "Telefone inválido"
+                    "Telefone inválido",
+                    "E-mail inválido"
                   ]
                 }
               },
@@ -1130,6 +1131,16 @@
           },
           "total": {
             "type": "integer"
+          },
+          "acesso": {
+            "type": "string",
+            "enum": [
+              "sem_email",
+              "pendente",
+              "convidado",
+              "ativo"
+            ],
+            "description": "Acesso ao app: ativo (tem senha), convidado (convite válido), pendente (tem e-mail, sem convite válido nem senha) ou sem_email"
           }
         },
         "required": [
@@ -1144,7 +1155,54 @@
           "credenciadoDesde",
           "especialidades",
           "emAberto",
-          "total"
+          "total",
+          "acesso"
+        ]
+      },
+      "PrestadorCredenciado": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PrestadorCadastro"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "convite": {
+                "type": "object",
+                "properties": {
+                  "situacao": {
+                    "type": "string",
+                    "enum": [
+                      "enviado",
+                      "falhou",
+                      "sem_email"
+                    ]
+                  },
+                  "email": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "mensagem": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Por que o convite não saiu (o cadastro vale mesmo assim)"
+                  }
+                },
+                "required": [
+                  "situacao",
+                  "email",
+                  "mensagem"
+                ]
+              }
+            },
+            "required": [
+              "convite"
+            ]
+          }
         ]
       },
       "DadosPrestador": {
@@ -1755,7 +1813,7 @@
         "tags": [
           "Prestadores"
         ],
-        "summary": "Credencia um prestador (ativo, desde hoje; não cria login)",
+        "summary": "Credencia um prestador (ativo, desde hoje) e, com e-mail, envia o convite de acesso",
         "security": [
           {
             "Bearer": []
@@ -1773,11 +1831,11 @@
         },
         "responses": {
           "201": {
-            "description": "Cadastro do prestador",
+            "description": "Credenciado, com o resultado do convite",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PrestadorCadastro"
+                  "$ref": "#/components/schemas/PrestadorCredenciado"
                 }
               }
             }

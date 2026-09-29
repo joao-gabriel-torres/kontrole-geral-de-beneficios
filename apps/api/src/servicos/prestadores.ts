@@ -1,4 +1,6 @@
 import type { Prisma } from '@kgb/db'
+import { HTTPException } from 'hono/http-exception'
+import type { UsuarioSessao } from '../contexto'
 import { prisma } from '../db'
 import { ErroDominio } from '../dominio/acionamento'
 import { dataSP } from '../dominio/datas'
@@ -14,7 +16,8 @@ import {
   type DadosPrestador,
   type PrestadorNormalizado,
 } from '../dominio/prestadores'
-import { naoEncontrado } from '../erros'
+import { ErroHttp, naoEncontrado } from '../erros'
+import { acessosDosPrestadores, enviarConvite, type AcessoPrestador } from './convites'
 
 type Db = Prisma.TransactionClient | typeof prisma
 export type StatusPrestador = 'ativo' | 'inativo'
@@ -29,7 +32,11 @@ const incluirCadastro = {
 
 type PrestadorComEspecialidades = Prisma.PrestadorGetPayload<{ include: typeof incluirCadastro }>
 
-function paraCadastro(p: PrestadorComEspecialidades, carga: Carga = { emAberto: 0, total: 0 }) {
+function paraCadastro(
+  p: PrestadorComEspecialidades,
+  carga: Carga = { emAberto: 0, total: 0 },
+  acesso: AcessoPrestador = 'sem_email',
+) {
   return {
     id: p.id,
     nome: p.nome,
@@ -43,6 +50,7 @@ function paraCadastro(p: PrestadorComEspecialidades, carga: Carga = { emAberto: 
     especialidades: p.especialidades.map((e) => e.tipo),
     emAberto: carga.emAberto,
     total: carga.total,
+    acesso,
   }
 }
 
@@ -65,7 +73,8 @@ async function listar(where: Prisma.PrestadorWhereInput = {}): Promise<Prestador
       quantidade: g._count._all,
     })),
   )
-  return ordenarPorNome(lista.map((p) => paraCadastro(p, carga.get(p.id))))
+  const acessos = await acessosDosPrestadores(lista.map((p) => p.id))
+  return ordenarPorNome(lista.map((p) => paraCadastro(p, carga.get(p.id), acessos.get(p.id))))
 }
 
 /** A lista da tela de Prestadores: os não excluídos, por nome, com a carga de cada um. */
@@ -113,7 +122,36 @@ async function comDocumentoUnico<T>(p: PrestadorNormalizado, gravar: () => Promi
 const vinculos = (especialidades: readonly string[]) =>
   especialidades.map((tipoId, ordem) => ({ tipoId, ordem }))
 
-export async function criarPrestador(dados: DadosPrestador): Promise<PrestadorCadastro> {
+/** O que aconteceu com o convite de acesso enviado ao credenciar. */
+export interface ConviteAoCredenciar {
+  situacao: 'enviado' | 'falhou' | 'sem_email'
+  email: string | null
+  /** Por que o convite não saiu (o cadastro vale mesmo assim; dá para reenviar pelo Editar). */
+  mensagem: string | null
+}
+
+async function convidarAoCredenciar(
+  id: string,
+  email: string | null,
+  autor: Pick<UsuarioSessao, 'papel'>,
+): Promise<ConviteAoCredenciar> {
+  if (!email) return { situacao: 'sem_email', email: null, mensagem: null }
+  try {
+    const enviado = await enviarConvite(id, autor)
+    return { situacao: 'enviado', email: enviado.email, mensagem: null }
+  } catch (e) {
+    if (e instanceof ErroDominio || e instanceof ErroHttp || e instanceof HTTPException) {
+      return { situacao: 'falhou', email, mensagem: e.message }
+    }
+    throw e
+  }
+}
+
+/** Credencia e, com e-mail, já manda o convite de acesso ao app. */
+export async function criarPrestador(
+  dados: DadosPrestador,
+  autor: Pick<UsuarioSessao, 'papel'>,
+): Promise<PrestadorCadastro & { convite: ConviteAoCredenciar }> {
   const p = normalizarPrestador(dados)
   validarPrestador(p, { donoDoDocumento: await donoDoDocumento(p.documento) })
   await exigirTipos(prisma, p.especialidades)
@@ -134,7 +172,8 @@ export async function criarPrestador(dados: DadosPrestador): Promise<PrestadorCa
       select: { id: true },
     }),
   )
-  return cadastroDe(criado.id)
+  const convite = await convidarAoCredenciar(criado.id, p.email, autor)
+  return { ...(await cadastroDe(criado.id)), convite }
 }
 
 async function exigirNaoExcluido(id: string) {

@@ -120,6 +120,7 @@ function aoEscolherArquivo(evento: Event) {
         :inicial="formulario"
         :lista="prestadores"
         :tipos="tipos ?? []"
+        :acesso="prestadores.find((p) => p.id === formulario?.id)?.acesso"
         @fechar="formulario = null"
       />
       <ModalExcluir v-if="exclusao" :prestador="exclusao" @fechar="exclusao = null" />

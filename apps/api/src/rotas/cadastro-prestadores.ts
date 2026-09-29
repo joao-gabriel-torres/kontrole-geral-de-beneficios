@@ -1,7 +1,7 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import type { Ambiente } from '../contexto'
 import { respostaErro } from '../erros'
-import { exigePapel } from '../middlewares/acesso'
+import { exigePapel, usuarioLogado } from '../middlewares/acesso'
 import { IdParam } from '../schemas'
 import {
   alterarStatus,
@@ -12,6 +12,7 @@ import {
 } from '../servicos/prestadores'
 
 const STATUS_PRESTADOR = ['ativo', 'inativo'] as const
+const ACESSOS = ['sem_email', 'pendente', 'convidado', 'ativo'] as const
 
 export const PrestadorCadastroSchema = z
   .object({
@@ -32,8 +33,23 @@ export const PrestadorCadastroSchema = z
       .int()
       .openapi({ description: 'Acionamentos agendados, em execução, reprovados ou aguardando' }),
     total: z.number().int(),
+    acesso: z.enum(ACESSOS).openapi({
+      description:
+        'Acesso ao app: ativo (tem senha), convidado (convite válido), pendente (tem e-mail, sem convite válido nem senha) ou sem_email',
+    }),
   })
   .openapi('PrestadorCadastro')
+
+export const PrestadorCredenciadoSchema = PrestadorCadastroSchema.extend({
+  convite: z.object({
+    situacao: z.enum(['enviado', 'falhou', 'sem_email']),
+    email: z.string().nullable(),
+    mensagem: z
+      .string()
+      .nullable()
+      .openapi({ description: 'Por que o convite não saiu (o cadastro vale mesmo assim)' }),
+  }),
+}).openapi('PrestadorCredenciado')
 
 export const DadosPrestadorSchema = z
   .object({
@@ -86,12 +102,15 @@ const rotaCriar = createRoute({
   method: 'post',
   path: '/api/prestadores',
   tags: ['Prestadores'],
-  summary: 'Credencia um prestador (ativo, desde hoje; não cria login)',
+  summary: 'Credencia um prestador (ativo, desde hoje) e, com e-mail, envia o convite de acesso',
   security: [{ Bearer: [] }],
   middleware: apenasGestor,
   request: corpoDados,
   responses: {
-    201: cadastro,
+    201: {
+      description: 'Credenciado, com o resultado do convite',
+      content: { 'application/json': { schema: PrestadorCredenciadoSchema } },
+    },
     ...errosDeAcesso,
     409: respostaErro('Documento já cadastrado'),
     422: respostaErro('Dados inválidos'),
@@ -156,7 +175,9 @@ const rotaExcluir = createRoute({
 /** Cadastro de prestadores (lista de gestão, criar, editar, status, excluir). */
 export const rotasCadastroPrestadores = new OpenAPIHono<Ambiente>()
   .openapi(rotaListar, async (c) => c.json(await listarCadastro(), 200))
-  .openapi(rotaCriar, async (c) => c.json(await criarPrestador(c.req.valid('json')), 201))
+  .openapi(rotaCriar, async (c) =>
+    c.json(await criarPrestador(c.req.valid('json'), usuarioLogado(c)), 201),
+  )
   .openapi(rotaEditar, async (c) =>
     c.json(await atualizarPrestador(c.req.valid('param').id, c.req.valid('json')), 200),
   )

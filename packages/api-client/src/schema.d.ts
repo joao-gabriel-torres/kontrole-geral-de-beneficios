@@ -526,7 +526,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** Credencia um prestador (ativo, desde hoje; não cria login) */
+        /** Credencia um prestador (ativo, desde hoje) e, com e-mail, envia o convite de acesso */
         post: {
             parameters: {
                 query?: never;
@@ -540,13 +540,13 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Cadastro do prestador */
+                /** @description Credenciado, com o resultado do convite */
                 201: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["PrestadorCadastro"];
+                        "application/json": components["schemas"]["PrestadorCredenciado"];
                     };
                 };
                 /** @description Sem sessão */
@@ -2391,7 +2391,7 @@ export interface components {
                 /** @enum {string} */
                 acao: "novo" | "atualizar" | "erro";
                 /** @enum {string} */
-                selo: "Novo" | "Atualizar" | "Sem nome" | "Documento inválido" | "Duplicado na planilha" | "Telefone inválido";
+                selo: "Novo" | "Atualizar" | "Sem nome" | "Documento inválido" | "Duplicado na planilha" | "Telefone inválido" | "E-mail inválido";
             }[];
             resumo: {
                 novos: number;
@@ -2437,6 +2437,20 @@ export interface components {
             /** @description Acionamentos agendados, em execução, reprovados ou aguardando */
             emAberto: number;
             total: number;
+            /**
+             * @description Acesso ao app: ativo (tem senha), convidado (convite válido), pendente (tem e-mail, sem convite válido nem senha) ou sem_email
+             * @enum {string}
+             */
+            acesso: "sem_email" | "pendente" | "convidado" | "ativo";
+        };
+        PrestadorCredenciado: components["schemas"]["PrestadorCadastro"] & {
+            convite: {
+                /** @enum {string} */
+                situacao: "enviado" | "falhou" | "sem_email";
+                email: string | null;
+                /** @description Por que o convite não saiu (o cadastro vale mesmo assim) */
+                mensagem: string | null;
+            };
         };
         DadosPrestador: {
             nome: string;

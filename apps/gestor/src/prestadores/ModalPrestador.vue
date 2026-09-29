@@ -6,13 +6,17 @@ import { useDisplay } from 'vuetify'
 import { ErroApi, mensagemDeErro } from '../erros'
 import { usarModalAberto } from '../modais'
 import { toastGestor } from '../toast'
-import { usarSalvarPrestador } from './dados'
+import { usarEnviarConvite, usarSalvarPrestador } from './dados'
 import {
   alternarEspecialidade,
+  avisoAoCredenciar,
   corpoDoFormulario,
   erroDoFormulario,
   ERROS_DO_FORMULARIO,
   mostrarErro,
+  rotuloDoConvite,
+  type AcessoPrestador,
+  type ConviteAoCredenciar,
   type FormularioPrestador,
 } from './formulario'
 import type { PrestadorCadastro } from './lista'
@@ -21,6 +25,8 @@ const props = defineProps<{
   inicial: FormularioPrestador
   lista: readonly PrestadorCadastro[]
   tipos: readonly TipoDemanda[]
+  /** Situação do acesso ao app de quem está sendo editado. */
+  acesso?: AcessoPrestador
 }>()
 const emit = defineEmits<{ fechar: [] }>()
 
@@ -47,14 +53,34 @@ async function enviar() {
   if (erro.value || salvando.value) return
   salvando.value = true
   try {
-    await salvar({ id: form.id, corpo: corpoDoFormulario(form) })
+    // O POST (Novo) responde com o resultado do convite; o PATCH (Editar), só com o cadastro.
+    const salvo = (await salvar({ id: form.id, corpo: corpoDoFormulario(form) })) as {
+      convite?: ConviteAoCredenciar
+    }
     emit('fechar')
-    toastGestor.mostrar(form.id ? 'Cadastro atualizado' : 'Prestador credenciado')
+    toastGestor.mostrar(form.id ? 'Cadastro atualizado' : avisoAoCredenciar(salvo.convite))
   } catch (e) {
     if (e instanceof ErroApi && ERROS_DO_FORMULARIO.has(e.codigo)) erroServidor.value = e.message
     else toastGestor.mostrar(mensagemDeErro(e))
   } finally {
     salvando.value = false
+  }
+}
+
+const { mutateAsync: enviarConvite, isPending: convidando } = usarEnviarConvite()
+/** O convite vai para o e-mail salvo: com o campo alterado e não salvo, o botão some. */
+const rotuloConvite = computed(() =>
+  form.id && form.email.trim() === props.inicial.email.trim()
+    ? rotuloDoConvite(props.acesso)
+    : null,
+)
+async function convidar() {
+  if (!form.id || convidando.value) return
+  try {
+    const { email } = await enviarConvite(form.id)
+    toastGestor.mostrar(`Convite enviado para ${email}`)
+  } catch (e) {
+    toastGestor.mostrar(mensagemDeErro(e))
   }
 }
 
@@ -113,6 +139,15 @@ onUnmounted(() => focoAnterior?.focus())
           <input v-model="form.regiao" class="entrada" placeholder="Zona Oeste" />
         </label>
       </div>
+      <button
+        v-if="rotuloConvite"
+        type="button"
+        class="convite"
+        :aria-disabled="convidando"
+        @click="convidar"
+      >
+        {{ rotuloConvite }}
+      </button>
       <div class="grupo">
         <div id="prestador-especialidades" class="rotulo">Especialidades</div>
         <div class="especialidades" role="group" aria-labelledby="prestador-especialidades">
@@ -236,6 +271,15 @@ onUnmounted(() => focoAnterior?.focus())
 }
 .regiao {
   flex: 1 1 160px;
+}
+.convite {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kgb-primaria);
 }
 .grupo {
   display: flex;
