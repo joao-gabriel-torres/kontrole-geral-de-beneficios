@@ -271,3 +271,21 @@ model Configuracao {
 
   @@map("configuracao")
 }
+
+/// Auditoria da importação da planilha de credenciados: quem, quando, qual arquivo e as contagens.
+/// Sem chave estrangeira para o usuário: o registro é histórico e sobrevive ao seed.
+model ImportacaoPlanilha {
+  id          String   @id @default(cuid())
+  autorId     String
+  autorNome   String
+  arquivo     String
+  em          DateTime @default(now())
+  novos       Int
+  atualizados Int
+  desativados Int
+  /// Linhas com erro, ignoradas.
+  ignorados   Int
+
+  @@index([em])
+  @@map("importacao_planilha")
+}
