@@ -41,6 +41,18 @@ O seed recria os dados de exemplo do protótipo, com datas relativas ao dia em q
 | Gestora (Renata Silva)    | `renata@russo.dev` | `russo2026` |
 | Prestador (Carlos Mendes) | `carlos@russo.dev` | `russo2026` |
 
+## Convite por e-mail
+
+O prestador entra no app por convite. O gestor chama `POST /api/prestadores/{id}/convite` e a API cria o usuário com o e-mail do cadastro, que vira o login. O prestador recebe um link de uso único, válido por 7 dias, e cria a senha na tela "Crie sua senha" do app (`/convite?token=…`). Reenviar invalida o link anterior e, para quem já tem senha, funciona como redefinição.
+
+| Variável            | Para quê                                                                                       |
+| ------------------- | ---------------------------------------------------------------------------------------------- |
+| `SMTP_URL`          | Servidor de e-mail (ex.: `smtps://usuario:senha@host:465`). Vazia: grava os e-mails em arquivo |
+| `EMAIL_REMETENTE`   | Remetente dos e-mails (ex.: `Russo Assistência <nao-responda@…>`); obrigatório com `SMTP_URL`  |
+| `URL_APP_PRESTADOR` | Endereço do app do prestador usado no link (dev: `http://localhost:5174`)                      |
+
+Em desenvolvimento, sem `SMTP_URL`, cada e-mail vira um HTML em `var/emails/` (fora do git), e o link do convite aparece no log da API.
+
 ## Scripts
 
 | Comando                                           | O que faz                                                                 |
