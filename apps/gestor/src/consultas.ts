@@ -1,6 +1,20 @@
+import { ErroTempoEsgotado } from '@kgb/api-client'
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/vue-query'
 import type { FiltroLista } from './acionamentos/filtros'
 import { ErroApi } from './erros'
+
+/** Quantas vezes uma consulta que falhou por 5xx ou por falha de rede é repetida. */
+export const REPETICOES = 1
+
+/**
+ * Política de repetição das consultas. Um 4xx é resposta definitiva (404, 401, 403…): repetir só
+ * atrasaria o aviso e a volta ao login. O tempo esgotado também não repete, porque a gestora já
+ * esperou o limite inteiro.
+ */
+export function deveRepetir(falhas: number, erro: unknown): boolean {
+  if (falhas >= REPETICOES || erro instanceof ErroTempoEsgotado) return false
+  return !(erro instanceof ErroApi && erro.status >= 400 && erro.status < 500)
+}
 
 /** `aoPerderSessao` é chamado quando a API recusa a sessão (401) numa consulta ou numa ação. */
 export function criarClienteConsultas(aoPerderSessao?: () => void): QueryClient {
@@ -10,7 +24,7 @@ export function criarClienteConsultas(aoPerderSessao?: () => void): QueryClient 
   return new QueryClient({
     queryCache: new QueryCache({ onError: aoErro }),
     mutationCache: new MutationCache({ onError: aoErro }),
-    defaultOptions: { queries: { retry: 1, staleTime: 5_000 } },
+    defaultOptions: { queries: { retry: deveRepetir, staleTime: 5_000 } },
   })
 }
 
