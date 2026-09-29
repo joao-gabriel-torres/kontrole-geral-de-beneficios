@@ -53,7 +53,6 @@ describe('BotoesFoto', () => {
     const clicar = vi.spyOn(input, 'click')
     await botoes.find('button.bloco-foto').trigger('click')
     expect(clicar).toHaveBeenCalled()
-    botoes.unmount()
   })
 
   it('mostra um bloco "Carregando…" enquanto a foto é preparada', async () => {
