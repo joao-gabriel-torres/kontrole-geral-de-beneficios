@@ -1,0 +1,77 @@
+import { comTempoLimite, type Usuario } from '@kgb/api-client'
+import { reactive, readonly } from 'vue'
+import { api, auth } from './api'
+
+export const MENSAGENS = {
+  credenciais: 'E-mail ou senha incorretos',
+  tentativas: 'Muitas tentativas. Aguarde alguns segundos e tente de novo.',
+  indisponivel: 'Não foi possível entrar. Verifique sua conexão e tente de novo.',
+  papel: 'Esta conta é de prestador. Use o app do prestador.',
+} as const
+
+const estado = reactive<{ usuario: Usuario | null; carregada: boolean; indisponivel: boolean }>({
+  usuario: null,
+  carregada: false,
+  indisponivel: false,
+})
+export const sessao = readonly(estado)
+
+/**
+ * Busca o usuário da sessão. Se a API não responder (erro de rede, tempo esgotado ou 5xx), marca
+ * `indisponivel` e deixa `carregada` falso para tentar de novo na próxima navegação.
+ */
+export async function carregarSessao(): Promise<Usuario | null> {
+  estado.usuario = null
+  try {
+    const { data, response } = await comTempoLimite((signal) => api.GET('/api/me', { signal }))
+    estado.indisponivel = response.status >= 500
+    estado.usuario = estado.indisponivel ? null : (data ?? null)
+  } catch {
+    estado.indisponivel = true
+  }
+  estado.carregada = !estado.indisponivel
+  return estado.usuario
+}
+
+/** Mensagem do login para quem foi mandado de volta a ele (?motivo=). */
+export function mensagemDoMotivo(motivo: unknown): string | null {
+  if (motivo === 'papel') return MENSAGENS.papel
+  if (motivo === 'conexao') return MENSAGENS.indisponivel
+  return null
+}
+
+export type ResultadoLogin = { ok: true } | { ok: false; mensagem: string }
+
+function mensagemDoErroDeLogin(status: number): string {
+  if (status === 400 || status === 401) return MENSAGENS.credenciais
+  if (status === 429) return MENSAGENS.tentativas
+  return MENSAGENS.indisponivel
+}
+
+export async function entrar(email: string, senha: string): Promise<ResultadoLogin> {
+  try {
+    const { error } = await comTempoLimite((signal) =>
+      auth.signIn.email({ email, password: senha }, { signal }),
+    )
+    if (error) return { ok: false, mensagem: mensagemDoErroDeLogin(error.status) }
+  } catch {
+    return { ok: false, mensagem: MENSAGENS.indisponivel }
+  }
+  const usuario = await carregarSessao()
+  if (!usuario) return { ok: false, mensagem: MENSAGENS.indisponivel }
+  if (usuario.papel !== 'gestor') {
+    await sair()
+    return { ok: false, mensagem: MENSAGENS.papel }
+  }
+  return { ok: true }
+}
+
+export async function sair(): Promise<void> {
+  try {
+    await comTempoLimite((signal) => auth.signOut({ fetchOptions: { signal } }))
+  } catch {
+    // Mesmo sem API, a sessão local é descartada.
+  } finally {
+    estado.usuario = null
+  }
+}

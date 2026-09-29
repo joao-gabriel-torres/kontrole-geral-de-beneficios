@@ -1,0 +1,34 @@
+@layer vuetify-overrides {
+  .v-btn {
+    border-radius: 16px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: normal;
+    text-transform: none;
+    box-shadow: none;
+  }
+  .v-btn--disabled.v-btn--variant-flat {
+    background: var(--kgb-primaria-tint-forte) !important;
+    color: var(--kgb-primaria-escura) !important;
+    opacity: 1;
+  }
+  .v-btn--disabled .v-btn__overlay {
+    opacity: 0;
+  }
+  .v-field {
+    border-radius: 16px;
+    font-size: 14px;
+  }
+  .v-field--variant-outlined .v-field__outline {
+    --v-field-border-opacity: 1;
+    color: var(--kgb-divisor);
+  }
+  .v-field--focused .v-field__outline {
+    color: var(--kgb-tinta);
+  }
+  .v-field__input {
+    min-height: 48px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}

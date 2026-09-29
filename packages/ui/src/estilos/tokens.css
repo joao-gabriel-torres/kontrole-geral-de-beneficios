@@ -1,0 +1,38 @@
+:root {
+  --kgb-fonte: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --v-font-body: var(--kgb-fonte);
+
+  --kgb-primaria: #0069bd;
+  --kgb-primaria-hover: #005aa3;
+  --kgb-primaria-escura: #004e8f;
+  --kgb-primaria-tint: #e6f0fa;
+  --kgb-primaria-tint-forte: #cce1f2;
+  --kgb-primaria-hover-leve: #eef4fa;
+  --kgb-laranja: #fc7608;
+  --kgb-laranja-claro: #ffebdc;
+  --kgb-laranja-texto: #b85200;
+  --kgb-coral: #f47b50;
+  --kgb-grafite: #5d627d;
+  --kgb-creme: #fcf5f0;
+  --kgb-tinta: #262a3b;
+  --kgb-titulo: #2c3143;
+  --kgb-texto: #363853;
+  --kgb-secundario: #50555c;
+  --kgb-terciario: #8f8d8d;
+  --kgb-linha: #adb3bc;
+  --kgb-divisor: #e5e5e5;
+  --kgb-superficie2: #eff1f3;
+  --kgb-superficie1: #f9f9f9;
+  --kgb-branco: #ffffff;
+  --kgb-sucesso: #0b8c61;
+  --kgb-sucesso-fundo: #e7f8f1;
+  --kgb-perigo: #ff6a5d;
+  --kgb-perigo-fundo: #ffd7d4;
+  --kgb-perigo-texto: #b8342a;
+  --kgb-inviavel: #a8336a;
+  --kgb-inviavel-fundo: #f4d8e8;
+  --kgb-aba-inativa: #61565c;
+
+  --kgb-sobreposicao: rgba(28, 18, 67, 0.8);
+  --kgb-sombra-elevado: 0 4px 16px rgba(0, 0, 0, 0.08);
+}

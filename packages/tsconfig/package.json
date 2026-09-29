@@ -1,0 +1,12 @@
+{
+  "name": "@kgb/tsconfig",
+  "private": true,
+  "files": [
+    "base.json",
+    "node.json",
+    "vue.json"
+  ],
+  "dependencies": {
+    "@vue/tsconfig": "^0.9.1"
+  }
+}

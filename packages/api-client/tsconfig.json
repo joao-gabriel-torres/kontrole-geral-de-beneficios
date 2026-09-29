@@ -1,0 +1,4 @@
+{
+  "extends": "@kgb/tsconfig/vue.json",
+  "include": ["src"]
+}

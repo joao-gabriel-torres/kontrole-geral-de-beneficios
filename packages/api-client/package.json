@@ -1,0 +1,25 @@
+{
+  "name": "@kgb/api-client",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./auth": "./src/auth.ts"
+  },
+  "scripts": {
+    "gerar:tipos": "openapi-typescript openapi.json -o src/schema.d.ts",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "better-auth": "1.7.6",
+    "openapi-fetch": "^0.17.0",
+    "vue": "^3.5.43"
+  },
+  "devDependencies": {
+    "@kgb/tsconfig": "workspace:*",
+    "openapi-typescript": "^7.13.0",
+    "vitest": "^4.1.11",
+    "vue-tsc": "^3.3.11"
+  }
+}

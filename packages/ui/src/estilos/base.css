@@ -1,0 +1,45 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+body {
+  font-family: var(--kgb-fonte);
+  color: var(--kgb-tinta);
+  line-height: normal;
+  -webkit-font-smoothing: antialiased;
+}
+* {
+  box-sizing: border-box;
+}
+a {
+  color: var(--kgb-primaria-escura);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--kgb-primaria);
+}
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+  color: var(--kgb-tinta);
+}
+button {
+  cursor: pointer;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d5d8dd;
+  border-radius: 8px;
+}
+/* O Vuetify define line-height 1.5 na raiz; o protótipo usa o padrão do navegador. */
+.v-application {
+  font-family: var(--kgb-fonte);
+  line-height: normal;
+  color: var(--kgb-tinta);
+}

@@ -1,0 +1,255 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Better Auth (formato gerado por `npx auth@1.7.6 generate`) ----------
+
+model User {
+  id                  String              @id
+  name                String
+  email               String              @unique
+  emailVerified       Boolean             @default(false)
+  image               String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  role                String              @default("prestador")
+  prestadorId         String?             @unique
+  prestador           Prestador?          @relation(fields: [prestadorId], references: [id], onDelete: SetNull)
+  sessions            Session[]
+  accounts            Account[]
+  acionamentosCriados Acionamento[]       @relation("AcionamentoCriadoPor")
+  revisoes            Revisao[]
+  eventos             EventoAcionamento[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ---------- Domínio ----------
+
+enum StatusPrestador {
+  ativo
+  inativo
+}
+
+enum StatusAcionamento {
+  aberto
+  em_andamento
+  aguardando
+  reprovado
+  aprovado
+}
+
+enum ContextoFoto {
+  etapa
+  conclusao
+  inviabilidade
+}
+
+enum Decisao {
+  aprovado
+  reprovado
+}
+
+enum TipoEvento {
+  criado
+  iniciado
+  enviado
+  inviabilidade_enviada
+  aprovado
+  reprovado
+}
+
+model TipoDemanda {
+  id           String      @id @default(cuid())
+  nome         String      @unique
+  cor          String
+  checklist    String[]
+  excluidoEm   DateTime?
+  criadoEm     DateTime    @default(now())
+  atualizadoEm DateTime    @updatedAt
+  prestadores  Prestador[] @relation("Especialidades")
+  demandas     Demanda[]
+
+  @@map("tipo_demanda")
+}
+
+model Prestador {
+  id               String          @id @default(cuid())
+  nome             String
+  documento        String          @unique
+  telefone         String
+  email            String?
+  regiao           String?
+  status           StatusPrestador @default(ativo)
+  credenciadoDesde DateTime        @db.Date
+  excluidoEm       DateTime?
+  cor              String
+  criadoEm         DateTime        @default(now())
+  atualizadoEm     DateTime        @updatedAt
+  especialidades   TipoDemanda[]   @relation("Especialidades")
+  acionamentos     Acionamento[]
+  usuario          User?
+
+  @@map("prestador")
+}
+
+model Acionamento {
+  id                      String              @id @default(cuid())
+  numero                  Int                 @unique @default(autoincrement())
+  titulo                  String
+  cliente                 String
+  endereco                String
+  data                    DateTime            @db.Date
+  inicio                  String // HH:MM, fuso America/Sao_Paulo
+  fim                     String // HH:MM, maior que inicio
+  prestadorId             String
+  prestador               Prestador           @relation(fields: [prestadorId], references: [id])
+  status                  StatusAcionamento   @default(aberto)
+  inviavel                Boolean             @default(false)
+  criadoEm                DateTime            @default(now())
+  iniciadoEm              DateTime?
+  comentarioConclusao     String?
+  inviabilidadeComentario String?
+  criadoPorId             String
+  criadoPor               User                @relation("AcionamentoCriadoPor", fields: [criadoPorId], references: [id])
+  demandas                Demanda[]
+  fotos                   Foto[]
+  revisoes                Revisao[]
+  eventos                 EventoAcionamento[]
+
+  @@index([prestadorId, data])
+  @@index([status])
+  @@map("acionamento")
+}
+
+model Demanda {
+  id            String      @id @default(cuid())
+  acionamentoId String
+  acionamento   Acionamento @relation(fields: [acionamentoId], references: [id], onDelete: Cascade)
+  tipoId        String
+  tipo          TipoDemanda @relation(fields: [tipoId], references: [id])
+  tipoNome      String // snapshot do nome na criação
+  cor           String // snapshot da cor na criação
+  ordem         Int
+  etapas        Etapa[]
+
+  @@index([acionamentoId])
+  @@map("demanda")
+}
+
+model Etapa {
+  id         String  @id @default(cuid())
+  demandaId  String
+  demanda    Demanda @relation(fields: [demandaId], references: [id], onDelete: Cascade)
+  ordem      Int
+  texto      String // snapshot do checklist na criação
+  feita      Boolean @default(false)
+  comentario String?
+  fotos      Foto[]
+
+  @@index([demandaId])
+  @@map("etapa")
+}
+
+model Foto {
+  id            String       @id @default(cuid())
+  acionamentoId String
+  acionamento   Acionamento  @relation(fields: [acionamentoId], references: [id], onDelete: Cascade)
+  contexto      ContextoFoto
+  etapaId       String?
+  etapa         Etapa?       @relation(fields: [etapaId], references: [id], onDelete: Cascade)
+  storageKey    String // "placeholder:#RRGGBB" nas fotos de exemplo do seed
+  tiradaEm      DateTime
+  criadaEm      DateTime     @default(now())
+
+  @@index([acionamentoId])
+  @@map("foto")
+}
+
+model Revisao {
+  id            String      @id @default(cuid())
+  acionamentoId String
+  acionamento   Acionamento @relation(fields: [acionamentoId], references: [id], onDelete: Cascade)
+  decisao       Decisao
+  motivo        String?
+  em            DateTime    @default(now())
+  gestorId      String
+  gestor        User        @relation(fields: [gestorId], references: [id])
+
+  @@index([acionamentoId])
+  @@map("revisao")
+}
+
+model EventoAcionamento {
+  id            String      @id @default(cuid())
+  acionamentoId String
+  acionamento   Acionamento @relation(fields: [acionamentoId], references: [id], onDelete: Cascade)
+  tipo          TipoEvento
+  em            DateTime    @default(now())
+  autorId       String
+  autor         User        @relation(fields: [autorId], references: [id])
+  dados         Json?
+
+  @@index([acionamentoId, em])
+  @@map("evento_acionamento")
+}
+
+model Configuracao {
+  id              Int     @id @default(1)
+  photoMin        Int     @default(1)
+  requireAllSteps Boolean @default(false)
+
+  @@map("configuracao")
+}

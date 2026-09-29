@@ -1,0 +1,39 @@
+{
+  "name": "@kgb/prestador",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "nativo:sync": "vite build && cap sync",
+    "nativo:ios": "cap open ios",
+    "nativo:android": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/preferences": "^8.0.1",
+    "@kgb/api-client": "workspace:*",
+    "@kgb/ui": "workspace:*",
+    "vue": "^3.5.43",
+    "vue-router": "^5.3.1",
+    "vuetify": "^4.2.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "@kgb/tsconfig": "workspace:*",
+    "@types/node": "^26.6.3",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@vue/test-utils": "^2.5.1",
+    "jsdom": "^30.1.1",
+    "resize-observer-polyfill": "^1.5.1",
+    "vite": "^8.3.1",
+    "vite-plugin-vuetify": "^2.1.3",
+    "vitest": "^4.1.11",
+    "vue-tsc": "^3.3.11"
+  }
+}
