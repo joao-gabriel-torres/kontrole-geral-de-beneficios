@@ -10,7 +10,7 @@ export const MENSAGENS = {
   tentativas: 'Muitas tentativas. Aguarde alguns segundos e tente de novo.',
   indisponivel: 'Não foi possível entrar. Verifique sua conexão e tente de novo.',
   papel: 'Esta conta é de gestor. Use o painel web.',
-  inativo: 'Seu cadastro está inativo. Fale com a Russo Assistência para voltar a atender.',
+  excluido: 'Seu cadastro foi encerrado. Fale com a Russo Assistência se precisar de acesso.',
 } as const
 
 const estado = reactive<{ usuario: Usuario | null; carregada: boolean; indisponivel: boolean }>({
@@ -51,9 +51,9 @@ export function mensagemDoMotivo(motivo: unknown): string | null {
 
 export type ResultadoLogin = { ok: true } | { ok: false; mensagem: string }
 
-/** O 403 também vem de origem recusada pela API: só o código diz que o cadastro está inativo. */
+/** O 403 também vem de origem recusada pela API: só o código diz que o cadastro foi encerrado. */
 function mensagemDoErroDeLogin(erro: { status: number; code?: string }): string {
-  if (erro.code === 'PRESTADOR_INATIVO') return MENSAGENS.inativo
+  if (erro.code === 'PRESTADOR_EXCLUIDO') return MENSAGENS.excluido
   if (erro.status === 400 || erro.status === 401) return MENSAGENS.credenciais
   if (erro.status === 429) return MENSAGENS.tentativas
   return MENSAGENS.indisponivel

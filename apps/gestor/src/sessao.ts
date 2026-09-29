@@ -44,10 +44,10 @@ export function mensagemDoMotivo(motivo: unknown): string | null {
 
 export type ResultadoLogin = { ok: true } | { ok: false; mensagem: string }
 
-/** O 403 também vem de origem recusada pela API: só o código diz que o cadastro está inativo. */
+/** O 403 também vem de origem recusada pela API: só o código diz que o cadastro foi encerrado. */
 function mensagemDoErroDeLogin(erro: { status: number; code?: string }): string {
-  // Conta de prestador desativado: o painel web não é para ela de qualquer forma.
-  if (erro.code === 'PRESTADOR_INATIVO') return MENSAGENS.papel
+  // Conta de prestador excluído: o painel web não é para ela de qualquer forma.
+  if (erro.code === 'PRESTADOR_EXCLUIDO') return MENSAGENS.papel
   if (erro.status === 400 || erro.status === 401) return MENSAGENS.credenciais
   if (erro.status === 429) return MENSAGENS.tentativas
   return MENSAGENS.indisponivel

@@ -73,15 +73,15 @@ describe('sessão do prestador', () => {
     expect(await entrar('c@x', 'x')).toEqual({ ok: false, mensagem: MENSAGENS.tentativas })
   })
 
-  it('prestador desativado (403) é avisado de que o cadastro está inativo', async () => {
-    auth.signIn.email.mockResolvedValue({ error: { status: 403, code: 'PRESTADOR_INATIVO' } })
-    expect(await entrar('c@x', 'x')).toEqual({ ok: false, mensagem: MENSAGENS.inativo })
-    expect(MENSAGENS.inativo).toBe(
-      'Seu cadastro está inativo. Fale com a Russo Assistência para voltar a atender.',
+  it('prestador excluído (403) é avisado de que o cadastro foi encerrado', async () => {
+    auth.signIn.email.mockResolvedValue({ error: { status: 403, code: 'PRESTADOR_EXCLUIDO' } })
+    expect(await entrar('c@x', 'x')).toEqual({ ok: false, mensagem: MENSAGENS.excluido })
+    expect(MENSAGENS.excluido).toBe(
+      'Seu cadastro foi encerrado. Fale com a Russo Assistência se precisar de acesso.',
     )
   })
 
-  it('outro 403 (origem recusada pela API) não diz que o cadastro está inativo', async () => {
+  it('outro 403 (origem recusada pela API) não diz que o cadastro foi encerrado', async () => {
     auth.signIn.email.mockResolvedValue({ error: { status: 403, code: 'INVALID_ORIGIN' } })
     expect(await entrar('c@x', 'x')).toEqual({ ok: false, mensagem: MENSAGENS.indisponivel })
   })

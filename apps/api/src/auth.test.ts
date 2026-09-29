@@ -127,23 +127,24 @@ describe('prestador inativo ou excluído', () => {
     email = await loginDePrestador(PRESTADOR)
   })
 
-  it('recusa o login de prestador inativo com 403', async () => {
+  it('prestador inativo continua entrando: só não recebe acionamentos novos', async () => {
     await situacao({ status: 'inativo' })
+    expect((await login()).status).toBe(200)
+  })
+
+  it('recusa o login de prestador excluído com 403', async () => {
+    await situacao({ status: 'inativo', excluidoEm: new Date() })
     const r = await login()
     expect(r.status).toBe(403)
-    expect(await r.json()).toMatchObject({ code: 'PRESTADOR_INATIVO' })
+    expect(await r.json()).toMatchObject({ code: 'PRESTADOR_EXCLUIDO' })
   })
 
-  it('recusa o login de prestador excluído', async () => {
-    await situacao({ status: 'ativo', excluidoEm: new Date() })
-    expect((await login()).status).toBe(403)
-  })
-
-  it('derruba a sessão aberta antes da desativação', async () => {
+  it('derruba a sessão aberta antes da exclusão', async () => {
     await situacao({ status: 'ativo' })
     const headers = await entrar(app, email)
-    expect((await app.request('/api/me', { headers })).status).toBe(200)
     await situacao({ status: 'inativo' })
+    expect((await app.request('/api/me', { headers })).status).toBe(200)
+    await situacao({ status: 'inativo', excluidoEm: new Date() })
     expect((await app.request('/api/me', { headers })).status).toBe(401)
   })
 })

@@ -28,8 +28,8 @@ export const auth = betterAuth({
           })
           if (usuario?.role !== 'gestor' && (await prestadorBloqueado(usuario?.prestadorId))) {
             throw new APIError('FORBIDDEN', {
-              message: 'Seu cadastro de prestador está inativo',
-              code: 'PRESTADOR_INATIVO',
+              message: 'Seu cadastro de prestador foi encerrado',
+              code: 'PRESTADOR_EXCLUIDO',
             })
           }
         },
