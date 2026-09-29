@@ -4,7 +4,8 @@ import { opcoesVuetify } from './vuetify'
 
 describe('opcoesVuetify', () => {
   it('texto branco sobre as cores cheias do tema, como nos botões do protótipo', () => {
-    const tema = opcoesVuetify().theme?.themes?.russo?.colors ?? {}
+    const { theme } = opcoesVuetify()
+    const tema = theme ? (theme.themes?.russo?.colors ?? {}) : {}
     for (const cor of ['primary', 'secondary', 'error', 'success', 'warning', 'info']) {
       expect(tema[`on-${cor}`], `on-${cor}`).toBe(cores.branco)
     }
