@@ -641,15 +641,12 @@
         "type": "object",
         "properties": {
           "proximo": {
-            "allOf": [
+            "anyOf": [
               {
                 "$ref": "#/components/schemas/ResumoAcionamento"
               },
               {
-                "type": [
-                  "object",
-                  "null"
-                ]
+                "type": "null"
               }
             ]
           },
@@ -709,6 +706,197 @@
           "hoje",
           "metricas",
           "rotaDoDia"
+        ]
+      },
+      "PainelGestor": {
+        "type": "object",
+        "properties": {
+          "hoje": {
+            "type": "string",
+            "example": "2026-09-29"
+          },
+          "periodo": {
+            "anyOf": [
+              {
+                "type": "number",
+                "enum": [
+                  7
+                ]
+              },
+              {
+                "type": "number",
+                "enum": [
+                  30
+                ]
+              }
+            ]
+          },
+          "emAberto": {
+            "type": "integer",
+            "description": "Aberto, em execução ou reprovado"
+          },
+          "paraHoje": {
+            "type": "integer",
+            "description": "Atendimentos de hoje não aprovados"
+          },
+          "aguardando": {
+            "type": "integer"
+          },
+          "aprovacao": {
+            "type": "object",
+            "properties": {
+              "aprovadas": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "aprovadas",
+              "total"
+            ]
+          },
+          "tempoMedioMin": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Média de (1º envio − início) em minutos, com fração; null sem dados",
+            "example": 106.15
+          },
+          "inviaveis": {
+            "type": "object",
+            "properties": {
+              "quantidade": {
+                "type": "integer"
+              },
+              "totalPeriodo": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "quantidade",
+              "totalPeriodo"
+            ]
+          },
+          "volume": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "string",
+                  "example": "2026-09-29"
+                },
+                "total": {
+                  "type": "integer"
+                },
+                "aprovados": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "data",
+                "total",
+                "aprovados"
+              ]
+            }
+          },
+          "reprovacoesPorTipo": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "tipoNome": {
+                  "type": "string"
+                },
+                "reprovacoes": {
+                  "type": "integer"
+                },
+                "demandas": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "tipoNome",
+                "reprovacoes",
+                "demandas"
+              ]
+            }
+          },
+          "ranking": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "prestador": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "nome": {
+                      "type": "string"
+                    },
+                    "cor": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "nome",
+                    "cor"
+                  ]
+                },
+                "concluidos": {
+                  "type": "integer"
+                },
+                "revisoes": {
+                  "type": "object",
+                  "properties": {
+                    "aprovadas": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "aprovadas",
+                    "total"
+                  ]
+                },
+                "tempoMedioMin": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "description": "Média de (1º envio − início) em minutos, com fração; null sem dados",
+                  "example": 106.15
+                }
+              },
+              "required": [
+                "prestador",
+                "concluidos",
+                "revisoes",
+                "tempoMedioMin"
+              ]
+            }
+          }
+        },
+        "required": [
+          "hoje",
+          "periodo",
+          "emAberto",
+          "paraHoje",
+          "aguardando",
+          "aprovacao",
+          "tempoMedioMin",
+          "inviaveis",
+          "volume",
+          "reprovacoesPorTipo",
+          "ranking"
         ]
       },
       "NovoTipo": {
@@ -2059,6 +2247,78 @@
           },
           "403": {
             "description": "Só o prestador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/painel": {
+      "get": {
+        "tags": [
+          "Painel"
+        ],
+        "summary": "KPIs, volume por dia, reprovações por tipo e ranking do período",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "7",
+                "30"
+              ],
+              "default": "7",
+              "description": "Últimos 7 ou 30 dias"
+            },
+            "required": false,
+            "description": "Últimos 7 ou 30 dias",
+            "name": "periodo",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Painel do gestor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PainelGestor"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Período inválido",
             "content": {
               "application/json": {
                 "schema": {

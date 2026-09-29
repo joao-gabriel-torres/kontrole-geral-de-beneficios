@@ -24,3 +24,6 @@ var/
 
 # worktrees do Claude Code
 .claude/worktrees/
+
+# artefatos do Playwright MCP
+.playwright-mcp/

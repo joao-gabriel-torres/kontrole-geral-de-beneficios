@@ -1236,6 +1236,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/painel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** KPIs, volume por dia, reprovações por tipo e ranking do período */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Últimos 7 ou 30 dias */
+                    periodo?: "7" | "30";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Painel do gestor */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PainelGestor"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Período inválido */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tipos/{id}": {
         parameters: {
             query?: never;
@@ -1530,7 +1596,7 @@ export interface components {
             comentario: string;
         };
         InicioPrestador: {
-            proximo: components["schemas"]["ResumoAcionamento"] & (Record<string, never> | null);
+            proximo: components["schemas"]["ResumoAcionamento"] | null;
             hoje: components["schemas"]["ResumoAcionamento"][];
             metricas: {
                 hoje: number;
@@ -1542,6 +1608,57 @@ export interface components {
                 paraCorrigir: number;
             };
             rotaDoDia: string[];
+        };
+        PainelGestor: {
+            /** @example 2026-09-29 */
+            hoje: string;
+            periodo: 7 | 30;
+            /** @description Aberto, em execução ou reprovado */
+            emAberto: number;
+            /** @description Atendimentos de hoje não aprovados */
+            paraHoje: number;
+            aguardando: number;
+            aprovacao: {
+                aprovadas: number;
+                total: number;
+            };
+            /**
+             * @description Média de (1º envio − início) em minutos, com fração; null sem dados
+             * @example 106.15
+             */
+            tempoMedioMin: number | null;
+            inviaveis: {
+                quantidade: number;
+                totalPeriodo: number;
+            };
+            volume: {
+                /** @example 2026-09-29 */
+                data: string;
+                total: number;
+                aprovados: number;
+            }[];
+            reprovacoesPorTipo: {
+                tipoNome: string;
+                reprovacoes: number;
+                demandas: number;
+            }[];
+            ranking: {
+                prestador: {
+                    id: string;
+                    nome: string;
+                    cor: string;
+                };
+                concluidos: number;
+                revisoes: {
+                    aprovadas: number;
+                    total: number;
+                };
+                /**
+                 * @description Média de (1º envio − início) em minutos, com fração; null sem dados
+                 * @example 106.15
+                 */
+                tempoMedioMin: number | null;
+            }[];
         };
         NovoTipo: {
             nome: string;
