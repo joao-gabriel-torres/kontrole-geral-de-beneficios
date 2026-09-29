@@ -53,7 +53,12 @@ async function decodificar(arquivo: Blob): Promise<Imagem> {
     const url = URL.createObjectURL(arquivo)
     const img = new Image()
     img.src = url
-    await img.decode()
+    try {
+      await img.decode()
+    } catch (erro) {
+      URL.revokeObjectURL(url)
+      throw erro
+    }
     return {
       largura: img.naturalWidth,
       altura: img.naturalHeight,
@@ -66,13 +71,16 @@ async function decodificar(arquivo: Blob): Promise<Imagem> {
 /** Redimensiona no canvas e converte para JPEG. */
 export async function redimensionar(arquivo: Blob): Promise<Blob> {
   const imagem = await decodificar(arquivo)
+  const canvas = document.createElement('canvas')
   try {
     const { largura, altura } = dimensoesAlvo(imagem.largura, imagem.altura)
-    const canvas = document.createElement('canvas')
     canvas.width = largura
     canvas.height = altura
     const contexto = canvas.getContext('2d')
     if (!contexto) throw new Error('Canvas indisponível')
+    // O JPEG não tem transparência: sem um fundo, o transparente de um PNG sairia preto.
+    contexto.fillStyle = '#fff'
+    contexto.fillRect(0, 0, largura, altura)
     contexto.drawImage(imagem.fonte, 0, 0, largura, altura)
     return await new Promise<Blob>((pronto, falhou) =>
       canvas.toBlob(
@@ -82,6 +90,10 @@ export async function redimensionar(arquivo: Blob): Promise<Blob> {
       ),
     )
   } finally {
+    // Devolve a memória do canvas já: o WebView do iOS tem um teto de memória de canvas, e uma
+    // sessão longa de fotos começaria a falhar esperando o coletor de lixo.
+    canvas.width = 0
+    canvas.height = 0
     imagem.liberar()
   }
 }

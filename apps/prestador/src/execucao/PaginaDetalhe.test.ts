@@ -410,6 +410,21 @@ describe('PaginaDetalhe', () => {
   })
 
   describe('marcar como inviável', () => {
+    it('com o painel aberto, o resto da tela fica inerte; ao cancelar, o foco volta ao link', async () => {
+      const { wrapper } = await abrir(detalheExemplo())
+      const inertes = () =>
+        ['.cabecalho', '.corpo', '.barra-acoes', '.painel'].filter((s) =>
+          Boolean(document.querySelector(s)?.hasAttribute('inert')),
+        )
+      const link = wrapper.find('.link-inviavel')
+      ;(link.element as HTMLElement).focus()
+      await link.trigger('click')
+      expect(inertes()).toEqual(['.cabecalho', '.corpo', '.barra-acoes'])
+      await wrapper.find('.painel .cancelar').trigger('click')
+      expect(inertes()).toEqual([])
+      expect(document.activeElement).toBe(link.element)
+    })
+
     it('envia motivo e fotos num único POST multipart, avisa e fecha o painel', async () => {
       URL.createObjectURL = vi.fn(() => 'blob:previa')
       URL.revokeObjectURL = vi.fn()

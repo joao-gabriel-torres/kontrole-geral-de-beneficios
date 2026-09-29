@@ -8,14 +8,30 @@ describe('AvisoToast', () => {
     const t = mount(AvisoToast, {
       props: { mensagem: 'Atendimento iniciado', variante: 'prestador' },
     })
-    expect(t.text()).toBe('Atendimento iniciado')
-    expect(t.classes()).toContain('prestador')
-    expect(t.attributes('role')).toBe('status')
+    const toast = t.find('.toast')
+    expect(toast.text()).toBe('Atendimento iniciado')
+    expect(toast.classes()).toContain('prestador')
+    expect(toast.attributes('role')).toBe('status')
   })
-  it('sem mensagem, não renderiza', () => {
-    expect(mount(AvisoToast, { props: { mensagem: null, variante: 'gestor' } }).html()).toBe(
-      '<!--v-if-->',
-    )
+
+  it('a região viva fica sempre montada: sem mensagem, existe e está vazia', () => {
+    const t = mount(AvisoToast, { props: { mensagem: null, variante: 'gestor' } })
+    const regiao = t.find('[aria-live="polite"]')
+    expect(regiao.exists()).toBe(true)
+    expect(regiao.attributes('aria-atomic')).toBe('true')
+    expect(regiao.text()).toBe('')
+    expect(t.find('.toast').exists()).toBe(false)
+  })
+
+  it('a mensagem entra na região que já existia (é isso que o leitor de tela anuncia)', async () => {
+    const t = mount(AvisoToast, { props: { mensagem: null, variante: 'prestador' } })
+    const regiao = t.find('[aria-live="polite"]').element
+    await t.setProps({ mensagem: 'Conclusão aprovada' })
+    expect(t.find('[aria-live="polite"]').element).toBe(regiao)
+    expect(regiao.textContent?.trim()).toBe('Conclusão aprovada')
+    await t.setProps({ mensagem: null })
+    expect(t.find('[aria-live="polite"]').element).toBe(regiao)
+    expect(regiao.textContent?.trim()).toBe('')
   })
 })
 

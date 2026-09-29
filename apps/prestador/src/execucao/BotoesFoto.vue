@@ -18,6 +18,7 @@ const emit = defineEmits<{ foto: [foto: FotoCapturada] }>()
 
 const nativo = Capacitor.isNativePlatform()
 const inputCamera = ref<HTMLInputElement>()
+const inputGaleria = ref<HTMLInputElement>()
 /** Fotos sendo preparadas (câmera nativa aberta, redimensionamento). */
 const preparando = ref(0)
 
@@ -42,10 +43,9 @@ function abrirCamera() {
   else inputCamera.value?.click()
 }
 
-function abrirGaleriaNativa(evento: Event) {
-  if (!nativo) return
-  evento.preventDefault()
-  void entregar(() => capturarNativa('galeria'), 'galeria')
+function abrirGaleria() {
+  if (nativo) void entregar(() => capturarNativa('galeria'), 'galeria')
+  else inputGaleria.value?.click()
 }
 
 function aoEscolher(evento: Event, origem: OrigemFoto) {
@@ -77,16 +77,18 @@ function aoEscolher(evento: Event, origem: OrigemFoto) {
     class="escondido"
     @change="aoEscolher($event, 'camera')"
   />
-  <label class="bloco-foto" :class="cor" @click="abrirGaleriaNativa">
-    <input
-      data-origem="galeria"
-      type="file"
-      accept="image/*"
-      class="escondido"
-      @change="aoEscolher($event, 'galeria')"
-    />
+  <!-- No protótipo é um <label> com o input dentro: não recebe foco pelo teclado. -->
+  <button type="button" class="bloco-foto" :class="cor" @click="abrirGaleria">
     <RussoIcone nome="image" :tamanho="20" class="icone" />Galeria
-  </label>
+  </button>
+  <input
+    ref="inputGaleria"
+    data-origem="galeria"
+    type="file"
+    accept="image/*"
+    class="escondido"
+    @change="aoEscolher($event, 'galeria')"
+  />
 </template>
 
 <style scoped>

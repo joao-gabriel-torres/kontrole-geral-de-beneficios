@@ -112,6 +112,7 @@ async function encerrarSessao() {
         tabindex="0"
         @click="abrir(a.id)"
         @keydown.enter="abrir(a.id)"
+        @keydown.space.prevent="abrir(a.id)"
       >
         <div class="hora">{{ a.inicio }}</div>
         <div class="corpo-item">

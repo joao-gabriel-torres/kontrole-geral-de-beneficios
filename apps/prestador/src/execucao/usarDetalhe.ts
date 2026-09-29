@@ -8,6 +8,35 @@ import type { FotoCapturada } from './fotos'
 
 export type ContextoFoto = 'etapa' | 'conclusao'
 
+/** Mutação do Detalhe em andamento. */
+interface Pedido {
+  /** Outra mutação esteve em voo em algum momento da vida desta. */
+  sobreposto: boolean
+}
+
+/**
+ * A API monta o Detalhe da resposta depois do commit e fora do lock: com duas mutações em voo, a
+ * resposta da primeira pode trazer um retrato anterior ao commit da segunda e chegar por último.
+ * Só a resposta de uma mutação que ficou sozinha do começo ao fim é certamente a mais nova.
+ */
+function criarPedidos() {
+  const emVoo = new Set<Pedido>()
+  return {
+    abrir(): Pedido {
+      const pedido = { sobreposto: emVoo.size > 0 }
+      emVoo.forEach((outro) => (outro.sobreposto = true))
+      emVoo.add(pedido)
+      return pedido
+    },
+    /** Encerra o pedido; `true` quando a resposta dele pode ir direto para o cache. */
+    fechar(pedido: Pedido | undefined): boolean {
+      if (!pedido) return false
+      emVoo.delete(pedido)
+      return !pedido.sobreposto
+    },
+  }
+}
+
 /** Consulta do Detalhe e as ações do prestador sobre ele. */
 export function usarDetalhe(id: Ref<string>) {
   const cliente = useQueryClient()
@@ -31,29 +60,56 @@ export function usarDetalhe(id: Ref<string>) {
     void cliente.invalidateQueries({ queryKey: CHAVES.inicio })
   }
 
-  /** Mutação que devolve o Detalhe: grava o cache e invalida a lista e o Início. */
+  const pedidos = criarPedidos()
+  /** Busca o Detalhe de novo; um GET que já estava em voo é cancelado (leu o banco antes). */
+  const buscarDetalhe = () => cliente.invalidateQueries({ queryKey: CHAVES.detalhe(id.value) })
+
+  /**
+   * Mutação que devolve o Detalhe: grava a resposta no cache quando ela é certamente a mais nova.
+   * Se outra mutação se sobrepôs, ou se um GET do Detalhe estava em voo (e pode chegar depois com
+   * um retrato anterior), busca o estado final. Invalida a lista e o Início.
+   */
   function acao<A>(executar: (args: A) => Promise<DetalheAcionamento>, sucesso?: string) {
     return useMutation({
       mutationFn: executar,
-      onSuccess: (detalhe) => {
-        cliente.setQueryData(CHAVES.detalhe(id.value), detalhe)
+      onMutate: () => pedidos.abrir(),
+      onSuccess: (detalhe, _args, pedido) => {
+        const chave = CHAVES.detalhe(id.value)
+        if (pedidos.fechar(pedido)) {
+          const getEmVoo = cliente.isFetching({ queryKey: chave }) > 0
+          cliente.setQueryData(chave, detalhe)
+          if (getEmVoo) void buscarDetalhe()
+        } else {
+          void buscarDetalhe()
+        }
         invalidarListas()
         if (sucesso) avisar(sucesso)
       },
-      onError: (erro) => avisar(mensagemDeErro(erro)),
+      onError: (erro, _args, pedido) => {
+        pedidos.fechar(pedido)
+        avisar(mensagemDeErro(erro))
+      },
     })
   }
 
-  /** Mutação de foto: a API não devolve o Detalhe, então ele é buscado de novo. */
+  /**
+   * Mutação de foto: a API não devolve o Detalhe, então ele é buscado de novo. Conta como pedido
+   * para as outras mutações saberem que houve sobreposição.
+   */
   function acaoFoto<A>(executar: (args: A) => Promise<unknown>) {
     return useMutation({
       mutationFn: executar,
+      onMutate: () => pedidos.abrir(),
       // Espera o Detalhe novo chegar: o bloco "Carregando…" só some quando a foto aparece.
-      onSuccess: async () => {
+      onSuccess: async (_resposta, _args, pedido) => {
+        pedidos.fechar(pedido)
         invalidarListas()
-        await cliente.invalidateQueries({ queryKey: CHAVES.detalhe(id.value) })
+        await buscarDetalhe()
       },
-      onError: (erro) => avisar(mensagemDeErro(erro)),
+      onError: (erro, _args, pedido) => {
+        pedidos.fechar(pedido)
+        avisar(mensagemDeErro(erro))
+      },
     })
   }
 

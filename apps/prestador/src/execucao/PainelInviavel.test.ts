@@ -92,6 +92,53 @@ describe('PainelInviavel', () => {
     expect(painel.emitted('enviar')).toBeUndefined()
   })
 
+  describe('foco', () => {
+    let gatilho: HTMLButtonElement
+    beforeEach(() => {
+      gatilho = document.createElement('button')
+      gatilho.textContent = 'Marcar como inviável'
+      document.body.append(gatilho)
+      gatilho.focus()
+    })
+    afterEach(() => gatilho.remove())
+
+    const montarFechado = () =>
+      mount(PainelInviavel, {
+        props: { aberto: false, enviando: false },
+        attachTo: document.body,
+      })
+
+    it('ao abrir, o foco vai para o painel (o diálogo); ao fechar, volta para quem abriu', async () => {
+      const painel = montarFechado()
+      expect(document.activeElement).toBe(gatilho)
+      await painel.setProps({ aberto: true })
+      const dialogo = painel.find('[role="dialog"]')
+      expect(dialogo.classes()).toContain('painel')
+      expect(dialogo.attributes('aria-modal')).toBe('true')
+      expect(dialogo.attributes('tabindex')).toBe('-1')
+      expect(document.activeElement).toBe(dialogo.element)
+      await painel.setProps({ aberto: false })
+      expect(document.activeElement).toBe(gatilho)
+    })
+
+    it('Esc com o foco no painel fecha', async () => {
+      const painel = montarFechado()
+      await painel.setProps({ aberto: true })
+      document.activeElement!.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+      )
+      expect(painel.emitted('fechar')).toHaveLength(1)
+    })
+
+    it('se quem abriu saiu da tela (a barra some depois do envio), fechar não quebra', async () => {
+      const painel = montarFechado()
+      await painel.setProps({ aberto: true })
+      gatilho.remove()
+      await painel.setProps({ aberto: false })
+      expect(document.activeElement).toBe(document.body)
+    })
+  })
+
   it('durante o envio, o botão mostra "Enviando…" e fica desabilitado', async () => {
     const painel = montarPainel()
     await painel.find('textarea').setValue('Sem acesso')

@@ -34,12 +34,16 @@ function principal() {
 </template>
 
 <style scoped>
+/*
+  Os 24px de baixo são do protótipo; no iPhone com barra de gestos, a área segura soma a altura do
+  indicador de início (no navegador, env() vale 0).
+*/
 .barra-acoes {
   position: sticky;
   bottom: 0;
   background: #fff;
   border-top: 1px solid var(--kgb-divisor);
-  padding: 12px 24px 24px;
+  padding: 12px 24px calc(24px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 8px;

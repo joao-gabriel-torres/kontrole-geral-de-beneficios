@@ -1,5 +1,5 @@
 import { MutationObserver } from '@tanstack/vue-query'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   CHAVES,
   criarClienteConsultas,
@@ -31,8 +31,43 @@ describe('exigir', () => {
     )
   })
 
-  it('erro sem corpo no formato da API ainda vira ErroApi com mensagem genérica', () => {
-    expect(() => exigir({ error: 'x', response: resposta(500) })).toThrow(MENSAGEM_SEM_CONEXAO)
+  describe('resposta fora do formato da API (proxy, servidor fora do ar) não é falta de conexão', () => {
+    const falhar = (status: number, corpo: unknown = `<html>${status}</html>`) => {
+      try {
+        exigir({ error: corpo, response: resposta(status) })
+      } catch (e) {
+        return e as ErroApi
+      }
+      throw new Error('exigir deveria ter lançado')
+    }
+
+    it('5xx (502 do proxy, 500 sem corpo) avisa que o servidor está com problemas', () => {
+      for (const [status, corpo] of [
+        [502, '<html>502 Bad Gateway</html>'],
+        [503, ''],
+        [500, 'x'],
+      ] as const) {
+        const e = falhar(status, corpo)
+        expect(e).toBeInstanceOf(ErroApi)
+        expect(e).toMatchObject({ status, codigo: 'servidor' })
+        expect(e.message).toBe('O servidor está com problemas. Tente de novo em instantes.')
+      }
+    })
+
+    it('413 do proxy num envio de foto avisa o limite de 10 MB, como a API', () => {
+      expect(falhar(413)).toMatchObject({
+        status: 413,
+        codigo: 'arquivo_grande',
+        message: 'A foto passa de 10 MB',
+      })
+    })
+
+    it('outro 4xx sem corpo da API usa o texto neutro', () => {
+      const e = falhar(404)
+      expect(e).toMatchObject({ status: 404, codigo: 'desconhecido' })
+      expect(e.message).toBe('Não foi possível falar com o servidor. Tente de novo.')
+      expect(e.message).not.toBe(MENSAGEM_SEM_CONEXAO)
+    })
   })
 })
 
@@ -72,5 +107,34 @@ describe('criarClienteConsultas', () => {
     expect(aoPerderSessao).toHaveBeenCalledTimes(1)
     await new MutationObserver(consultas, { mutationFn: falhar(401) }).mutate().catch(() => {})
     expect(aoPerderSessao).toHaveBeenCalledTimes(2)
+  })
+
+  describe('novas tentativas', () => {
+    afterEach(() => vi.useRealTimers())
+
+    /** Quantas vezes a consulta foi chamada antes de 1 s e no total, com a falha dada. */
+    async function tentativas(falha: unknown) {
+      vi.useFakeTimers()
+      const consultas = criarClienteConsultas()
+      const buscar = vi.fn(() => Promise.reject(falha))
+      const consulta = consultas.fetchQuery({ queryKey: ['c'], queryFn: buscar })
+      consulta.catch(() => {})
+      await vi.advanceTimersByTimeAsync(999)
+      const antesDe1s = buscar.mock.calls.length
+      await vi.advanceTimersByTimeAsync(5000)
+      await consulta.catch(() => {})
+      return { antesDe1s, total: buscar.mock.calls.length }
+    }
+
+    it('4xx é resposta definitiva: não repete (o 404 e a volta ao login não atrasam 1 s)', async () => {
+      expect(await tentativas(new ErroApi('x', 404, 'falhou'))).toEqual({ antesDe1s: 1, total: 1 })
+      expect(await tentativas(new ErroApi('x', 401, 'falhou'))).toEqual({ antesDe1s: 1, total: 1 })
+    })
+
+    it('5xx e falha de rede repetem uma vez, depois de 1 s', async () => {
+      const esperado = { antesDe1s: 1, total: 2 }
+      expect(await tentativas(new ErroApi('x', 502, 'falhou'))).toEqual(esperado)
+      expect(await tentativas(new TypeError('Failed to fetch'))).toEqual(esperado)
+    })
   })
 })

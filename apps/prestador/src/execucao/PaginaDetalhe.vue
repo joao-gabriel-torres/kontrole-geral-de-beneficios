@@ -93,7 +93,8 @@ function voltar() {
 
 <template>
   <div class="detalhe">
-    <div class="cabecalho">
+    <!-- Com o painel "Marcar como inviável" aberto, a tela por trás fica inerte: o Tab não sai dele. -->
+    <div class="cabecalho" :inert="painelInviavel || undefined">
       <button type="button" class="voltar" aria-label="Voltar" @click="voltar">
         <RussoIcone nome="chevron-right" :tamanho="20" class="seta" />
       </button>
@@ -101,7 +102,7 @@ function voltar() {
       <div class="espaco" />
     </div>
 
-    <div v-if="d" class="corpo">
+    <div v-if="d" class="corpo" :inert="painelInviavel || undefined">
       <div class="identificacao">
         <StatusChip class="chip-status" :status="d.status" :inviavel="d.inviavel" />
         <div class="titulo-detalhe">{{ d.titulo }}</div>
@@ -192,7 +193,7 @@ function voltar() {
         @remover-foto="acoes.removerFoto"
       />
     </div>
-    <div v-else-if="acoes.erro.value" class="corpo">
+    <div v-else-if="acoes.erro.value" class="corpo" :inert="painelInviavel || undefined">
       <div class="erro">{{ mensagemDeErro(acoes.erro.value) }}</div>
     </div>
 
@@ -201,6 +202,7 @@ function voltar() {
       :status="d.status"
       :envio="envio"
       :ocupado="ocupado"
+      :inert="painelInviavel || undefined"
       @iniciar="acoes.iniciar"
       @enviar="enviar"
       @inviavel="painelInviavel = true"

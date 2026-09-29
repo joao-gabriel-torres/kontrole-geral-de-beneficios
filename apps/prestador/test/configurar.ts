@@ -1,4 +1,6 @@
+import { enableAutoUnmount } from '@vue/test-utils'
 import ResizeObserver from 'resize-observer-polyfill'
+import { afterEach, expect } from 'vitest'
 
 globalThis.ResizeObserver ??= ResizeObserver
 
@@ -11,3 +13,11 @@ if (!globalThis.localStorage && jsdom) {
     configurable: true,
   })
 }
+
+// Um componente esquecido no body continua com timers e observers ativos e atrapalha os testes
+// seguintes (foco, document.querySelector). Os afterEach rodam em pilha (o último registrado roda
+// primeiro): a conferência vem antes no arquivo para rodar depois da desmontagem automática.
+afterEach(() => {
+  expect(document.body.innerHTML, 'algum teste deixou elementos no body').toBe('')
+})
+enableAutoUnmount(afterEach)

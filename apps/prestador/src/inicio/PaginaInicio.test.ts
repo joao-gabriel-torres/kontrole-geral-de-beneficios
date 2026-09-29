@@ -171,6 +171,15 @@ describe('PaginaInicio', () => {
     expect(router.currentRoute.value.params.id).toBe('1062')
   })
 
+  it('Espaço no item da agenda de hoje abre o detalhe, sem rolar a página', async () => {
+    const { wrapper, router } = await montar(PaginaInicio)
+    const espaco = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })
+    wrapper.findAll('.item-hoje')[1]!.element.dispatchEvent(espaco)
+    await flushPromises()
+    expect(espaco.defaultPrevented).toBe(true)
+    expect(router.currentRoute.value.params.id).toBe('1063')
+  })
+
   it('sem nada hoje, diz "Nada agendado para hoje."', async () => {
     api.GET.mockResolvedValue(ok(inicio({ hoje: [] })))
     const { wrapper } = await montar(PaginaInicio)
