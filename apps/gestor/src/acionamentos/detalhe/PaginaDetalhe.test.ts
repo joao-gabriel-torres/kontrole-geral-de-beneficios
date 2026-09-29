@@ -1,9 +1,12 @@
 import type { DetalheAcionamento } from '@kgb/api-client'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { erroApi, simularApi, type RespostaFalsa } from '../../../test/api-falsa'
+import type { QueryClient } from '@tanstack/vue-query'
+import type { VueWrapper } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { erroApi, nuncaResponde, simularApi, type RespostaFalsa } from '../../../test/api-falsa'
 import { detalhe, foto } from '../../../test/fixtures'
 import { aguardar, montar } from '../../../test/montar'
 import { api } from '../../api'
+import { CHAVES } from '../../consultas'
 import { toastGestor } from '../../toast'
 import PaginaDetalhe from './PaginaDetalhe.vue'
 
@@ -233,6 +236,67 @@ describe('PaginaDetalhe', () => {
       '27/09 · 08:00',
       '27/09 · 10:30',
     ])
+  })
+
+  describe('busca em segundo plano que falha, com o Detalhe já carregado', () => {
+    const estado = (consultas: QueryClient) =>
+      consultas.getQueryState(CHAVES.detalhe('a1059'))?.status
+
+    function detalheContinua(tela: VueWrapper) {
+      expect(tela.find('.aviso').exists()).toBe(false)
+      expect(tela.find('h1').text()).toBe('Revisão elétrica e troca de disjuntor')
+      expect(tela.find('.info').text()).toContain('Colégio Aprender')
+    }
+
+    it('500: o Detalhe, a decisão e a observação digitada continuam na tela', async () => {
+      const { tela, consultas } = await abrir('aprovacoes')
+      await tela.find('.decisao textarea').setValue('Falta a foto do quadro')
+      simularApi(api, {
+        'GET /api/acionamentos/{id}': () => erroApi(500, 'erro_interno', 'Erro interno'),
+      })
+      await consultas.invalidateQueries({ queryKey: CHAVES.acionamentos })
+      await aguardar()
+      expect(estado(consultas)).toBe('error')
+      detalheContinua(tela)
+      expect((tela.find('.decisao textarea').element as HTMLTextAreaElement).value).toBe(
+        'Falta a foto do quadro',
+      )
+    })
+
+    describe('com a API travada', () => {
+      beforeEach(() => {
+        vi.useFakeTimers({ shouldAdvanceTime: true })
+      })
+      afterEach(() => {
+        vi.useRealTimers()
+      })
+
+      it('depois de 8 s sem resposta, o Detalhe continua (sem o cartão de erro)', async () => {
+        const { tela, consultas } = await abrir('aprovacoes')
+        simularApi(api, { 'GET /api/acionamentos/{id}': nuncaResponde })
+        void consultas.invalidateQueries({ queryKey: CHAVES.acionamentos })
+        await vi.advanceTimersByTimeAsync(8_000)
+        await aguardar()
+        expect(estado(consultas)).toBe('error')
+        detalheContinua(tela)
+        expect(tela.find('.decisao .aprovar').text()).toBe('Aprovar conclusão')
+      })
+    })
+
+    it('depois de aprovar, a nova busca que falha não esconde a decisão nem troca o aviso', async () => {
+      const { tela, consultas } = await abrir()
+      simularApi(api, {
+        'GET /api/acionamentos/{id}': () => erroApi(500, 'erro_interno', 'Erro interno'),
+        'POST /api/acionamentos/{id}/revisao': (o: { body?: unknown }) =>
+          revisao(o.body as { decisao: string; motivo?: string }),
+      })
+      await tela.find('.decisao .aprovar').trigger('click')
+      await aguardar()
+      expect(estado(consultas)).toBe('error')
+      detalheContinua(tela)
+      expect(tela.find('.ultima').text()).toContain('Aprovado em 28/09 · 09:00')
+      expect(toastGestor.mensagem.value).toBe('Conclusão aprovada')
+    })
   })
 
   it('acionamento inexistente mostra o aviso', async () => {

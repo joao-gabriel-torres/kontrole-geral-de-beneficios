@@ -49,6 +49,9 @@ const temConclusao = computed(
     !!acionamento.value &&
     (acionamento.value.fotosConclusao.length > 0 || !!acionamento.value.comentarioConclusao),
 )
+// Uma nova busca que falha (foco na janela, revisão, API lenta) mantém o dado do cache: o aviso só
+// substitui o Detalhe quando não há o que mostrar.
+const semDetalhe = computed(() => isError.value && !acionamento.value)
 const aviso = computed(() =>
   error.value instanceof ErroApi && error.value.status === 404
     ? 'Acionamento não encontrado.'
@@ -76,7 +79,7 @@ async function decidir(decisao: Decisao, texto: string) {
     <RouterLink :to="{ name: voltar.rota }" class="voltar">
       <RussoIcone nome="chevron-right" :tamanho="18" class="seta" />{{ voltar.rotulo }}
     </RouterLink>
-    <div v-if="isError" class="cartao aviso">{{ aviso }}</div>
+    <div v-if="semDetalhe" class="cartao aviso">{{ aviso }}</div>
     <template v-else-if="acionamento">
       <div class="topo">
         <div class="identificacao">
