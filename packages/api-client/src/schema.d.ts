@@ -1236,7 +1236,7 @@ export interface paths {
                         "application/json": components["schemas"]["Erro"];
                     };
                 };
-                /** @description Prestador sem e-mail, ou e-mail usado por outra conta */
+                /** @description Prestador sem e-mail, com e-mail inválido ou usado por outra conta */
                 409: {
                     headers: {
                         [name: string]: unknown;

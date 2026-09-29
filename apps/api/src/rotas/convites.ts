@@ -30,7 +30,7 @@ const rotaConvite = createRoute({
     401: respostaErro('Sem sessão'),
     403: respostaErro('Só para a gestão'),
     404: respostaErro('Prestador não encontrado ou excluído'),
-    409: respostaErro('Prestador sem e-mail, ou e-mail usado por outra conta'),
+    409: respostaErro('Prestador sem e-mail, com e-mail inválido ou usado por outra conta'),
     502: respostaErro('O servidor de e-mail não aceitou a mensagem'),
   },
 })

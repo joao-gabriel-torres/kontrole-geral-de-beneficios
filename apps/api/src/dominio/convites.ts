@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { ErroDominio } from './acionamento'
 
 export const VALIDADE_CONVITE_DIAS = 7
@@ -9,6 +10,7 @@ export const ASSUNTO_CONVITE = 'Seu acesso ao app da Russo Assistência'
 
 export const MENSAGENS_CONVITE = {
   semEmail: 'Cadastre um e-mail para enviar o convite',
+  emailInvalido: 'O e-mail do cadastro não é válido',
   emailEmUso: 'Este e-mail já é usado por outra conta',
 } as const
 
@@ -37,6 +39,8 @@ export function linkDoConvite(urlApp: string, token: string): string {
 
 /**
  * Confere se o convite pode sair e devolve o e-mail normalizado, que vira o login.
+ * O formato é o mesmo `z.email()` do sign-in do Better Auth: um login que ele recusa trancaria o
+ * prestador para fora, e um texto com vírgula ou ponto e vírgula levaria o link a outro endereço.
  * `contaDoEmail` é a conta que já usa esse e-mail, se houver: só serve a do próprio prestador.
  */
 export function verificarConvite(dados: {
@@ -46,6 +50,9 @@ export function verificarConvite(dados: {
 }): string {
   const email = normalizarEmail(dados.email)
   if (!email) throw new ErroDominio('prestador_sem_email', MENSAGENS_CONVITE.semEmail, 409)
+  if (!z.email().safeParse(email).success) {
+    throw new ErroDominio('email_invalido', MENSAGENS_CONVITE.emailInvalido, 409)
+  }
   if (dados.contaDoEmail && dados.contaDoEmail.prestadorId !== dados.prestadorId) {
     throw new ErroDominio('email_em_uso', MENSAGENS_CONVITE.emailEmUso, 409)
   }

@@ -82,6 +82,35 @@ describe('verificarConvite', () => {
     }
   })
 
+  it('recusa o que o login do Better Auth não aceita: dois endereços, nome junto, incompleto', () => {
+    // Com vírgula ou ponto e vírgula, o nodemailer entregaria o link a todos os endereços.
+    for (const email of [
+      'a@x.com; b@y.com',
+      'a@x.com, b@y.com',
+      'Ana <a@x.com>',
+      'ana@',
+      'ana.x.com',
+    ]) {
+      const e = erro(() => verificarConvite({ prestadorId: 'p2', email, contaDoEmail: null }))
+      expect(e).toBeInstanceOf(ErroDominio)
+      expect(e).toMatchObject({
+        codigo: 'email_invalido',
+        message: 'O e-mail do cadastro não é válido',
+        status: 409,
+      })
+    }
+  })
+
+  it('aceita endereços comuns com subdomínio, + e hífen', () => {
+    expect(
+      verificarConvite({
+        prestadorId: 'p2',
+        email: 'Ana.Costa+Russo@mail.ribeiro-reparos.com.br',
+        contaDoEmail: null,
+      }),
+    ).toBe('ana.costa+russo@mail.ribeiro-reparos.com.br')
+  })
+
   it('aceita o e-mail que já é do usuário do próprio prestador', () => {
     expect(
       verificarConvite({

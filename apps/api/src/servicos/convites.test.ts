@@ -159,6 +159,32 @@ describe('enviarConvite', () => {
     expect(await prisma.user.count({ where: { prestadorId: { in: ids } } })).toBe(0)
   })
 
+  it('e-mail malformado: recusa sem criar usuário, sem e-mail e sem trocar o login de quem já tem senha', async () => {
+    // O Carlos (p1) já tem senha: o texto inválido não pode virar o login dele.
+    const carlos = await prisma.user.findUniqueOrThrow({ where: { id: 'u-p1' } })
+    const emailDoCadastro = (await prisma.prestador.findUniqueOrThrow({ where: { id: 'p1' } }))
+      .email
+    await novoPrestador('p-conv-invalido', { email: 'a@x.com; b@y.com' })
+
+    for (const email of ['a@x.com; b@y.com', 'a@x.com, b@y.com', 'Ana <a@x.com>']) {
+      await prisma.prestador.update({ where: { id: 'p1' }, data: { email } })
+      await expect(enviarConvite('p1', GESTOR)).rejects.toMatchObject({
+        codigo: 'email_invalido',
+        message: 'O e-mail do cadastro não é válido',
+        status: 409,
+      })
+    }
+    await prisma.prestador.update({ where: { id: 'p1' }, data: { email: emailDoCadastro } })
+    await expect(enviarConvite('p-conv-invalido', GESTOR)).rejects.toMatchObject({
+      codigo: 'email_invalido',
+    })
+
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: 'u-p1' } })).toEqual(carlos)
+    expect(await prisma.user.count({ where: { prestadorId: 'p-conv-invalido' } })).toBe(0)
+    expect(await convitesDoUsuario('u-p1')).toEqual([])
+    expect(caixa.enviados).toEqual([])
+  })
+
   it('só a gestão convida', async () => {
     await expect(enviarConvite('p6', { papel: 'prestador' })).rejects.toMatchObject({
       status: 403,

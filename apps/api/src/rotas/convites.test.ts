@@ -99,7 +99,7 @@ describe('POST /api/prestadores/{id}/convite', () => {
     }
   })
 
-  it('409 sem e-mail e com e-mail de outra conta, com as mensagens do spec', async () => {
+  it('409 sem e-mail, com e-mail de outra conta e com e-mail que não é um endereço só', async () => {
     await prestadorDeTeste('p-rota-sem-email', null)
     await prestadorDeTeste('p-rota-gestora', 'renata@russo.dev')
 
@@ -116,6 +116,16 @@ describe('POST /api/prestadores/{id}/convite', () => {
     expect(emUso.status).toBe(409)
     expect(await emUso.json()).toEqual({
       erro: { codigo: 'email_em_uso', mensagem: 'Este e-mail já é usado por outra conta' },
+    })
+
+    await prestadorDeTeste(
+      'p-rota-dois-emails',
+      'contato@marinacosta.com.br; socio@marinacosta.com.br',
+    )
+    const invalido = await convidar('p-rota-dois-emails')
+    expect(invalido.status).toBe(409)
+    expect(await invalido.json()).toEqual({
+      erro: { codigo: 'email_invalido', mensagem: 'O e-mail do cadastro não é válido' },
     })
     expect(caixa.enviados).toEqual([])
   })
