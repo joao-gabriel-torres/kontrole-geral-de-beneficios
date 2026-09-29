@@ -2,6 +2,7 @@ import type { components } from '@kgb/api-client'
 
 type PrestadorCadastro = components['schemas']['PrestadorCadastro']
 type TipoDemanda = components['schemas']['TipoDemanda']
+type PreviaPlanilha = components['schemas']['PreviaPlanilha']
 
 /** Dados de teste da tela de Prestadores (o seed do dia, no formato da API). */
 
@@ -117,3 +118,47 @@ export const SEED_PRESTADORES: PrestadorCadastro[] = [
     total: 0,
   }),
 ]
+
+type LinhaPrevia = PreviaPlanilha['linhas'][number]
+const linhaPrevia = (
+  nome: string,
+  documento: string,
+  especialidades: string[],
+  selo: LinhaPrevia['selo'],
+): LinhaPrevia => ({
+  nome,
+  documento,
+  especialidades,
+  acao: selo === 'Novo' ? 'novo' : selo === 'Atualizar' ? 'atualizar' : 'erro',
+  selo,
+})
+
+/** A prévia da planilha de exemplo dos casos visuais (tools/visual/fixtures/credenciados.csv). */
+export const PREVIA_EXEMPLO: PreviaPlanilha = {
+  linhas: [
+    linhaPrevia(
+      'Carlos Mendes',
+      '318.402.117-50',
+      ['Vazamento', 'Revisão elétrica', 'Ponto de luz'],
+      'Atualizar',
+    ),
+    linhaPrevia('Ana Ribeiro', '27.415.903/0001-44', ['Pintura', 'Reparo em gesso'], 'Atualizar'),
+    linhaPrevia('Pedro Lima', '529.982.247-25', ['Vazamento', 'Chaveiro'], 'Novo'),
+    linhaPrevia(
+      'Fernanda Souza',
+      '11.222.333/0001-81',
+      ['limpeza de ar condicionado', 'Jardinagem'],
+      'Novo',
+    ),
+    linhaPrevia('Roberto Alves', '219.774.380-12', ['Chaveiro', 'Pintura'], 'Atualizar'),
+    linhaPrevia('', '111.444.777-35', ['Pintura'], 'Sem nome'),
+    linhaPrevia('Bruno Castro', '123.456.789', ['Vazamento'], 'Documento inválido'),
+    linhaPrevia('Carlos M.', '318.402.117-50', ['Vazamento'], 'Duplicado na planilha'),
+  ],
+  resumo: { novos: 2, atualizados: 3, erros: 3 },
+  ausentes: [
+    { id: 'p3', nome: 'João Pires' },
+    { id: 'p4', nome: 'Marina Costa' },
+    { id: 'p6', nome: 'Luciana Prado' },
+  ],
+}

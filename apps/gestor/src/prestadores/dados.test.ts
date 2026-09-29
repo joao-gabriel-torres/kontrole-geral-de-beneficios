@@ -14,8 +14,6 @@ import {
 } from './dados'
 import { estadoPrestadores, reiniciarPrestadores } from './estado'
 import type { PrestadorCadastro } from './lista'
-import { baixarModeloPlanilha, exportarPlanilha } from './planilha/acoes'
-import { importacao } from './planilha/estado'
 import { prestador, SEED_PRESTADORES } from './teste/dados'
 
 const { sessaoFalsa } = vi.hoisted(() => ({ sessaoFalsa: { usuario: { id: 'u-renata' } } }))
@@ -157,20 +155,5 @@ describe('estado da tela', () => {
     await nextTick()
     expect(estadoPrestadores.busca).toBe('')
     sessao.usuario = reactive({ id: 'u-renata' })
-  })
-})
-
-describe('planilha (encaixe da etapa 2)', () => {
-  it('a escolha do arquivo abre a importação com ele', () => {
-    const arquivo = new File(['a'], 'credenciados.csv', { type: 'text/csv' })
-    importacao.abrir(arquivo)
-    expect(importacao.arquivo.value).toBe(arquivo)
-    importacao.fechar()
-    expect(importacao.arquivo.value).toBeNull()
-  })
-
-  it('exportar e baixar o modelo ainda não fazem nada (etapa 2)', async () => {
-    await expect(exportarPlanilha()).resolves.toBeUndefined()
-    await expect(baixarModeloPlanilha()).resolves.toBeUndefined()
   })
 })

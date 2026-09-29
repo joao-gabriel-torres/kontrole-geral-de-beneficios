@@ -10,7 +10,7 @@ import ModalPrestador from './ModalPrestador.vue'
 import PaginaPrestadores from './PaginaPrestadores.vue'
 import { baixarModeloPlanilha, exportarPlanilha } from './planilha/acoes'
 import { importacao } from './planilha/estado'
-import { prestador, SEED_PRESTADORES, TIPOS_SEED } from './teste/dados'
+import { PREVIA_EXEMPLO, prestador, SEED_PRESTADORES, TIPOS_SEED } from './teste/dados'
 
 vi.mock('../api', () => ({
   api: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn(), DELETE: vi.fn() },
@@ -54,6 +54,7 @@ describe('PaginaPrestadores', () => {
         data: prestador({ status: (body as { status: 'ativo' | 'inativo' }).status }),
       }),
       'DELETE /api/prestadores/{id}': () => excluir(),
+      'POST /api/prestadores/planilha/previa': PREVIA_EXEMPLO,
     })
   })
   afterEach(() => alvo.remove())
@@ -408,6 +409,7 @@ describe('PaginaPrestadores', () => {
       const arquivo = new File(['x'], 'credenciados.xlsx')
       Object.defineProperty(input.element, 'files', { value: [arquivo], configurable: true })
       await input.trigger('change')
+      await aguardar()
       expect(importacao.arquivo.value).toBe(arquivo)
       expect((input.element as HTMLInputElement).value).toBe('')
     })
