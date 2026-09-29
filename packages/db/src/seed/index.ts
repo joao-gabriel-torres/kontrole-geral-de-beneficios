@@ -46,7 +46,12 @@ export async function semear(
       await tx.tipoDemanda.createMany({ data: dados.tipos })
       for (const p of dados.prestadores) {
         await tx.prestador.create({
-          data: { ...p.dados, especialidades: { connect: p.especialidades.map((id) => ({ id })) } },
+          data: {
+            ...p.dados,
+            especialidades: {
+              create: p.especialidades.map((tipoId, ordem) => ({ tipoId, ordem })),
+            },
+          },
         })
       }
       await tx.user.createMany({

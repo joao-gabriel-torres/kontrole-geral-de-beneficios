@@ -24,6 +24,15 @@ describe('semear', () => {
     })
   })
 
+  it('grava as especialidades na ordem do protótipo (Luciana: Reparo em gesso, Pintura)', async () => {
+    await semear(prisma)
+    const especialidades = await prisma.prestadorEspecialidade.findMany({
+      where: { prestadorId: 'p6' },
+      orderBy: { ordem: 'asc' },
+    })
+    expect(especialidades.map((e) => e.tipoId)).toEqual(['t6', 't5'])
+  })
+
   it('cria a conta do prestador de dev com a senha documentada', async () => {
     const usuario = await prisma.user.findUniqueOrThrow({
       where: { email: EMAIL_PRESTADOR_DEV },

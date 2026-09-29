@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
@@ -112,37 +113,54 @@ enum TipoEvento {
 }
 
 model TipoDemanda {
-  id           String      @id @default(cuid())
-  nome         String      @unique
-  cor          String
-  checklist    String[]
-  excluidoEm   DateTime?
-  criadoEm     DateTime    @default(now())
-  atualizadoEm DateTime    @updatedAt
-  prestadores  Prestador[] @relation("Especialidades")
-  demandas     Demanda[]
+  id             String                   @id @default(cuid())
+  nome           String
+  cor            String
+  checklist      String[]
+  excluidoEm     DateTime?
+  criadoEm       DateTime                 @default(now())
+  atualizadoEm   DateTime                 @updatedAt
+  especialidades PrestadorEspecialidade[]
+  demandas       Demanda[]
 
+  // Excluir é lógico: o nome só é único entre os tipos não excluídos (dá para recriar "Pintura").
+  @@unique([nome], where: raw("\"excluidoEm\" IS NULL"), map: "tipo_demanda_nome_ativo_key")
   @@map("tipo_demanda")
 }
 
 model Prestador {
-  id               String          @id @default(cuid())
+  id               String                   @id @default(cuid())
   nome             String
-  documento        String          @unique
+  documento        String
   telefone         String
   email            String?
   regiao           String?
-  status           StatusPrestador @default(ativo)
-  credenciadoDesde DateTime        @db.Date
+  status           StatusPrestador          @default(ativo)
+  credenciadoDesde DateTime                 @db.Date
   excluidoEm       DateTime?
   cor              String
-  criadoEm         DateTime        @default(now())
-  atualizadoEm     DateTime        @updatedAt
-  especialidades   TipoDemanda[]   @relation("Especialidades")
+  criadoEm         DateTime                 @default(now())
+  atualizadoEm     DateTime                 @updatedAt
+  especialidades   PrestadorEspecialidade[]
   acionamentos     Acionamento[]
   usuario          User?
 
+  // Excluir é lógico: o documento só é único entre os prestadores não excluídos.
+  @@unique([documento], where: raw("\"excluidoEm\" IS NULL"), map: "prestador_documento_ativo_key")
   @@map("prestador")
+}
+
+/// Especialidade de um prestador. A tela mostra na ordem em que foram cadastradas (`ordem`).
+model PrestadorEspecialidade {
+  prestadorId String
+  prestador   Prestador   @relation(fields: [prestadorId], references: [id], onDelete: Cascade)
+  tipoId      String
+  tipo        TipoDemanda @relation(fields: [tipoId], references: [id], onDelete: Cascade)
+  ordem       Int
+
+  @@id([prestadorId, tipoId])
+  @@index([tipoId])
+  @@map("prestador_especialidade")
 }
 
 model Acionamento {
