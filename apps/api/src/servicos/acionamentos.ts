@@ -114,10 +114,19 @@ export async function travar(
   return linha ?? null
 }
 
+/**
+ * Apaga os arquivos em melhor esforço: roda depois do commit ou para desfazer um envio, e uma falha
+ * do armazenamento não pode virar erro de uma ação já gravada nem trocar o erro original. Cada
+ * falha fica no log.
+ */
 export async function removerArquivos(chaves: readonly string[]): Promise<void> {
-  await Promise.all(
-    chaves.filter((c) => !c.startsWith(PREFIXO_PLACEHOLDER)).map((c) => armazenamento.remover(c)),
-  )
+  const reais = chaves.filter((c) => !c.startsWith(PREFIXO_PLACEHOLDER))
+  const resultados = await Promise.allSettled(reais.map((c) => armazenamento.remover(c)))
+  resultados.forEach((r, i) => {
+    if (r.status === 'rejected') {
+      console.error('Não foi possível remover o arquivo', reais[i], r.reason)
+    }
+  })
 }
 
 export async function criarAcionamento(u: UsuarioSessao, dados: DadosNovoAcionamento) {

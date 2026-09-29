@@ -1,8 +1,9 @@
 import { EMAIL_PRESTADOR_DEV, GESTORA_DEV } from '@kgb/db/seed'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { criarAcionamento, formularioFoto, JPEG, loginDePrestador } from '../../test/dados'
 import { entrar } from '../../test/sessao'
 import { criarApp } from '../app'
+import { armazenamento } from '../arquivos'
 import { assinar } from '../arquivos/assinatura'
 import { prisma } from '../db'
 
@@ -16,6 +17,8 @@ beforeAll(async () => {
   carlos = await entrar(app, EMAIL_PRESTADOR_DEV)
   ana = await entrar(app, await loginDePrestador('p2'))
 })
+
+afterEach(() => vi.restoreAllMocks())
 
 const req = (metodo: string, caminho: string, headers: Record<string, string>, corpo?: unknown) =>
   app.request(caminho, {
@@ -228,6 +231,28 @@ describe('fotos', () => {
     expect(r.status).toBe(200)
     expect(await prisma.foto.count({ where: { id: foto.id } })).toBe(0)
     expect((await app.request(foto.url)).status).toBe(404)
+  })
+
+  it('remover a foto responde 200 mesmo se o arquivo não puder ser apagado', async () => {
+    const id = await novoIniciado()
+    const foto = await (
+      await req(
+        'POST',
+        `/api/acionamentos/${id}/fotos`,
+        carlos,
+        formularioFoto({ contexto: 'conclusao' }),
+      )
+    ).json()
+    vi.spyOn(armazenamento, 'remover').mockRejectedValueOnce(new Error('armazenamento fora do ar'))
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const r = await req('DELETE', `/api/acionamentos/${id}/fotos/${foto.id}`, carlos)
+    expect(r.status).toBe(200)
+    expect(await prisma.foto.count({ where: { id: foto.id } })).toBe(0)
+    expect(log).toHaveBeenCalledWith(
+      'Não foi possível remover o arquivo',
+      expect.stringContaining(foto.id),
+      expect.any(Error),
+    )
   })
 })
 
