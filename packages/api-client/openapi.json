@@ -710,6 +710,23 @@
           "metricas",
           "rotaDoDia"
         ]
+      },
+      "ConviteEnviado": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "E-mail que recebeu o convite e vira o login"
+          },
+          "expiraEm": {
+            "type": "string",
+            "description": "Validade do link (ISO 8601)"
+          }
+        },
+        "required": [
+          "email",
+          "expiraEm"
+        ]
       }
     },
     "parameters": {}
@@ -1956,6 +1973,92 @@
           },
           "403": {
             "description": "Só o prestador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/{id}/convite": {
+      "post": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Envia ou reenvia o convite de acesso do prestador por e-mail",
+        "description": "Cria ou atualiza o usuário do prestador (sem senha) e manda um link de uso único, válido por 7 dias, para ele criar a senha. Invalida os convites anteriores. Quem já tem senha recebe o mesmo convite, que funciona como redefinição.",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Convite enviado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConviteEnviado"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prestador não encontrado ou excluído",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Prestador sem e-mail, ou e-mail usado por outra conta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "O servidor de e-mail não aceitou a mensagem",
             "content": {
               "application/json": {
                 "schema": {

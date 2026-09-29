@@ -1176,6 +1176,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/prestadores/{id}/convite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Envia ou reenvia o convite de acesso do prestador por e-mail
+         * @description Cria ou atualiza o usuário do prestador (sem senha) e manda um link de uso único, válido por 7 dias, para ele criar a senha. Invalida os convites anteriores. Quem já tem senha recebe o mesmo convite, que funciona como redefinição.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Convite enviado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConviteEnviado"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Prestador não encontrado ou excluído */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Prestador sem e-mail, ou e-mail usado por outra conta */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description O servidor de e-mail não aceitou a mensagem */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1334,6 +1420,12 @@ export interface components {
                 paraCorrigir: number;
             };
             rotaDoDia: string[];
+        };
+        ConviteEnviado: {
+            /** @description E-mail que recebeu o convite e vira o login */
+            email: string;
+            /** @description Validade do link (ISO 8601) */
+            expiraEm: string;
         };
     };
     responses: never;
