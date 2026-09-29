@@ -1,4 +1,4 @@
-import { ErroTempoEsgotado } from '@kgb/api-client'
+import { comTempoLimite, ErroTempoEsgotado } from '@kgb/api-client'
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/vue-query'
 import type { FiltroLista } from './acionamentos/filtros'
 import { ErroApi } from './erros'
@@ -14,6 +14,18 @@ export const REPETICOES = 1
 export function deveRepetir(falhas: number, erro: unknown): boolean {
   if (falhas >= REPETICOES || erro instanceof ErroTempoEsgotado) return false
   return !(erro instanceof ErroApi && erro.status >= 400 && erro.status < 500)
+}
+
+/**
+ * Chamada de dados com tempo limite: sem resposta em 8 s, o pedido é abortado e a consulta ou a
+ * ação falha com `ErroTempoEsgotado`, que `mensagemDeErro` mostra como falha de conexão. O `sinal`
+ * do vue-query (cancelamento ao sair da tela) continua abortando o pedido.
+ */
+export function comLimite<T>(
+  executar: (sinal: AbortSignal) => Promise<T>,
+  sinal?: AbortSignal,
+): Promise<T> {
+  return comTempoLimite((limite) => executar(sinal ? AbortSignal.any([sinal, limite]) : limite))
 }
 
 /** `aoPerderSessao` é chamado quando a API recusa a sessão (401) numa consulta ou numa ação. */
