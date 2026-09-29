@@ -11,6 +11,7 @@ export const MENSAGENS = {
   indisponivel: 'Não foi possível entrar. Verifique sua conexão e tente de novo.',
   papel: 'Esta conta é de gestor. Use o painel web.',
   excluido: 'Seu cadastro foi encerrado. Fale com a Russo Assistência se precisar de acesso.',
+  senhaCriada: 'Senha criada. Entre com seu e-mail e a nova senha.',
 } as const
 
 const estado = reactive<{ usuario: Usuario | null; carregada: boolean; indisponivel: boolean }>({
@@ -47,6 +48,11 @@ export function mensagemDoMotivo(motivo: unknown): string | null {
   if (motivo === 'papel') return MENSAGENS.papel
   if (motivo === 'conexao') return MENSAGENS.indisponivel
   return null
+}
+
+/** Aviso de sucesso do login (?motivo=senha-criada, depois do convite). */
+export function avisoDoMotivo(motivo: unknown): string | null {
+  return motivo === 'senha-criada' ? MENSAGENS.senhaCriada : null
 }
 
 export type ResultadoLogin = { ok: true } | { ok: false; mensagem: string }
