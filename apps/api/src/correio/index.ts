@@ -11,12 +11,20 @@ export { criarCorreioEmMemoria, type CorreioEmMemoria } from './memoria'
 /** Onde o correio de desenvolvimento grava os e-mails (fora do git, como var/uploads). */
 export const PASTA_EMAILS = resolve(RAIZ, 'var/emails')
 
-/** SMTP quando há `SMTP_URL`; senão, arquivo em `var/emails/` com o link no log. */
+/**
+ * SMTP quando há `SMTP_URL`; senão, no dev, arquivo em `var/emails/` com o link no log.
+ * Em produção não há correio de arquivo: o link que define a senha nunca vai para disco nem log.
+ */
 export function criarCorreio(
-  config: { SMTP_URL?: string; EMAIL_REMETENTE?: string },
+  config: { SMTP_URL?: string; EMAIL_REMETENTE?: string; NODE_ENV?: string },
   pasta = PASTA_EMAILS,
 ): Correio {
-  if (!config.SMTP_URL) return criarCorreioDeArquivo(pasta)
+  if (!config.SMTP_URL) {
+    if (config.NODE_ENV === 'production') {
+      throw new Error('Em produção, defina SMTP_URL para enviar e-mails')
+    }
+    return criarCorreioDeArquivo(pasta)
+  }
   if (!config.EMAIL_REMETENTE) {
     throw new Error('Defina EMAIL_REMETENTE para enviar e-mails por SMTP')
   }

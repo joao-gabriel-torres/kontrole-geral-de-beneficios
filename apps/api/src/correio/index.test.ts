@@ -27,6 +27,14 @@ describe('criarCorreio', () => {
     expect(existsSync(pasta)).toBe(false)
   })
 
+  it('em produção sem SMTP_URL recusa: nada de arquivo nem de link no log', async () => {
+    const log = vi.spyOn(console, 'info').mockImplementation(() => {})
+    const pasta = await pastaNova()
+    expect(() => criarCorreio({ NODE_ENV: 'production' }, pasta)).toThrow('SMTP_URL')
+    expect(existsSync(pasta)).toBe(false)
+    expect(log).not.toHaveBeenCalled()
+  })
+
   it('SMTP_URL sem remetente é recusada', () => {
     expect(() => criarCorreio({ SMTP_URL: 'smtp://127.0.0.1:1' })).toThrow('EMAIL_REMETENTE')
   })
