@@ -1,3 +1,4 @@
+import type { CodigoErroConvites } from './erros-convites'
 import type { CodigoErroPlanilha } from './erros-planilha'
 import type { CodigoErroPrestadores } from './erros-prestadores'
 import type { CodigoErroTipos } from './erros-tipos'
@@ -14,6 +15,7 @@ export type CodigoErroDominio =
   | CodigoErroPrestadores
   | CodigoErroPlanilha
   | CodigoErroTipos
+  | CodigoErroConvites
   | 'transicao_invalida'
   | 'fotos_insuficientes'
   | 'etapas_pendentes'

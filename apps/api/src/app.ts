@@ -12,6 +12,7 @@ import { rotasAcionamentos } from './rotas/acionamentos'
 import { rotasArquivos } from './rotas/arquivos'
 import { rotasCadastroPrestadores } from './rotas/cadastro-prestadores'
 import { rotasCatalogo } from './rotas/catalogo'
+import { rotasConvites } from './rotas/convites'
 import { rotasExecucao } from './rotas/execucao'
 import { rotasPrestador } from './rotas/prestador'
 import { rotasMe } from './rotas/me'
@@ -72,6 +73,7 @@ export function criarApp() {
   app.route('/', rotasTipos)
   // A planilha antes do cadastro: /api/prestadores/planilha… não pode cair em /api/prestadores/{id}.
   app.route('/', rotasPlanilha)
+  app.route('/', rotasConvites)
   app.route('/', rotasCadastroPrestadores)
 
   app.doc31('/api/openapi.json', INFO_OPENAPI)

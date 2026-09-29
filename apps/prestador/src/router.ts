@@ -17,6 +17,13 @@ export const rotas: RouteRecordRaw[] = [
     meta: { publica: true },
   },
   {
+    // Link do e-mail de convite: abre com ou sem sessão (pode chegar a um aparelho já logado).
+    path: '/convite',
+    name: 'convite',
+    component: () => import('./convite/PaginaConvite.vue'),
+    meta: { publica: true, qualquerSessao: true },
+  },
+  {
     path: '/',
     component: () => import('./layouts/LayoutPrestador.vue'),
     children: [
@@ -47,6 +54,7 @@ export function decidirAcesso(
   destino: { fullPath: string; meta: RouteMeta },
   apiIndisponivel = false,
 ): Decisao {
+  if (destino.meta.qualquerSessao === true) return { tipo: 'seguir' }
   const publica = destino.meta.publica === true
   if (!usuario) {
     if (publica) return { tipo: 'seguir' }
