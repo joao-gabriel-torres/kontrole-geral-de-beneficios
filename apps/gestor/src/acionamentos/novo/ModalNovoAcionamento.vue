@@ -46,11 +46,20 @@ async function enviar() {
   }
 }
 
+/**
+ * X, Cancelar e Esc. Durante o envio não fecham: num erro o formulário se perderia, e reabrir e
+ * enviar de novo duplicaria o acionamento.
+ */
+function fechar() {
+  if (criando.value) return
+  emit('fechar')
+}
+
 const painel = ref<HTMLElement>()
 // Quem abriu o modal (o botão "Novo acionamento") recebe o foco de volta ao fechar.
 const focoAnterior = document.activeElement instanceof HTMLElement ? document.activeElement : null
 function aoTeclar(e: KeyboardEvent) {
-  if (e.key === 'Escape') emit('fechar')
+  if (e.key === 'Escape') fechar()
 }
 onMounted(() => {
   painel.value?.focus()
@@ -72,7 +81,13 @@ onUnmounted(() => focoAnterior?.focus())
     >
       <div class="cabecalho">
         <h2 id="novo-titulo" class="titulo">Novo acionamento</h2>
-        <button type="button" class="fechar" aria-label="Fechar" @click="emit('fechar')">
+        <button
+          type="button"
+          class="fechar"
+          aria-label="Fechar"
+          :aria-disabled="criando || undefined"
+          @click="fechar"
+        >
           <RussoIcone nome="cancel" :tamanho="18" />
         </button>
       </div>
@@ -153,15 +168,23 @@ onUnmounted(() => focoAnterior?.focus())
         </div>
       </div>
       <div class="acoes">
-        <button type="button" class="cancelar" @click="emit('fechar')">Cancelar</button>
+        <button
+          type="button"
+          class="cancelar"
+          :aria-disabled="criando || undefined"
+          @click="fechar"
+        >
+          Cancelar
+        </button>
         <button
           type="button"
           class="enviar"
-          :class="{ inativo: !valido }"
+          :class="{ inativo: !valido || criando }"
           :aria-disabled="bloqueado"
+          :aria-busy="criando || undefined"
           @click="enviar"
         >
-          Enviar ao prestador
+          {{ criando ? 'Enviando…' : 'Enviar ao prestador' }}
         </button>
       </div>
     </div>
@@ -384,5 +407,14 @@ onUnmounted(() => focoAnterior?.focus())
 .enviar.inativo {
   background: var(--kgb-primaria-tint-forte);
   color: var(--kgb-primaria-escura);
+}
+/* Estados do envio: os atributos não existem em repouso, então o visual parado não muda. */
+.enviar[aria-busy='true'] {
+  cursor: progress;
+}
+.fechar[aria-disabled='true'],
+.cancelar[aria-disabled='true'] {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

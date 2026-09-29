@@ -1,6 +1,6 @@
 import { dataISO } from '@kgb/ui'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { erroApi, simularApi } from '../../../test/api-falsa'
+import { erroApi, simularApi, type RespostaFalsa } from '../../../test/api-falsa'
 import { PRESTADORES, resumo, TIPOS } from '../../../test/fixtures'
 import { aguardar, montar } from '../../../test/montar'
 import { api } from '../../api'
@@ -16,7 +16,7 @@ vi.mock('../../api', () => ({
 
 describe('ModalNovoAcionamento', () => {
   let simulada: ReturnType<typeof simularApi>
-  let criar: () => { data?: unknown; error?: unknown; status?: number }
+  let criar: () => RespostaFalsa | Promise<RespostaFalsa>
   beforeEach(() => {
     toastGestor.mensagem.value = null
     criar = () => ({
@@ -140,6 +140,72 @@ describe('ModalNovoAcionamento', () => {
     await aguardar()
     expect(toastGestor.mensagem.value).toBe('Escolha um prestador ativo')
     expect(tela.emitted('fechar')).toBeUndefined()
+  })
+
+  /** Resposta do POST que só chega quando o teste chama `responder`. */
+  function adiado() {
+    let responder!: (r: RespostaFalsa) => void
+    const promessa = new Promise<RespostaFalsa>((ok) => (responder = ok))
+    return { promessa, responder }
+  }
+  const esc = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+
+  it('em repouso, X e Cancelar não estão travados e o envio não está ocupado', async () => {
+    const { tela } = await abrir()
+    await preencher(tela)
+    expect(tela.find('button.fechar').attributes('aria-disabled')).toBeUndefined()
+    expect(tela.find('button.cancelar').attributes('aria-disabled')).toBeUndefined()
+    expect(tela.find('button.enviar').attributes('aria-busy')).toBeUndefined()
+    expect(tela.find('button.enviar').text()).toBe('Enviar ao prestador')
+  })
+
+  it('durante o envio, X, Cancelar e Esc não fecham e o botão mostra "Enviando…"', async () => {
+    const pedido = adiado()
+    criar = () => pedido.promessa
+    const { tela } = await abrir()
+    await preencher(tela)
+    await tela.find('button.enviar').trigger('click')
+    await aguardar()
+    const enviar = tela.find('button.enviar')
+    expect(enviar.text()).toBe('Enviando…')
+    expect(enviar.attributes('aria-busy')).toBe('true')
+    expect(enviar.attributes('aria-disabled')).toBe('true')
+    expect(enviar.classes()).toContain('inativo')
+    expect(tela.find('button.fechar').attributes('aria-disabled')).toBe('true')
+    expect(tela.find('button.cancelar').attributes('aria-disabled')).toBe('true')
+    await tela.find('button.fechar').trigger('click')
+    await tela.find('button.cancelar').trigger('click')
+    esc()
+    expect(tela.emitted('fechar')).toBeUndefined()
+
+    pedido.responder({ data: resumo({ id: 'a2000' }) })
+    await aguardar()
+    expect(tela.emitted('fechar')).toHaveLength(1)
+    expect(toastGestor.mensagem.value).toBe('Acionamento enviado para Carlos Mendes')
+  })
+
+  it('se o envio falha, destrava X, Cancelar e Esc e mantém o formulário preenchido', async () => {
+    const pedido = adiado()
+    criar = () => pedido.promessa
+    const { tela } = await abrir()
+    await preencher(tela)
+    await tela.find('button.enviar').trigger('click')
+    await aguardar()
+    pedido.responder(erroApi(422, 'prestador_inativo', 'Escolha um prestador ativo'))
+    await aguardar()
+    expect(toastGestor.mensagem.value).toBe('Escolha um prestador ativo')
+    const enviar = tela.find('button.enviar')
+    expect(enviar.text()).toBe('Enviar ao prestador')
+    expect(enviar.attributes('aria-busy')).toBeUndefined()
+    expect(enviar.classes()).not.toContain('inativo')
+    expect(tela.find('button.fechar').attributes('aria-disabled')).toBeUndefined()
+    const titulo = tela.findAll('input:not([type])')[0]!.element as HTMLInputElement
+    expect(titulo.value).toBe('  Vazamento no banheiro social ')
+    expect(tipo(tela, 'Vazamento').classes()).toContain('escolhido')
+    esc()
+    await tela.find('button.cancelar').trigger('click')
+    await tela.find('button.fechar').trigger('click')
+    expect(tela.emitted('fechar')).toHaveLength(3)
   })
 
   it('fecha pelo X, por Cancelar e pela tecla Esc', async () => {
