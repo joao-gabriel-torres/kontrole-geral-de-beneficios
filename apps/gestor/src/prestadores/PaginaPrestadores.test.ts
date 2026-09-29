@@ -8,6 +8,7 @@ import { estadoPrestadores, reiniciarPrestadores } from './estado'
 import ModalExcluir from './ModalExcluir.vue'
 import ModalPrestador from './ModalPrestador.vue'
 import PaginaPrestadores from './PaginaPrestadores.vue'
+import ModalImportacao from './planilha/ModalImportacao.vue'
 import { baixarModeloPlanilha, exportarPlanilha } from './planilha/acoes'
 import { importacao } from './planilha/estado'
 import { PREVIA_EXEMPLO, prestador, SEED_PRESTADORES, TIPOS_SEED } from './teste/dados'
@@ -33,6 +34,8 @@ describe('PaginaPrestadores', () => {
   let cadastro: () => RespostaFalsa | Promise<RespostaFalsa>
   let salvar: () => RespostaFalsa
   let excluir: () => RespostaFalsa
+  let previa: () => RespostaFalsa | Promise<RespostaFalsa>
+  let importar: () => RespostaFalsa | Promise<RespostaFalsa>
   let alvo: HTMLElement
 
   beforeEach(() => {
@@ -45,6 +48,8 @@ describe('PaginaPrestadores', () => {
     cadastro = () => ({ data: SEED_PRESTADORES })
     salvar = () => ({ data: prestador({ id: 'p7', nome: 'Pedro Lima' }) })
     excluir = () => ({ data: { ok: true } })
+    previa = () => ({ data: PREVIA_EXEMPLO })
+    importar = () => ({ data: { novos: 2, atualizados: 3, desativados: 0 } })
     simulada = simularApi(api, {
       'GET /api/prestadores/cadastro': () => cadastro(),
       'GET /api/tipos': TIPOS_SEED,
@@ -54,7 +59,8 @@ describe('PaginaPrestadores', () => {
         data: prestador({ status: (body as { status: 'ativo' | 'inativo' }).status }),
       }),
       'DELETE /api/prestadores/{id}': () => excluir(),
-      'POST /api/prestadores/planilha/previa': PREVIA_EXEMPLO,
+      'POST /api/prestadores/planilha/previa': () => previa(),
+      'POST /api/prestadores/planilha/importacao': () => importar(),
     })
   })
   afterEach(() => alvo.remove())
@@ -412,6 +418,189 @@ describe('PaginaPrestadores', () => {
       await aguardar()
       expect(importacao.arquivo.value).toBe(arquivo)
       expect((input.element as HTMLInputElement).value).toBe('')
+    })
+
+    describe('Conferir importação', () => {
+      const conferencia = (tela: Tela) => tela.findComponent(ModalImportacao)
+      async function anexar(nome = 'credenciados.csv') {
+        const r = await abrir()
+        const input = r.tela.find('input[type="file"]')
+        Object.defineProperty(input.element, 'files', {
+          value: [new File(['x'], nome)],
+          configurable: true,
+        })
+        await input.trigger('change')
+        await aguardar()
+        return r
+      }
+      const formularioImportado = () => {
+        const [chamada] = simulada.chamadas('POST', '/api/prestadores/planilha/importacao')
+        return (chamada as unknown as { bodySerializer: () => FormData }).bodySerializer()
+      }
+
+      it('mostra o arquivo, o resumo e cada linha com o selo', async () => {
+        const { tela } = await anexar()
+        const c = conferencia(tela)
+        expect(c.find('.titulo').text()).toBe('Conferir importação')
+        expect(c.find('.arquivo').text()).toBe('credenciados.csv')
+        expect(c.find('.resumo').text()).toBe(
+          '2 novos · 3 atualizados · 3 com erro (serão ignorados)',
+        )
+        const itens = c.findAll('.item')
+        expect(itens.map((i) => i.find('.nome').text())).toEqual([
+          'Carlos Mendes',
+          'Ana Ribeiro',
+          'Pedro Lima',
+          'Fernanda Souza',
+          'Roberto Alves',
+          '(sem nome)',
+          'Bruno Castro',
+          'Carlos M.',
+        ])
+        expect(itens[0]!.find('.documento').text()).toBe('318.402.117-50')
+        expect(itens[0]!.find('.especialidades').text()).toBe(
+          'Vazamento, Revisão elétrica, Ponto de luz',
+        )
+        expect(itens.map((i) => [i.find('.selo').text(), i.find('.selo').classes()[1]])).toEqual([
+          ['Atualizar', 'atualizar'],
+          ['Atualizar', 'atualizar'],
+          ['Novo', 'novo'],
+          ['Novo', 'novo'],
+          ['Atualizar', 'atualizar'],
+          ['Sem nome', 'erro'],
+          ['Documento inválido', 'erro'],
+          ['Duplicado na planilha', 'erro'],
+        ])
+      })
+
+      it('sem documento ou sem especialidades mostra "—"', async () => {
+        previa = () => ({
+          data: {
+            ...PREVIA_EXEMPLO,
+            linhas: [
+              {
+                nome: 'Ana',
+                documento: '',
+                especialidades: [],
+                acao: 'erro',
+                selo: 'Documento inválido',
+              },
+            ],
+          },
+        })
+        const { tela } = await anexar()
+        const item = conferencia(tela).find('.item')
+        expect(item.find('.documento').text()).toBe('—')
+        expect(item.find('.especialidades').text()).toBe('—')
+      })
+
+      it('o bloco dos ausentes lista os nomes e alterna o switch', async () => {
+        const { tela } = await anexar()
+        const bloco = conferencia(tela).find('.ausentes')
+        expect(bloco.find('.rotulo').text()).toBe('Desativar quem não está na planilha')
+        expect(bloco.find('.descricao').text()).toBe(
+          '3 credenciados ativos não estão na planilha: João Pires, Marina Costa, Luciana Prado',
+        )
+        expect(bloco.attributes('aria-pressed')).toBe('false')
+        await bloco.trigger('click')
+        expect(bloco.attributes('aria-pressed')).toBe('true')
+        expect(bloco.find('.trilho').classes()).toContain('ligado')
+      })
+
+      it('sem ausentes, sem o bloco', async () => {
+        previa = () => ({ data: { ...PREVIA_EXEMPLO, ausentes: [] } })
+        const { tela } = await anexar()
+        expect(conferencia(tela).find('.ausentes').exists()).toBe(false)
+      })
+
+      it('Importar envia o arquivo, fecha, avisa e recarrega a lista', async () => {
+        const { tela } = await anexar()
+        await botao(conferencia(tela), 'Importar').trigger('click')
+        await aguardar()
+        const formulario = formularioImportado()
+        expect((formulario.get('arquivo') as File).name).toBe('credenciados.csv')
+        expect(formulario.get('desativarAusentes')).toBe('false')
+        expect(conferencia(tela).exists()).toBe(false)
+        expect(toastGestor.mensagem.value).toBe('Planilha importada: 2 novos, 3 atualizados')
+        expect(simulada.chamadas('GET', '/api/prestadores/cadastro')).toHaveLength(2)
+      })
+
+      it('com o switch ligado, pede para desativar os ausentes', async () => {
+        const { tela } = await anexar()
+        await conferencia(tela).find('.ausentes').trigger('click')
+        await botao(conferencia(tela), 'Importar').trigger('click')
+        await aguardar()
+        expect(formularioImportado().get('desativarAusentes')).toBe('true')
+      })
+
+      it('sem nada a importar, o Importar fica claro e não chama a API', async () => {
+        previa = () => ({
+          data: { ...PREVIA_EXEMPLO, resumo: { novos: 0, atualizados: 0, erros: 3 } },
+        })
+        const { tela } = await anexar()
+        const importarBotao = botao(conferencia(tela), 'Importar')
+        expect(importarBotao.classes()).toContain('inativo')
+        expect(importarBotao.attributes('aria-disabled')).toBe('true')
+        await importarBotao.trigger('click')
+        await aguardar()
+        expect(simulada.chamadas('POST', '/api/prestadores/planilha/importacao')).toHaveLength(0)
+        expect(conferencia(tela).exists()).toBe(true)
+      })
+
+      it('clique duplo em Importar grava uma vez', async () => {
+        let responder!: (r: RespostaFalsa) => void
+        importar = () => new Promise((pronto) => (responder = pronto))
+        const { tela } = await anexar()
+        const importarBotao = botao(conferencia(tela), 'Importar')
+        await importarBotao.trigger('click')
+        await importarBotao.trigger('click')
+        await aguardar()
+        expect(simulada.chamadas('POST', '/api/prestadores/planilha/importacao')).toHaveLength(1)
+        responder({ data: { novos: 2, atualizados: 3, desativados: 0 } })
+        await aguardar()
+        expect(conferencia(tela).exists()).toBe(false)
+      })
+
+      it('erro ao importar vira toast e a conferência continua aberta', async () => {
+        importar = () =>
+          erroApi(
+            409,
+            'planilha_conflito',
+            'Os cadastros mudaram durante a importação. Confira a planilha de novo.',
+          )
+        const { tela } = await anexar()
+        await botao(conferencia(tela), 'Importar').trigger('click')
+        await aguardar()
+        expect(toastGestor.mensagem.value).toBe(
+          'Os cadastros mudaram durante a importação. Confira a planilha de novo.',
+        )
+        expect(conferencia(tela).exists()).toBe(true)
+      })
+
+      it('Cancelar, o X e o Esc fecham sem gravar', async () => {
+        for (const fechar of [
+          (t: Tela) => botao(conferencia(t), 'Cancelar').trigger('click'),
+          (t: Tela) => conferencia(t).find('button[aria-label="Fechar"]').trigger('click'),
+          async () => {
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+            await aguardar()
+          },
+        ]) {
+          const { tela } = await anexar()
+          expect(conferencia(tela).exists()).toBe(true)
+          await fechar(tela)
+          expect(conferencia(tela).exists()).toBe(false)
+          expect(importacao.previa.value).toBeNull()
+        }
+        expect(simulada.chamadas('POST', '/api/prestadores/planilha/importacao')).toHaveLength(0)
+      })
+
+      it('erro na prévia vira toast e não abre a conferência', async () => {
+        previa = () => erroApi(422, 'planilha_vazia', 'Não encontramos linhas na planilha')
+        const { tela } = await anexar()
+        expect(conferencia(tela).exists()).toBe(false)
+        expect(toastGestor.mensagem.value).toBe('Não encontramos linhas na planilha')
+      })
     })
   })
 })

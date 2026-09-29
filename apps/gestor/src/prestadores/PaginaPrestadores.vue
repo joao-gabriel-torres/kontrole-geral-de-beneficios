@@ -15,6 +15,7 @@ import ModalExcluir from './ModalExcluir.vue'
 import ModalPrestador from './ModalPrestador.vue'
 import { baixarModeloPlanilha, exportarPlanilha } from './planilha/acoes'
 import { importacao } from './planilha/estado'
+import ModalImportacao from './planilha/ModalImportacao.vue'
 
 const { data: lista, isSuccess, isError, error } = usarCadastro()
 const { data: tipos } = usarTipos()
@@ -122,6 +123,12 @@ function aoEscolherArquivo(evento: Event) {
         @fechar="formulario = null"
       />
       <ModalExcluir v-if="exclusao" :prestador="exclusao" @fechar="exclusao = null" />
+      <ModalImportacao
+        v-if="importacao.arquivo.value && importacao.previa.value"
+        :arquivo="importacao.arquivo.value"
+        :previa="importacao.previa.value"
+        @fechar="importacao.fechar()"
+      />
     </Teleport>
   </PaginaGestor>
 </template>
