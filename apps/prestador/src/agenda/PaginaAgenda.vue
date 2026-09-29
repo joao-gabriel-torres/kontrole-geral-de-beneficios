@@ -6,7 +6,7 @@ import ItemAgenda from './ItemAgenda.vue'
 import { usarAgenda } from './usarAgenda'
 
 const router = useRouter()
-const { dias, rotulo, itens, escolher, error, isSuccess } = usarAgenda()
+const { dias, rotulo, itens, escolher, error, carregada } = usarAgenda()
 
 function abrir(id: string) {
   void router.push({ name: 'detalhe', params: { id } })
@@ -19,7 +19,7 @@ function abrir(id: string) {
     <FaixaDias :dias="dias" @escolher="escolher" />
     <h2 class="rotulo-dia">{{ rotulo }}</h2>
     <div v-if="error" class="aviso">{{ mensagemDeErro(error) }}</div>
-    <div v-else-if="isSuccess && !itens.length" class="livre">Dia livre.</div>
+    <div v-else-if="carregada && !itens.length" class="livre">Dia livre.</div>
     <ItemAgenda v-for="a in itens" :key="a.id" :acionamento="a" @abrir="abrir(a.id)" />
   </div>
 </template>
