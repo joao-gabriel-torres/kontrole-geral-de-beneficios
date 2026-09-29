@@ -33,6 +33,7 @@ function abrir(id: string) {
         type="button"
         class="chip-filtro"
         :class="{ ativo: f.id === filtro }"
+        :aria-pressed="f.id === filtro"
         @click="escolher(f.id)"
       >
         {{ f.rotulo }}<span class="contagem">{{ contagem[f.id] }}</span>

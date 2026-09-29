@@ -20,6 +20,7 @@ const tipos = computed(() => a.value.tipos.map((t) => t.nome).join(' + '))
     tabindex="0"
     @click="$emit('abrir')"
     @keydown.enter="$emit('abrir')"
+    @keydown.space.prevent="$emit('abrir')"
   >
     <div class="linha-meta">
       <span class="meta">{{ a.codigo }} · {{ quando }}</span>
