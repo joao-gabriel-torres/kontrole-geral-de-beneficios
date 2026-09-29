@@ -147,4 +147,66 @@ describe('prestador inativo ou excluído', () => {
     await situacao({ status: 'inativo', excluidoEm: new Date() })
     expect((await app.request('/api/me', { headers })).status).toBe(401)
   })
+
+  describe('rotas do Better Auth', () => {
+    const authReq = (caminho: string, headers: Record<string, string>, corpo?: unknown) =>
+      app.request(`/api/auth/${caminho}`, {
+        method: corpo === undefined ? 'GET' : 'POST',
+        headers: {
+          ...headers,
+          origin: 'http://localhost:5174',
+          'content-type': 'application/json',
+        },
+        body: corpo === undefined ? undefined : JSON.stringify(corpo),
+      })
+
+    it('inativo continua lendo a sessão e atualizando o perfil', async () => {
+      await situacao({ status: 'ativo' })
+      const headers = await entrar(app, email)
+      await situacao({ status: 'inativo' })
+      const sessao = await authReq('get-session', headers)
+      expect(sessao.status).toBe(200)
+      expect(await sessao.json()).toMatchObject({ user: { email } })
+      expect((await authReq('update-user', headers, { name: 'Prestador Inativo' })).status).toBe(
+        200,
+      )
+    })
+
+    it('excluído não lê a sessão, não lista sessões nem muda o perfil (Bearer)', async () => {
+      await situacao({ status: 'ativo' })
+      const headers = await entrar(app, email)
+      await situacao({ status: 'inativo', excluidoEm: new Date() })
+      const respostas = [
+        await authReq('get-session', headers),
+        await authReq('list-sessions', headers),
+        await authReq('update-user', headers, { name: 'Outro nome' }),
+      ]
+      for (const r of respostas) {
+        expect(r.status).toBe(401)
+        expect(await r.json()).toMatchObject({ code: 'PRESTADOR_EXCLUIDO' })
+      }
+    })
+
+    it('excluído também é recusado pela sessão em cookie', async () => {
+      await situacao({ status: 'ativo' })
+      const cookie = (await login()).headers
+        .getSetCookie()
+        .map((c) => c.split(';')[0])
+        .join('; ')
+      await situacao({ status: 'inativo', excluidoEm: new Date() })
+      expect((await authReq('get-session', { cookie })).status).toBe(401)
+    })
+
+    it('excluído ainda sai, e outra conta entra no mesmo aparelho', async () => {
+      await situacao({ status: 'ativo' })
+      const headers = await entrar(app, email)
+      await situacao({ status: 'inativo', excluidoEm: new Date() })
+      const outra = await authReq('sign-in/email', headers, {
+        email: GESTORA_DEV.email,
+        password: SENHA_DEV,
+      })
+      expect(outra.status).toBe(200)
+      expect((await authReq('sign-out', headers, {})).status).toBe(200)
+    })
+  })
 })
