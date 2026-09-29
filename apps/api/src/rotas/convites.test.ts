@@ -130,6 +130,19 @@ describe('POST /api/prestadores/{id}/convite', () => {
     expect(caixa.enviados).toEqual([])
   })
 
+  it('12 convites simultâneos do mesmo prestador: todos 200 e só um link vale no fim', async () => {
+    const respostas = await Promise.all(Array.from({ length: 12 }, () => convidar('p3')))
+
+    expect(respostas.map((r) => r.status)).toEqual(Array<number>(12).fill(200))
+    const convites = await prisma.verification.findMany({
+      where: { value: 'u-p3', identifier: { startsWith: 'reset-password:' } },
+    })
+    expect(convites).toHaveLength(1)
+    const enviados = caixa.enviados.map((e) => `reset-password:${tokenDoLink(e.texto)}`)
+    expect(enviados).toHaveLength(12)
+    expect(enviados).toContain(convites[0].identifier)
+  })
+
   it('200 com o e-mail que vira o login e a validade de 7 dias', async () => {
     const antes = Date.now()
     const r = await convidar('p6')

@@ -1,7 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto'
 import { Prisma } from '@kgb/db'
 import { HTTPException } from 'hono/http-exception'
-import { auth } from '../auth'
 import type { UsuarioSessao } from '../contexto'
 import { correio } from '../correio'
 import { prisma } from '../db'
@@ -92,11 +91,16 @@ export async function enviarConvite(
       await tx.verification.deleteMany({
         where: { value: usuario.id, identifier: { startsWith: PREFIXO_CONVITE } },
       })
-      const contexto = await auth.$context
-      await contexto.internalAdapter.createVerificationValue({
-        identifier: identificador,
-        value: usuario.id,
-        expiresAt: expiraEm,
+      // O mesmo registro que o internalAdapter do Better Auth grava (identificador em texto puro,
+      // sem verification.storeIdentifier), mas nesta transação: usa a conexão que segura a trava
+      // do prestador, em vez de pedir outra ao pool, e some junto se a transação falhar.
+      await tx.verification.create({
+        data: {
+          id: randomUUID(),
+          identifier: identificador,
+          value: usuario.id,
+          expiresAt: expiraEm,
+        },
       })
       return { nome: prestador.nome, email }
     })
