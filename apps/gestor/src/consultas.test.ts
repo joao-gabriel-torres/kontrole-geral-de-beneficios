@@ -1,7 +1,7 @@
 import { ErroTempoEsgotado } from '@kgb/api-client'
 import { MutationObserver } from '@tanstack/vue-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { criarClienteConsultas, deveRepetir } from './consultas'
+import { comLimite, criarClienteConsultas, deveRepetir } from './consultas'
 import { ErroApi } from './erros'
 
 describe('criarClienteConsultas', () => {
@@ -98,5 +98,43 @@ describe('deveRepetir', () => {
       expect(deveRepetir(0, new ErroApi('x', 'x', status))).toBe(false)
     }
     expect(deveRepetir(0, new ErroTempoEsgotado())).toBe(false)
+  })
+})
+
+describe('comLimite sem AbortSignal.any (navegadores anteriores a 2024, como Safari < 17.4)', () => {
+  let original: PropertyDescriptor | undefined
+  beforeEach(() => {
+    vi.useFakeTimers()
+    original = Object.getOwnPropertyDescriptor(AbortSignal, 'any')
+    Object.defineProperty(AbortSignal, 'any', { value: undefined, configurable: true })
+  })
+  afterEach(() => {
+    if (original) Object.defineProperty(AbortSignal, 'any', original)
+    vi.useRealTimers()
+  })
+
+  /** Pedido que nunca responde; devolve o sinal que ele recebeu. */
+  function pedir(cancelamento: AbortSignal) {
+    let recebido!: AbortSignal
+    const resultado = comLimite((sinal) => {
+      recebido = sinal
+      return new Promise<never>(() => {})
+    }, cancelamento).catch((e: unknown) => e)
+    return { sinal: () => recebido, resultado }
+  }
+
+  it('o cancelamento do vue-query ainda aborta o pedido', () => {
+    const cancelamento = new AbortController()
+    const { sinal } = pedir(cancelamento.signal)
+    expect(sinal().aborted).toBe(false)
+    cancelamento.abort()
+    expect(sinal().aborted).toBe(true)
+  })
+
+  it('o tempo limite ainda aborta o pedido e falha com tempo esgotado', async () => {
+    const { sinal, resultado } = pedir(new AbortController().signal)
+    await vi.advanceTimersByTimeAsync(8_000)
+    expect(sinal().aborted).toBe(true)
+    expect(await resultado).toBeInstanceOf(ErroTempoEsgotado)
   })
 })

@@ -25,7 +25,21 @@ export function comLimite<T>(
   executar: (sinal: AbortSignal) => Promise<T>,
   sinal?: AbortSignal,
 ): Promise<T> {
-  return comTempoLimite((limite) => executar(sinal ? AbortSignal.any([sinal, limite]) : limite))
+  return comTempoLimite((limite) => executar(sinal ? qualquerSinal([sinal, limite]) : limite))
+}
+
+/** `AbortSignal.any`, com alternativa para navegadores anteriores a 2024 (Safari < 17.4). */
+function qualquerSinal(sinais: AbortSignal[]): AbortSignal {
+  if (typeof AbortSignal.any === 'function') return AbortSignal.any(sinais)
+  const controle = new AbortController()
+  for (const sinal of sinais) {
+    if (sinal.aborted) {
+      controle.abort(sinal.reason)
+      break
+    }
+    sinal.addEventListener('abort', () => controle.abort(sinal.reason), { once: true })
+  }
+  return controle.signal
 }
 
 /** `aoPerderSessao` é chamado quando a API recusa a sessão (401) numa consulta ou numa ação. */
