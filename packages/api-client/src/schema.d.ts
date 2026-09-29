@@ -1236,6 +1236,292 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/prestadores/planilha/previa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confere a planilha sem gravar: selo de cada linha, resumo e ausentes */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": {
+                        /**
+                         * Format: binary
+                         * @description .xlsx, .xls ou .csv, até 5 MB
+                         */
+                        arquivo?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Prévia da importação */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PreviaPlanilha"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Planilha acima de 5 MB */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem arquivo, ilegível, sem linhas ou acima de 2000 linhas */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/prestadores/planilha/importacao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Importa a planilha numa transação (recalcula a prévia) e grava a auditoria */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": {
+                        /**
+                         * Format: binary
+                         * @description .xlsx, .xls ou .csv, até 5 MB
+                         */
+                        arquivo?: string;
+                        /**
+                         * @description Desativa os ativos que não estão na planilha (padrão: false)
+                         * @enum {string}
+                         */
+                        desativarAusentes?: "true" | "false";
+                    };
+                };
+            };
+            responses: {
+                /** @description Contagens aplicadas */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ResultadoImportacao"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Os cadastros mudaram durante a importação */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Planilha acima de 5 MB */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem arquivo, ilegível, sem linhas ou acima de 2000 linhas */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/prestadores/planilha": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Exporta os prestadores não excluídos (credenciados-russo-DD-MM-AAAA.xlsx) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Planilha de credenciados */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/prestadores/planilha/modelo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Modelo da planilha (modelo-credenciados-russo.xlsx) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Modelo com o cabeçalho e uma linha de exemplo */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/prestadores/cadastro": {
         parameters: {
             query?: never;
@@ -1674,6 +1960,35 @@ export interface components {
                 paraCorrigir: number;
             };
             rotaDoDia: string[];
+        };
+        PreviaPlanilha: {
+            linhas: {
+                /** @description Como veio na planilha (vazio = sem nome) */
+                nome: string;
+                /** @description Como veio na planilha */
+                documento: string;
+                /** @description Nomes como vieram, inclusive os não reconhecidos */
+                especialidades: string[];
+                /** @enum {string} */
+                acao: "novo" | "atualizar" | "erro";
+                /** @enum {string} */
+                selo: "Novo" | "Atualizar" | "Sem nome" | "Documento inválido" | "Duplicado na planilha" | "Telefone inválido";
+            }[];
+            resumo: {
+                novos: number;
+                atualizados: number;
+                erros: number;
+            };
+            /** @description Ativos cujo documento não está na planilha, na ordem de cadastro */
+            ausentes: {
+                id: string;
+                nome: string;
+            }[];
+        };
+        ResultadoImportacao: {
+            novos: number;
+            atualizados: number;
+            desativados: number;
         };
         PrestadorCadastro: {
             id: string;

@@ -711,6 +711,122 @@
           "rotaDoDia"
         ]
       },
+      "PreviaPlanilha": {
+        "type": "object",
+        "properties": {
+          "linhas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "nome": {
+                  "type": "string",
+                  "description": "Como veio na planilha (vazio = sem nome)"
+                },
+                "documento": {
+                  "type": "string",
+                  "description": "Como veio na planilha"
+                },
+                "especialidades": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Nomes como vieram, inclusive os não reconhecidos"
+                },
+                "acao": {
+                  "type": "string",
+                  "enum": [
+                    "novo",
+                    "atualizar",
+                    "erro"
+                  ]
+                },
+                "selo": {
+                  "type": "string",
+                  "enum": [
+                    "Novo",
+                    "Atualizar",
+                    "Sem nome",
+                    "Documento inválido",
+                    "Duplicado na planilha",
+                    "Telefone inválido"
+                  ]
+                }
+              },
+              "required": [
+                "nome",
+                "documento",
+                "especialidades",
+                "acao",
+                "selo"
+              ]
+            }
+          },
+          "resumo": {
+            "type": "object",
+            "properties": {
+              "novos": {
+                "type": "integer"
+              },
+              "atualizados": {
+                "type": "integer"
+              },
+              "erros": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "novos",
+              "atualizados",
+              "erros"
+            ]
+          },
+          "ausentes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "nome": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "nome"
+              ]
+            },
+            "description": "Ativos cujo documento não está na planilha, na ordem de cadastro"
+          }
+        },
+        "required": [
+          "linhas",
+          "resumo",
+          "ausentes"
+        ]
+      },
+      "ResultadoImportacao": {
+        "type": "object",
+        "properties": {
+          "novos": {
+            "type": "integer"
+          },
+          "atualizados": {
+            "type": "integer"
+          },
+          "desativados": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "novos",
+          "atualizados",
+          "desativados"
+        ]
+      },
       "PrestadorCadastro": {
         "type": "object",
         "properties": {
@@ -2176,6 +2292,280 @@
           },
           "403": {
             "description": "Só o prestador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/planilha/previa": {
+      "post": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Confere a planilha sem gravar: selo de cada linha, resumo e ausentes",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "arquivo": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": ".xlsx, .xls ou .csv, até 5 MB"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Prévia da importação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviaPlanilha"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Planilha acima de 5 MB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Sem arquivo, ilegível, sem linhas ou acima de 2000 linhas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/planilha/importacao": {
+      "post": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Importa a planilha numa transação (recalcula a prévia) e grava a auditoria",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "arquivo": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": ".xlsx, .xls ou .csv, até 5 MB"
+                  },
+                  "desativarAusentes": {
+                    "type": "string",
+                    "enum": [
+                      "true",
+                      "false"
+                    ],
+                    "description": "Desativa os ativos que não estão na planilha (padrão: false)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contagens aplicadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoImportacao"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Os cadastros mudaram durante a importação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Planilha acima de 5 MB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Sem arquivo, ilegível, sem linhas ou acima de 2000 linhas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/planilha": {
+      "get": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Exporta os prestadores não excluídos (credenciados-russo-DD-MM-AAAA.xlsx)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Planilha de credenciados",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/planilha/modelo": {
+      "get": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Modelo da planilha (modelo-credenciados-russo.xlsx)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Modelo com o cabeçalho e uma linha de exemplo",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
             "content": {
               "application/json": {
                 "schema": {
