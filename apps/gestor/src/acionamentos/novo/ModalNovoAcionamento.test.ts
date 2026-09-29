@@ -4,6 +4,7 @@ import { erroApi, simularApi, type RespostaFalsa } from '../../../test/api-falsa
 import { PRESTADORES, resumo, TIPOS } from '../../../test/fixtures'
 import { aguardar, montar } from '../../../test/montar'
 import { api } from '../../api'
+import { MENSAGEM_FALHA } from '../../erros'
 import { toastGestor } from '../../toast'
 import { estadoLista } from '../estadoLista'
 import ModalNovoAcionamento from './ModalNovoAcionamento.vue'
@@ -206,6 +207,65 @@ describe('ModalNovoAcionamento', () => {
     await tela.find('button.cancelar').trigger('click')
     await tela.find('button.fechar').trigger('click')
     expect(tela.emitted('fechar')).toHaveLength(3)
+  })
+
+  describe('tipos ou prestadores que não carregam', () => {
+    /** Rota que falha nas primeiras `falhas` chamadas e depois responde `dados`. */
+    function falhandoAte(falhas: number, dados: unknown, falha: () => RespostaFalsa) {
+      let chamadas = 0
+      return () => (++chamadas <= falhas ? falha() : { data: dados })
+    }
+    const erroInterno = () => erroApi(500, 'interno', 'Erro interno')
+    const semRede = (): RespostaFalsa => {
+      throw new TypeError('Failed to fetch')
+    }
+
+    it('tipos: mostra a mensagem, e "Tentar de novo" busca e mostra os tipos', async () => {
+      simulada = simularApi(api, {
+        'GET /api/tipos': falhandoAte(1, TIPOS, erroInterno),
+        'GET /api/prestadores': PRESTADORES,
+      })
+      const { tela } = await abrir()
+      const falha = tela.find('.grupo-tipos .falha')
+      expect(falha.attributes('role')).toBe('alert')
+      expect(falha.text()).toContain('Erro interno')
+      expect(tela.findAll('button.tipo')).toHaveLength(0)
+      await falha.find('button.tentar').trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('GET', '/api/tipos')).toHaveLength(2)
+      expect(tela.find('.grupo-tipos .falha').exists()).toBe(false)
+      expect(tela.findAll('button.tipo').map((b) => b.text())).toEqual(TIPOS.map((t) => t.nome))
+    })
+
+    it('"Tentar de novo" que falha outra vez mantém a mensagem e o botão', async () => {
+      simulada = simularApi(api, {
+        'GET /api/tipos': falhandoAte(2, TIPOS, semRede),
+        'GET /api/prestadores': PRESTADORES,
+      })
+      const { tela } = await abrir()
+      await tela.find('.grupo-tipos .falha button.tentar').trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('GET', '/api/tipos')).toHaveLength(2)
+      const falha = tela.find('.grupo-tipos .falha')
+      expect(falha.text()).toContain(MENSAGEM_FALHA)
+      expect(falha.find('button.tentar').text()).toBe('Tentar de novo')
+    })
+
+    it('prestadores: mensagem no lugar do seletor, e o Carlos volta a ser o padrão depois', async () => {
+      simulada = simularApi(api, {
+        'GET /api/tipos': TIPOS,
+        'GET /api/prestadores': falhandoAte(1, PRESTADORES, semRede),
+      })
+      const { tela } = await abrir()
+      expect(tela.find('select').exists()).toBe(false)
+      const falha = tela.find('.campo .falha')
+      expect(falha.attributes('role')).toBe('alert')
+      expect(falha.text()).toContain(MENSAGEM_FALHA)
+      await falha.find('button.tentar').trigger('click')
+      await aguardar()
+      expect(tela.find('.falha').exists()).toBe(false)
+      expect((tela.find('select').element as HTMLSelectElement).value).toBe('p1')
+    })
   })
 
   it('fecha pelo X, por Cancelar e pela tecla Esc', async () => {
