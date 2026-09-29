@@ -23,7 +23,11 @@ const tipos = computed(() => a.value.tipos.map((t) => t.nome).join(' + '))
       @keydown.space.prevent="$emit('abrir')"
     >
       <div class="titulo-cartao">{{ a.titulo }}</div>
-      <div class="horario">{{ intervalo(a.inicio, a.fim) }} · {{ tipos }}</div>
+      <!-- Três pedaços, como no protótipo (cada interpolação dele é um span): muda o arredondamento
+           das posições do texto depois do " · ". -->
+      <div class="horario">
+        <span>{{ intervalo(a.inicio, a.fim) }}</span> · <span>{{ tipos }}</span>
+      </div>
       <div class="endereco">
         <RussoIcone nome="pin" :tamanho="14" class="pin" />{{ a.endereco }}
       </div>
