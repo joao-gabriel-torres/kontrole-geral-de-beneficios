@@ -147,6 +147,51 @@ O título da página é **"Tipos de demanda"**, como no código do protótipo.
 - Os modais usam `usarModalAberto()` com `<Teleport defer to="#modais-gestor">` (no esqueleto).
 - **Posição dos modais no mobile:** segue o protótipo. O fundo dele começa 44px acima da origem do harness; ver o levantamento.
 
+## Convite por e-mail (acesso do prestador)
+
+Decisão do usuário em 29/09: o acesso de prestadores novos é por **convite por e-mail**.
+
+**Regras** (API, só gestor):
+- **`POST /api/prestadores/{id}/convite`** envia ou reenvia o convite:
+  - Cria ou atualiza o usuário do prestador (`User` com `role = 'prestador'`, `prestadorId`, nome e e-mail do cadastro). Não cria senha.
+  - Gera um token aleatório de uso único, válido por **7 dias**, no formato de redefinição do Better Auth: `reset-password:<token>` na tabela `verification`, criado com o `internalAdapter`.
+  - Invalida os convites anteriores do mesmo usuário e manda o e-mail.
+- **Recusas:**
+  - prestador sem e-mail: 409 `prestador_sem_email`, "Cadastre um e-mail para enviar o convite";
+  - e-mail já usado por outra conta (gestor ou outro prestador): 409 `email_em_uso`, "Este e-mail já é usado por outra conta";
+  - prestador excluído: 404.
+- **Inativo:** pode receber convite, porque continua entrando.
+- **Quem já tem senha:** o prestador que já criou a senha também pode receber um convite novo, que funciona como redefinição.
+- **Situação do acesso:** o cadastro expõe `acesso: 'sem_email' | 'pendente' | 'convidado' | 'ativo'`.
+  - `ativo`: já tem senha;
+  - `convidado`: tem convite válido;
+  - `pendente`: tem e-mail, mas não tem convite válido nem senha.
+- **Automático:** criar um prestador com e-mail envia o convite.
+
+**Envio** (`apps/api/src/correio/`), pela interface `Correio { enviar({ para, assunto, texto, html }) }`:
+- **Desenvolvimento** (sem `SMTP_URL`): grava o e-mail em HTML em `var/emails/` e mostra o link no log da API.
+- **Produção:** SMTP com nodemailer, usando `SMTP_URL` e `EMAIL_REMETENTE`.
+- **Link:** `${URL_APP_PRESTADOR}/convite?token=…`, com `URL_APP_PRESTADOR` no `.env` (em dev, `http://localhost:5174`).
+- **Texto do e-mail:**
+  - assunto: "Seu acesso ao app da Russo Assistência";
+  - saudação pelo primeiro nome;
+  - o login (e-mail);
+  - o botão "Criar minha senha";
+  - a validade: "O link vale por 7 dias".
+
+**Prestador** (rota pública `/convite?token=`, fora do protótipo):
+- **Tela "Crie sua senha":** no mesmo cartão do login (marca, título, apoio "Para entrar no app da Russo Assistência"), com os campos "Nova senha" e "Confirmar senha" e o botão "Criar senha".
+- **Mensagens:**
+  - "Use pelo menos 8 caracteres";
+  - "As senhas não conferem";
+  - token inválido ou vencido: "Este convite expirou ou já foi usado. Peça um novo à Russo Assistência.".
+- **Sucesso:** vai para o login com o aviso "Senha criada. Entre com seu e-mail e a nova senha.".
+- **Chamada:** `auth.resetPassword({ newPassword, token })` do cliente do Better Auth.
+
+**Gestor** (depois da integração com a frente de Prestadores):
+- **Toast ao cadastrar com e-mail:** "Prestador cadastrado. Convite enviado para {e-mail}".
+- **No modal Editar:** o botão de texto "Enviar convite de acesso" ou "Reenviar convite", quando há e-mail e o acesso não é `ativo`. Fica logo abaixo do campo de e-mail, no estilo de link do protótipo (`#0069BD`, 13/600). Não aparece para o Carlos do seed, que já tem senha, então o caso visual do Editar não muda.
+
 ## Agenda (prestador)
 
 - **Sem rota nova:** reusa `GET /api/acionamentos` (`usarDemandas`, a mesma chave e as mesmas invalidações de Demandas). O front filtra por data e ordena por início.
