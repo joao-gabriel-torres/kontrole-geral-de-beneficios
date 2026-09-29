@@ -12,7 +12,8 @@ export const auth = betterAuth({
   basePath: '/api/auth',
   secret: env.BETTER_AUTH_SECRET,
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
-  emailAndPassword: { enabled: true, disableSignUp: true },
+  // Criar a senha pelo convite também serve de redefinição: as sessões abertas com a senha antiga caem.
+  emailAndPassword: { enabled: true, disableSignUp: true, revokeSessionsOnPasswordReset: true },
   user: {
     additionalFields: {
       role: { type: 'string', required: false, defaultValue: 'prestador', input: false },

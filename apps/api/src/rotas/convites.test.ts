@@ -226,6 +226,8 @@ describe('convite ponta a ponta', () => {
   })
 
   it('quem já tem senha recebe o convite como redefinição: a senha antiga deixa de valer', async () => {
+    // Uma sessão aberta com a senha antiga (outro aparelho) tem de cair junto com ela.
+    const sessaoAntiga = await entrar(app, EMAIL_PRESTADOR_DEV)
     const r = await convidar('p1')
     const { email } = (await r.json()) as { email: string }
     // O login passa a ser o e-mail do cadastro.
@@ -237,5 +239,6 @@ describe('convite ponta a ponta', () => {
 
     expect((await tentarEntrar(email, SENHA_DEV)).status).toBe(401)
     expect((await tentarEntrar(email, 'nova-senha-do-carlos')).status).toBe(200)
+    expect((await app.request('/api/me', { headers: sessaoAntiga })).status).toBe(401)
   })
 })
