@@ -116,10 +116,11 @@ function enviar() {
   flex-direction: column;
   justify-content: flex-end;
 }
+/* Os 28px de baixo são do protótipo; a área segura soma o indicador de início do iPhone. */
 .painel {
   background: #fff;
   border-radius: 24px 24px 0 0;
-  padding: 12px 24px 28px;
+  padding: 12px 24px calc(28px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 14px;
