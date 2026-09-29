@@ -21,7 +21,9 @@ import { montarLinhaDoTempo } from './linhaDoTempo'
 const props = defineProps<{ id: string; origem: 'acionamentos' | 'aprovacoes' | 'painel' }>()
 
 const { data: acionamento, isError, error } = usarDetalhe(() => props.id)
-const { mutateAsync: revisar, isPending: enviando } = usarRevisao(() => props.id)
+const { mutateAsync: revisar, isPending, variables } = usarRevisao(() => props.id)
+/** A decisão em envio, para o rótulo do botão clicado; null em repouso. */
+const enviando = computed(() => (isPending.value ? (variables.value?.decisao ?? null) : null))
 const observacao = ref('')
 
 const voltar = computed(() =>
@@ -49,7 +51,7 @@ const progressoDemanda = (etapas: readonly { feita: boolean }[]) =>
   `${etapas.filter((e) => e.feita).length}/${etapas.length}`
 
 async function decidir(decisao: Decisao, texto: string) {
-  if (enviando.value) return
+  if (isPending.value) return
   const pedido = prepararRevisao(decisao, texto)
   if (!pedido.ok) return toastGestor.mostrar(pedido.mensagem)
   try {

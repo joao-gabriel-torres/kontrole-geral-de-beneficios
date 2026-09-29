@@ -1,6 +1,6 @@
 import type { DetalheAcionamento } from '@kgb/api-client'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { erroApi, simularApi } from '../../../test/api-falsa'
+import { erroApi, simularApi, type RespostaFalsa } from '../../../test/api-falsa'
 import { detalhe, foto } from '../../../test/fixtures'
 import { aguardar, montar } from '../../../test/montar'
 import { api } from '../../api'
@@ -16,11 +16,10 @@ vi.mock('../../api', () => ({
 describe('PaginaDetalhe', () => {
   let atual: DetalheAcionamento
   let simulada: ReturnType<typeof simularApi>
-  let revisao: (corpo: { decisao: string; motivo?: string }) => {
-    data?: unknown
-    error?: unknown
-    status?: number
-  }
+  let revisao: (corpo: {
+    decisao: string
+    motivo?: string
+  }) => RespostaFalsa | Promise<RespostaFalsa>
 
   beforeEach(() => {
     toastGestor.mensagem.value = null
@@ -158,6 +157,25 @@ describe('PaginaDetalhe', () => {
     await tela.find('.decisao .aprovar').trigger('click')
     await aguardar()
     expect(simulada.chamadas('POST', '/api/acionamentos/{id}/revisao')).toHaveLength(1)
+  })
+
+  it('durante o envio, o botão clicado mostra "Enviando…" e os dois travam', async () => {
+    let responder!: () => void
+    const resposta = revisao
+    revisao = (corpo) => new Promise((ok) => (responder = () => ok(resposta(corpo))))
+    const { tela } = await abrir()
+    await tela.find('.decisao .aprovar').trigger('click')
+    await aguardar()
+    const aprovar = tela.find('.decisao .aprovar')
+    expect(aprovar.text()).toBe('Enviando…')
+    expect(aprovar.attributes('aria-busy')).toBe('true')
+    expect(aprovar.attributes('disabled')).toBeDefined()
+    expect(tela.find('.decisao .reprovar').attributes('disabled')).toBeDefined()
+    expect(tela.find('.decisao .reprovar').text()).toBe('Reprovar')
+    responder()
+    await aguardar()
+    expect(toastGestor.mensagem.value).toBe('Conclusão aprovada')
+    expect(tela.find('.decisao').exists()).toBe(false)
   })
 
   it('se a API recusar (outra pessoa já decidiu), mostra a mensagem e recarrega', async () => {
