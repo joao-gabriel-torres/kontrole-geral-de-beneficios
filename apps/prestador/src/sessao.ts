@@ -1,5 +1,7 @@
 import { comTempoLimite, type Usuario } from '@kgb/api-client'
+import type { QueryClient } from '@tanstack/vue-query'
 import { reactive, readonly } from 'vue'
+import type { Router } from 'vue-router'
 import { api, auth } from './api'
 import { obterToken, salvarToken } from './token'
 
@@ -8,6 +10,7 @@ export const MENSAGENS = {
   tentativas: 'Muitas tentativas. Aguarde alguns segundos e tente de novo.',
   indisponivel: 'Não foi possível entrar. Verifique sua conexão e tente de novo.',
   papel: 'Esta conta é de gestor. Use o painel web.',
+  inativo: 'Seu cadastro está inativo. Fale com a Russo Assistência para voltar a atender.',
 } as const
 
 const estado = reactive<{ usuario: Usuario | null; carregada: boolean; indisponivel: boolean }>({
@@ -48,9 +51,11 @@ export function mensagemDoMotivo(motivo: unknown): string | null {
 
 export type ResultadoLogin = { ok: true } | { ok: false; mensagem: string }
 
-function mensagemDoErroDeLogin(status: number): string {
-  if (status === 400 || status === 401) return MENSAGENS.credenciais
-  if (status === 429) return MENSAGENS.tentativas
+/** O 403 também vem de origem recusada pela API: só o código diz que o cadastro está inativo. */
+function mensagemDoErroDeLogin(erro: { status: number; code?: string }): string {
+  if (erro.code === 'PRESTADOR_INATIVO') return MENSAGENS.inativo
+  if (erro.status === 400 || erro.status === 401) return MENSAGENS.credenciais
+  if (erro.status === 429) return MENSAGENS.tentativas
   return MENSAGENS.indisponivel
 }
 
@@ -59,7 +64,7 @@ export async function entrar(email: string, senha: string): Promise<ResultadoLog
     const { error } = await comTempoLimite((signal) =>
       auth.signIn.email({ email, password: senha }, { signal }),
     )
-    if (error) return { ok: false, mensagem: mensagemDoErroDeLogin(error.status) }
+    if (error) return { ok: false, mensagem: mensagemDoErroDeLogin(error) }
   } catch {
     return { ok: false, mensagem: MENSAGENS.indisponivel }
   }
@@ -80,5 +85,27 @@ export async function sair(): Promise<void> {
   } finally {
     await salvarToken(null)
     estado.usuario = null
+  }
+}
+
+let perdendoSessao = false
+
+/**
+ * A API recusou a sessão no meio do uso (expirou ou o cadastro foi desativado): esquece o usuário e os dados
+ * e volta ao login, que depois devolve para a tela atual. Várias consultas falhando juntas
+ * disparam uma volta só.
+ */
+export async function perderSessao(router: Router, consultas: QueryClient): Promise<void> {
+  if (perdendoSessao) return
+  perdendoSessao = true
+  try {
+    await salvarToken(null)
+    estado.usuario = null
+    estado.carregada = false
+    consultas.clear()
+    const voltar = router.currentRoute.value.fullPath
+    await router.replace({ name: 'login', query: voltar === '/' ? {} : { voltar } })
+  } finally {
+    perdendoSessao = false
   }
 }

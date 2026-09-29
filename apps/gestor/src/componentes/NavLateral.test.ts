@@ -1,8 +1,15 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { ITENS_NAVEGACAO } from '../navegacao'
+import { rotas } from '../router'
 import NavLateral from './NavLateral.vue'
+
+vi.mock('../api', () => ({
+  api: { GET: vi.fn(), POST: vi.fn() },
+  auth: { signIn: { email: vi.fn() }, signOut: vi.fn() },
+  BASE_API: 'http://api.test',
+}))
 
 async function montar(aprovacoes: number) {
   const router = createRouter({
@@ -54,5 +61,24 @@ describe('sair', () => {
     await nav.find('.gatilho').trigger('click')
     await nav.find('[role="menuitem"]').trigger('click')
     expect(nav.emitted('sair')).toHaveLength(1)
+  })
+})
+
+describe('Detalhe aberto a partir de uma lista', () => {
+  async function navegarPara(caminho: string) {
+    const router = createRouter({ history: createMemoryHistory(), routes: rotas })
+    await router.push(caminho)
+    return mount(NavLateral, {
+      props: { itens: ITENS_NAVEGACAO, aprovacoes: 0, usuario: 'Renata Silva' },
+      global: { plugins: [router] },
+    })
+  }
+  it('pela fila, destaca Aprovações', async () => {
+    expect((await navegarPara('/aprovacoes/a1')).find('.ativo .rotulo').text()).toBe('Aprovações')
+  })
+  it('pela lista, destaca Acionamentos', async () => {
+    expect((await navegarPara('/acionamentos/a1')).find('.ativo .rotulo').text()).toBe(
+      'Acionamentos',
+    )
   })
 })

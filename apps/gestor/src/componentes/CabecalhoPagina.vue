@@ -1,9 +1,20 @@
 <script setup lang="ts">
-defineProps<{ titulo: string; subtitulo?: string; sobretitulo?: string; alturaMinima?: number }>()
+defineProps<{
+  titulo: string
+  subtitulo?: string
+  sobretitulo?: string
+  alturaMinima?: number
+  /** "base" alinha título e ações pela base (cabeçalho do Painel no protótipo). */
+  alinhamento?: 'centro' | 'base'
+}>()
 </script>
 
 <template>
-  <div class="cabecalho" :style="alturaMinima ? { minHeight: `${alturaMinima}px` } : undefined">
+  <div
+    class="cabecalho"
+    :class="{ base: alinhamento === 'base' }"
+    :style="alturaMinima ? { minHeight: `${alturaMinima}px` } : undefined"
+  >
     <div class="textos">
       <div v-if="sobretitulo" class="sobretitulo">{{ sobretitulo }}</div>
       <h1 class="titulo">{{ titulo }}</h1>
@@ -19,6 +30,9 @@ defineProps<{ titulo: string; subtitulo?: string; sobretitulo?: string; alturaMi
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
+}
+.cabecalho.base {
+  align-items: flex-end;
 }
 .textos {
   flex: 1;

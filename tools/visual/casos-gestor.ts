@@ -1,0 +1,148 @@
+import { telaInteira, type Caso, type Passo, type Regiao } from './tipos'
+
+const sidebar: Regiao = { nome: 'sidebar', x: 0, y: 0, largura: 232, altura: 844 }
+const abasGestor: Regiao = { nome: 'abas', x: 0, y: 692, largura: 375, altura: 76 }
+const cabecalhoWeb = (altura: number): Regiao => ({
+  nome: 'cabecalho',
+  x: 264,
+  y: 28,
+  largura: 480,
+  altura,
+})
+const telaWeb = telaInteira('gw')
+const telaMobile = telaInteira('gm')
+
+/**
+ * Abre um acionamento pelo título a partir de um filtro da lista. O protótipo reaproveita a
+ * rolagem da lista no Detalhe; o segundo clique no título (já no Detalhe) faz o navegador rolar até
+ * ele, e o protótipo e o app ficam os dois no topo.
+ */
+function abrirPeloTitulo(filtro: string, titulo: string): Passo[] {
+  return [{ clicar: filtro }, { clicar: titulo, papel: 'text' }, { clicar: titulo, papel: 'text' }]
+}
+
+const DETALHES = [
+  { caso: 'aguardando', filtro: 'Aguardando 3', titulo: 'Revisão elétrica e troca de disjuntor' },
+  { caso: 'reprovado', filtro: 'Reprovados 2', titulo: 'Revisão elétrica anual' },
+  { caso: 'aprovado', filtro: 'Finalizados 57', titulo: 'Reparo no forro da sala' },
+  { caso: 'inviavel', filtro: 'Finalizados 57', titulo: 'Ponto de luz na garagem' },
+]
+
+const casosDetalhe: Caso[] = (['gw', 'gm'] as const).flatMap((modo) =>
+  DETALHES.map((d) => ({
+    nome: `gestor-${modo === 'gw' ? 'web' : 'mobile'}-detalhe-${d.caso}`,
+    modo,
+    navegarPrototipo: 'Acionamentos',
+    app: 'gestor' as const,
+    rota: '/acionamentos',
+    passos: abrirPeloTitulo(d.filtro, d.titulo),
+    regioes: [telaInteira(modo)],
+  })),
+)
+
+export const CASOS_GESTOR: Caso[] = [
+  {
+    nome: 'gestor-web-painel',
+    modo: 'gw',
+    app: 'gestor',
+    rota: '/painel',
+    regioes: [sidebar, cabecalhoWeb(56)],
+  },
+  {
+    nome: 'gestor-web-acionamentos',
+    modo: 'gw',
+    navegarPrototipo: 'Acionamentos',
+    app: 'gestor',
+    rota: '/acionamentos',
+    regioes: [telaWeb],
+  },
+  {
+    nome: 'gestor-web-acionamentos-aguardando',
+    modo: 'gw',
+    navegarPrototipo: 'Acionamentos',
+    app: 'gestor',
+    rota: '/acionamentos',
+    passos: [{ clicar: 'Aguardando 3' }],
+    regioes: [telaWeb],
+  },
+  {
+    nome: 'gestor-web-novo-acionamento',
+    modo: 'gw',
+    navegarPrototipo: 'Acionamentos',
+    app: 'gestor',
+    rota: '/acionamentos',
+    passos: [{ clicar: 'Novo acionamento' }],
+    regioes: [telaWeb],
+  },
+  {
+    nome: 'gestor-web-novo-acionamento-tipos',
+    modo: 'gw',
+    navegarPrototipo: 'Acionamentos',
+    app: 'gestor',
+    rota: '/acionamentos',
+    passos: [
+      { clicar: 'Novo acionamento' },
+      { clicar: 'Vazamento' },
+      { clicar: 'Reparo em gesso' },
+    ],
+    regioes: [telaWeb],
+  },
+  {
+    nome: 'gestor-web-aprovacoes',
+    modo: 'gw',
+    navegarPrototipo: 'Aprovações',
+    app: 'gestor',
+    rota: '/aprovacoes',
+    regioes: [telaWeb],
+  },
+  // O subtítulo "N ativos de M" depende de dados de prestadores: o cabeçalho entra quando a tela for implementada.
+  {
+    nome: 'gestor-web-prestadores',
+    modo: 'gw',
+    navegarPrototipo: 'Prestadores',
+    app: 'gestor',
+    rota: '/prestadores',
+    regioes: [sidebar],
+  },
+  {
+    nome: 'gestor-web-checklists',
+    modo: 'gw',
+    navegarPrototipo: 'Checklists',
+    app: 'gestor',
+    rota: '/checklists',
+    regioes: [sidebar, cabecalhoWeb(56)],
+  },
+  {
+    nome: 'gestor-mobile-painel',
+    modo: 'gm',
+    app: 'gestor',
+    rota: '/painel',
+    regioes: [abasGestor, { nome: 'cabecalho', x: 16, y: 16, largura: 300, altura: 52 }],
+  },
+  {
+    nome: 'gestor-mobile-aprovacoes',
+    modo: 'gm',
+    navegarPrototipo: 'Aprovações',
+    app: 'gestor',
+    rota: '/aprovacoes',
+    regioes: [telaMobile],
+  },
+  {
+    nome: 'gestor-mobile-acionamentos',
+    modo: 'gm',
+    navegarPrototipo: 'Acionamentos',
+    app: 'gestor',
+    rota: '/acionamentos',
+    regioes: [telaMobile],
+  },
+  {
+    nome: 'gestor-mobile-acionamentos-aguardando',
+    modo: 'gm',
+    navegarPrototipo: 'Acionamentos',
+    app: 'gestor',
+    rota: '/acionamentos',
+    passos: [{ clicar: 'Aguardando 3' }],
+    regioes: [telaMobile],
+  },
+  ...casosDetalhe,
+]

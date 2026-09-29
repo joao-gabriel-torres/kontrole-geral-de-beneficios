@@ -140,6 +140,576 @@
           "reprovado",
           "aprovado"
         ]
+      },
+      "ResumoAcionamento": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "cliente": {
+            "type": "string"
+          },
+          "endereco": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string"
+          },
+          "inicio": {
+            "type": "string"
+          },
+          "fim": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "aberto",
+              "em_andamento",
+              "aguardando",
+              "reprovado",
+              "aprovado"
+            ]
+          },
+          "inviavel": {
+            "type": "boolean"
+          },
+          "prestador": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "nome": {
+                "type": "string"
+              },
+              "cor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "nome",
+              "cor"
+            ]
+          },
+          "tipos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "nome": {
+                  "type": "string"
+                },
+                "cor": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "nome",
+                "cor"
+              ]
+            }
+          },
+          "etapas": {
+            "type": "object",
+            "properties": {
+              "feitas": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "feitas",
+              "total"
+            ]
+          },
+          "ultimoEnvioEm": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "codigo",
+          "titulo",
+          "cliente",
+          "endereco",
+          "data",
+          "inicio",
+          "fim",
+          "status",
+          "inviavel",
+          "prestador",
+          "tipos",
+          "etapas",
+          "ultimoEnvioEm"
+        ]
+      },
+      "DetalheAcionamento": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ResumoAcionamento"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "criadoEm": {
+                "type": "string"
+              },
+              "iniciadoEm": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "comentarioConclusao": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "regras": {
+                "type": "object",
+                "properties": {
+                  "photoMin": {
+                    "type": "integer"
+                  },
+                  "requireAllSteps": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "photoMin",
+                  "requireAllSteps"
+                ]
+              },
+              "demandas": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "tipoNome": {
+                      "type": "string"
+                    },
+                    "cor": {
+                      "type": "string"
+                    },
+                    "etapas": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "texto": {
+                            "type": "string"
+                          },
+                          "feita": {
+                            "type": "boolean"
+                          },
+                          "comentario": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "fotos": {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/Foto"
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "texto",
+                          "feita",
+                          "comentario",
+                          "fotos"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "tipoNome",
+                    "cor",
+                    "etapas"
+                  ]
+                }
+              },
+              "fotosConclusao": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Foto"
+                }
+              },
+              "inviabilidade": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "comentario": {
+                    "type": "string"
+                  },
+                  "fotos": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Foto"
+                    }
+                  }
+                },
+                "required": [
+                  "comentario",
+                  "fotos"
+                ]
+              },
+              "revisoes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "decisao": {
+                      "type": "string",
+                      "enum": [
+                        "aprovado",
+                        "reprovado"
+                      ]
+                    },
+                    "motivo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "em": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "decisao",
+                    "motivo",
+                    "em"
+                  ]
+                }
+              },
+              "eventos": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "tipo": {
+                      "type": "string",
+                      "enum": [
+                        "criado",
+                        "iniciado",
+                        "enviado",
+                        "inviabilidade_enviada",
+                        "aprovado",
+                        "reprovado"
+                      ]
+                    },
+                    "em": {
+                      "type": "string"
+                    },
+                    "motivo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "tipo",
+                    "em",
+                    "motivo"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "criadoEm",
+              "iniciadoEm",
+              "comentarioConclusao",
+              "regras",
+              "demandas",
+              "fotosConclusao",
+              "inviabilidade",
+              "revisoes",
+              "eventos"
+            ]
+          }
+        ]
+      },
+      "Foto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Caminho assinado; null nas fotos de exemplo"
+          },
+          "cor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cor do bloco das fotos de exemplo"
+          },
+          "horario": {
+            "type": "string"
+          },
+          "tiradaEm": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "cor",
+          "horario",
+          "tiradaEm"
+        ]
+      },
+      "NovoAcionamento": {
+        "type": "object",
+        "properties": {
+          "titulo": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "cliente": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "endereco": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "data": {
+            "type": "string",
+            "format": "date"
+          },
+          "inicio": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "fim": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "tipoIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20
+          },
+          "prestadorId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "titulo",
+          "cliente",
+          "endereco",
+          "data",
+          "inicio",
+          "fim",
+          "tipoIds",
+          "prestadorId"
+        ]
+      },
+      "NovaRevisao": {
+        "type": "object",
+        "properties": {
+          "decisao": {
+            "type": "string",
+            "enum": [
+              "aprovado",
+              "reprovado"
+            ]
+          },
+          "motivo": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "decisao"
+        ]
+      },
+      "TipoDemanda": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "cor": {
+            "type": "string"
+          },
+          "checklist": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "cor",
+          "checklist"
+        ]
+      },
+      "PrestadorOpcao": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "regiao": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "regiao",
+          "cor"
+        ]
+      },
+      "AtualizacaoEtapa": {
+        "type": "object",
+        "properties": {
+          "feita": {
+            "type": "boolean"
+          },
+          "comentario": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
+      },
+      "AtualizacaoConclusao": {
+        "type": "object",
+        "properties": {
+          "comentario": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "comentario"
+        ]
+      },
+      "InicioPrestador": {
+        "type": "object",
+        "properties": {
+          "proximo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResumoAcionamento"
+              },
+              {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              }
+            ]
+          },
+          "hoje": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResumoAcionamento"
+            }
+          },
+          "metricas": {
+            "type": "object",
+            "properties": {
+              "hoje": {
+                "type": "integer"
+              },
+              "noMes": {
+                "type": "integer"
+              },
+              "aprovacao": {
+                "type": "object",
+                "properties": {
+                  "taxa": {
+                    "type": "integer"
+                  },
+                  "dePrimeira": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "taxa",
+                  "dePrimeira"
+                ]
+              },
+              "paraCorrigir": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "hoje",
+              "noMes",
+              "aprovacao",
+              "paraCorrigir"
+            ]
+          },
+          "rotaDoDia": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "proximo",
+          "hoje",
+          "metricas",
+          "rotaDoDia"
+        ]
       }
     },
     "parameters": {}
@@ -224,6 +794,1168 @@
           },
           "401": {
             "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acionamentos": {
+      "get": {
+        "tags": [
+          "Acionamentos"
+        ],
+        "summary": "Lista (o prestador vê só os seus), do mais recente para o mais antigo",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "aberto",
+                "em_andamento",
+                "aguardando",
+                "reprovado",
+                "finalizados"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "busca",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Acionamentos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumoAcionamento"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Acionamentos"
+        ],
+        "summary": "Cria o acionamento, copiando o checklist de cada tipo",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoAcionamento"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Criado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumoAcionamento"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acionamentos/{id}": {
+      "get": {
+        "tags": [
+          "Acionamentos"
+        ],
+        "summary": "Detalhe com etapas, fotos, revisões e linha do tempo",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalhe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetalheAcionamento"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acionamentos/{id}/revisao": {
+      "post": {
+        "tags": [
+          "Acionamentos"
+        ],
+        "summary": "Aprova ou reprova (reprovar exige motivo)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaRevisao"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Revisado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetalheAcionamento"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Não está aguardando aprovação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Motivo obrigatório",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tipos": {
+      "get": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Tipos de demanda com o checklist",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tipos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TipoDemanda"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores": {
+      "get": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Prestadores ativos (seletor do Novo acionamento)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ativo"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prestadores ativos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PrestadorOpcao"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acionamentos/{id}/iniciar": {
+      "post": {
+        "tags": [
+          "Execução"
+        ],
+        "summary": "Inicia o atendimento",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Acionamento atualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetalheAcionamento"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só o prestador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Status não permite esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acionamentos/{id}/enviar": {
+      "post": {
+        "tags": [
+          "Execução"
+        ],
+        "summary": "Envia para aprovação",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Acionamento atualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetalheAcionamento"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só o prestador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Status não permite esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acionamentos/{id}/etapas/{etapaId}": {
+      "patch": {
+        "tags": [
+          "Execução"
+        ],
+        "summary": "Marca a etapa e/ou grava o comentário",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "etapaId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AtualizacaoEtapa"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Acionamento atualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetalheAcionamento"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só o prestador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Status não permite esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acionamentos/{id}/conclusao": {
+      "patch": {
+        "tags": [
+          "Execução"
+        ],
+        "summary": "Grava o comentário final para o gestor",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AtualizacaoConclusao"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Acionamento atualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetalheAcionamento"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só o prestador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Status não permite esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acionamentos/{id}/fotos": {
+      "post": {
+        "tags": [
+          "Execução"
+        ],
+        "summary": "Envia uma foto da etapa ou da conclusão (JPEG, PNG, WebP ou HEIC, até 10 MB)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "arquivo": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "contexto": {
+                    "type": "string",
+                    "enum": [
+                      "etapa",
+                      "conclusao"
+                    ]
+                  },
+                  "etapaId": {
+                    "type": "string"
+                  },
+                  "tiradaEm": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "contexto"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Foto gravada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Foto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só o prestador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Status não permite esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Foto grande demais",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Arquivo não é imagem",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acionamentos/{id}/fotos/{fotoId}": {
+      "delete": {
+        "tags": [
+          "Execução"
+        ],
+        "summary": "Remove uma foto da etapa ou da conclusão",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "fotoId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Removida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só o prestador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Status não permite esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acionamentos/{id}/inviavel": {
+      "post": {
+        "tags": [
+          "Execução"
+        ],
+        "summary": "Marca como inviável (motivo + pelo menos 1 foto)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "comentario": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "arquivos": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  }
+                },
+                "required": [
+                  "comentario"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Acionamento atualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetalheAcionamento"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só o prestador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Status não permite esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Fotos grandes demais",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Arquivo não é imagem",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestador/inicio": {
+      "get": {
+        "tags": [
+          "Prestador"
+        ],
+        "summary": "Próximo atendimento, agenda de hoje, métricas e rota do dia",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Início",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InicioPrestador"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só o prestador",
             "content": {
               "application/json": {
                 "schema": {

@@ -1,0 +1,91 @@
+import type { components } from '@kgb/api-client'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { computed, toValue, type MaybeRefOrGetter } from 'vue'
+import { api } from '../api'
+import { CHAVES } from '../consultas'
+import { exigir } from '../erros'
+import { statusDaConsulta, type FiltroLista } from './filtros'
+
+export type NovoAcionamento = components['schemas']['NovoAcionamento']
+export type NovaRevisao = components['schemas']['NovaRevisao']
+
+export function usarContagem() {
+  return useQuery({
+    queryKey: CHAVES.contagem,
+    queryFn: ({ signal }) => exigir(api.GET('/api/acionamentos/contagem', { signal })),
+  })
+}
+
+export function usarLista(
+  filtro: MaybeRefOrGetter<FiltroLista>,
+  busca: MaybeRefOrGetter<string> = '',
+) {
+  return useQuery({
+    queryKey: computed(() => CHAVES.lista(toValue(filtro), toValue(busca))),
+    queryFn: ({ queryKey, signal }) =>
+      exigir(
+        api.GET('/api/acionamentos', {
+          params: {
+            query: { status: statusDaConsulta(queryKey[2]), busca: queryKey[3] || undefined },
+          },
+          signal,
+        }),
+      ),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function usarDetalhe(id: MaybeRefOrGetter<string>) {
+  return useQuery({
+    queryKey: computed(() => CHAVES.detalhe(toValue(id))),
+    queryFn: ({ queryKey, signal }) =>
+      exigir(api.GET('/api/acionamentos/{id}', { params: { path: { id: queryKey[2] } }, signal })),
+  })
+}
+
+export function usarTipos() {
+  return useQuery({
+    queryKey: CHAVES.tipos,
+    queryFn: ({ signal }) => exigir(api.GET('/api/tipos', { signal })),
+    staleTime: 60_000,
+  })
+}
+
+export function usarPrestadoresAtivos() {
+  return useQuery({
+    queryKey: CHAVES.prestadoresAtivos,
+    queryFn: ({ signal }) =>
+      exigir(api.GET('/api/prestadores', { params: { query: { status: 'ativo' } }, signal })),
+    staleTime: 60_000,
+  })
+}
+
+export function usarCriarAcionamento() {
+  const consultas = useQueryClient()
+  return useMutation({
+    mutationFn: (corpo: NovoAcionamento) => exigir(api.POST('/api/acionamentos', { body: corpo })),
+    onSuccess: () => {
+      void consultas.invalidateQueries({ queryKey: CHAVES.acionamentos })
+    },
+  })
+}
+
+export function usarRevisao(id: MaybeRefOrGetter<string>) {
+  const consultas = useQueryClient()
+  return useMutation({
+    mutationFn: (corpo: NovaRevisao) =>
+      exigir(
+        api.POST('/api/acionamentos/{id}/revisao', {
+          params: { path: { id: toValue(id) } },
+          body: corpo,
+        }),
+      ),
+    onSuccess: (detalhe) => {
+      consultas.setQueryData(CHAVES.detalhe(detalhe.id), detalhe)
+    },
+    // Com sucesso ou erro (ex.: 409, outra pessoa já decidiu), tudo volta a refletir a API.
+    onSettled: () => {
+      void consultas.invalidateQueries({ queryKey: CHAVES.acionamentos })
+    },
+  })
+}

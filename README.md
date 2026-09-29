@@ -30,6 +30,8 @@ pnpm db:seed
 pnpm dev
 ```
 
+As fotos enviadas pelo app ficam em `var/uploads` (`ARQUIVOS_DIR` no `.env`, fora do git). Em produção, S3 ou Cloudflare R2 entram como outra implementação da interface `Armazenamento` da API, sem mudar os apps.
+
 ### Usuários de desenvolvimento
 
 O seed recria os dados de exemplo do protótipo, com datas relativas ao dia em que roda.
@@ -54,6 +56,7 @@ O seed recria os dados de exemplo do protótipo, com datas relativas ao dia em q
 | `pnpm db:studio`                                  | Abre o Prisma Studio                                                      |
 | `pnpm api:generate`                               | Regenera o OpenAPI e os tipos do cliente depois de mudar a API            |
 | `pnpm visual`                                     | Compara o app com o protótipo pixel a pixel                               |
+| `pnpm e2e`                                        | Roteiro ponta a ponta do fluxo nos dois apps (cria dados no `kgb_dev`)    |
 
 ## Estrutura
 
@@ -86,6 +89,17 @@ As telas precisam ser idênticas ao protótipo em `docs/design/Acionamentos.dc.h
 - `pnpm visual -- --caso=<nome>` compara um caso só.
 - `pnpm visual -- --sanidade` compara o protótipo com ele mesmo e confirma que um deslocamento de 1px é detectado.
 - Ao implementar uma tela, acrescente as regiões dela em `tools/visual/casos.ts`.
+
+## Roteiro ponta a ponta
+
+Com `pnpm dev` rodando, o `pnpm e2e` percorre o fluxo inteiro contra a API real, nos dois apps:
+
+1. A gestora cria um acionamento para o Carlos.
+2. O Carlos o vê no Início e em Demandas, inicia, marca as etapas, anexa fotos, comenta e envia.
+3. A gestora reprova com motivo; o Carlos corrige e reenvia; a gestora aprova.
+4. Um segundo acionamento é marcado como inviável; a gestora recusa, o Carlos marca de novo e a gestora confirma.
+
+O roteiro cria acionamentos novos no `kgb_dev`. Rode `pnpm db:seed` antes de um `pnpm visual`. Em caso de falha, as telas do momento ficam em `tools/visual/.saida/ponta-a-ponta-*.png`.
 
 ## App nativo (prestador)
 

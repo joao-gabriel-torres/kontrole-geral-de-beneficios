@@ -1,0 +1,70 @@
+import { FUSO } from './formatos'
+
+const formatoDia = new Intl.DateTimeFormat('en-CA', {
+  timeZone: FUSO,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+const formatoMomento = new Intl.DateTimeFormat('en-GB', {
+  timeZone: FUSO,
+  day: '2-digit',
+  month: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+})
+
+/** "YYYY-MM-DD" do dia em São Paulo. */
+export function dataISO(d: Date): string {
+  return formatoDia.format(d)
+}
+
+/** "2026-09-28" → "28/09/2026". */
+export function dataBR(iso: string): string {
+  const [ano, mes, dia] = iso.split('-')
+  return `${dia}/${mes}/${ano}`
+}
+
+/** "2026-09-28" → "28/09". */
+export function diaMes(iso: string): string {
+  return dataBR(iso).slice(0, 5)
+}
+
+export function intervalo(inicio: string, fim: string): string {
+  return `${inicio}–${fim}`
+}
+
+/** "Hoje · 10:30–12:30" ou "29/09 · 09:00–10:00" (app do prestador). */
+export function quandoCurto(data: string, inicio: string, fim: string, hoje: string): string {
+  return `${data === hoje ? 'Hoje' : diaMes(data)} · ${intervalo(inicio, fim)}`
+}
+
+/** Instante ISO → "28/09 · 10:05" no fuso de São Paulo (linha do tempo, envios). */
+export function momento(instante: string): string {
+  const partes = Object.fromEntries(
+    formatoMomento.formatToParts(new Date(instante)).map((p) => [p.type, p.value]),
+  )
+  return `${partes.day}/${partes.month} · ${partes.hour}:${partes.minute}`
+}
+
+export function progresso(etapas: { feitas: number; total: number }): {
+  texto: string
+  percentual: number
+} {
+  return {
+    texto: `${etapas.feitas}/${etapas.total}`,
+    percentual: etapas.total ? Math.round((etapas.feitas / etapas.total) * 100) : 0,
+  }
+}
+
+const destino = (endereco: string) =>
+  encodeURIComponent(`${endereco.replace(' · ', ', ')}, São Paulo`)
+
+export function urlMapa(endereco: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${destino(endereco)}`
+}
+
+export function urlRota(enderecos: readonly string[]): string {
+  return `https://www.google.com/maps/dir/${enderecos.map(destino).join('/')}`
+}

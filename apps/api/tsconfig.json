@@ -1,4 +1,5 @@
 {
   "extends": "@kgb/tsconfig/node.json",
-  "include": ["src", "scripts", "test", "vitest.config.ts"]
+  "include": ["src", "scripts", "vitest.config.ts"],
+  "exclude": ["src/**/*.test.ts"]
 }

@@ -1,8 +1,11 @@
+import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { config } from 'dotenv'
 import { z } from 'zod'
 
-config({ path: fileURLToPath(new URL('../../../.env', import.meta.url)), quiet: true })
+const RAIZ = fileURLToPath(new URL('../../../', import.meta.url))
+
+config({ path: resolve(RAIZ, '.env'), quiet: true })
 
 /** Placeholder do .env.example: a API se recusa a subir com ele. */
 const SEGREDO_DE_EXEMPLO = 'troque-por-um-segredo-com-32-caracteres-ou-mais'
@@ -26,6 +29,11 @@ export const EsquemaEnv = z.object({
         .filter(Boolean),
     ),
   PORT: z.coerce.number().int().positive().default(3000),
+  /** Pasta das fotos no dev; caminho relativo é resolvido a partir da raiz do repositório. */
+  ARQUIVOS_DIR: z
+    .string()
+    .default('var/uploads')
+    .transform((pasta) => resolve(RAIZ, pasta)),
 })
 
 export const env = EsquemaEnv.parse(process.env)
