@@ -28,6 +28,13 @@ describe('FormularioLogin', () => {
     await tela.find('form').trigger('submit')
     expect(tela.emitted('enviar')).toBeUndefined()
   })
+  it('mostra o aviso recebido (senha criada pelo convite)', () => {
+    const aviso = 'Senha criada. Entre com seu e-mail e a nova senha.'
+    expect(montar({ aviso }).find('p[role="status"]').text()).toBe(aviso)
+  })
+  it('sem aviso, não mostra a faixa', () => {
+    expect(montar().find('p[role="status"]').exists()).toBe(false)
+  })
   it('mostra o erro recebido', () => {
     expect(montar({ erro: 'E-mail ou senha incorretos' }).find('p[role="alert"]').text()).toBe(
       'E-mail ou senha incorretos',
