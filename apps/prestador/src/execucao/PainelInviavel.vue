@@ -30,11 +30,26 @@ function limpar() {
   comentario.value = ''
 }
 
+const painel = ref<HTMLElement>()
+/** Quem tinha o foco ao abrir ("Marcar como inviável"): recebe o foco de volta ao fechar. */
+let focoAnterior: HTMLElement | null = null
+
+// Depois do DOM atualizado: ao abrir, o painel já existe; ao fechar, a tela por trás já saiu do
+// `inert` (um elemento inerte não recebe foco).
 watch(
   () => props.aberto,
   (aberto) => {
-    if (!aberto) limpar()
+    if (aberto) {
+      focoAnterior = document.activeElement instanceof HTMLElement ? document.activeElement : null
+      // O painel, e não o textarea: o foco no textarea muda a borda dele, e o protótipo abre sem.
+      painel.value?.focus()
+    } else {
+      limpar()
+      focoAnterior?.focus()
+      focoAnterior = null
+    }
   },
+  { flush: 'post' },
 )
 onBeforeUnmount(limpar)
 
@@ -66,15 +81,15 @@ function enviar() {
 </script>
 
 <template>
-  <div
-    v-if="aberto"
-    class="sobreposicao"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="titulo-inviavel"
-    @keydown.esc="$emit('fechar')"
-  >
-    <div class="painel">
+  <div v-if="aberto" class="sobreposicao" @keydown.esc="$emit('fechar')">
+    <div
+      ref="painel"
+      class="painel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="titulo-inviavel"
+      tabindex="-1"
+    >
       <div class="alca" />
       <div>
         <div id="titulo-inviavel" class="titulo-painel">Marcar como inviável</div>
@@ -124,6 +139,10 @@ function enviar() {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+/* O painel é o contêiner do diálogo, não um controle: recebe o foco ao abrir, sem contorno. */
+.painel:focus {
+  outline: none;
 }
 .alca {
   width: 40px;
