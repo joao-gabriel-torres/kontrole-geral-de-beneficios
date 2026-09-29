@@ -410,67 +410,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** Cria um tipo de demanda (checklist vazio, cor pela paleta) */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["NovoTipo"];
-                };
-            };
-            responses: {
-                /** @description Tipo de demanda */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["TipoDemanda"];
-                    };
-                };
-                /** @description Sem sessão */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Erro"];
-                    };
-                };
-                /** @description Só para a gestão */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Erro"];
-                    };
-                };
-                /** @description Já existe um tipo com esse nome */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Erro"];
-                    };
-                };
-                /** @description Dados inválidos */
-                422: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Erro"];
-                    };
-                };
-            };
-        };
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -526,7 +466,67 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        /** Credencia um prestador (ativo, desde hoje; não cria login) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DadosPrestador"];
+                };
+            };
+            responses: {
+                /** @description Cadastro do prestador */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrestadorCadastro"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Documento já cadastrado */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Dados inválidos */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -1236,33 +1236,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/painel": {
+    "/api/prestadores/planilha/previa": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** KPIs, volume por dia, reprovações por tipo e ranking do período */
-        get: {
+        get?: never;
+        put?: never;
+        /** Confere a planilha sem gravar: selo de cada linha, resumo e ausentes */
+        post: {
             parameters: {
-                query?: {
-                    /** @description Últimos 7 ou 30 dias */
-                    periodo?: "7" | "30";
-                };
+                query?: never;
                 header?: never;
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "multipart/form-data": {
+                        /**
+                         * Format: binary
+                         * @description .xlsx, .xls ou .csv, até 5 MB
+                         */
+                        arquivo?: string;
+                    };
+                };
+            };
             responses: {
-                /** @description Painel do gestor */
+                /** @description Prévia da importação */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["PainelGestor"];
+                        "application/json": components["schemas"]["PreviaPlanilha"];
                     };
                 };
                 /** @description Sem sessão */
@@ -1283,8 +1292,165 @@ export interface paths {
                         "application/json": components["schemas"]["Erro"];
                     };
                 };
-                /** @description Período inválido */
+                /** @description Planilha acima de 5 MB */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem arquivo, ilegível, sem linhas ou acima de 2000 linhas */
                 422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/prestadores/planilha/importacao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Importa a planilha numa transação (recalcula a prévia) e grava a auditoria */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": {
+                        /**
+                         * Format: binary
+                         * @description .xlsx, .xls ou .csv, até 5 MB
+                         */
+                        arquivo?: string;
+                        /**
+                         * @description Desativa os ativos que não estão na planilha (padrão: false)
+                         * @enum {string}
+                         */
+                        desativarAusentes?: "true" | "false";
+                    };
+                };
+            };
+            responses: {
+                /** @description Contagens aplicadas */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ResultadoImportacao"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Os cadastros mudaram durante a importação */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Planilha acima de 5 MB */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem arquivo, ilegível, sem linhas ou acima de 2000 linhas */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/prestadores/planilha": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Exporta os prestadores não excluídos (credenciados-russo-DD-MM-AAAA.xlsx) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Planilha de credenciados */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1302,7 +1468,115 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/tipos/{id}": {
+    "/api/prestadores/planilha/modelo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Modelo da planilha (modelo-credenciados-russo.xlsx) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Modelo com o cabeçalho e uma linha de exemplo */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/prestadores/cadastro": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Prestadores não excluídos, por nome, com especialidades e carga */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Cadastro */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrestadorCadastro"][];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/prestadores/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1312,7 +1586,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Exclui o tipo (os acionamentos já criados não mudam) */
+        /** Exclui (lógico) quem não tem acionamentos em aberto e derruba a sessão dele */
         delete: {
             parameters: {
                 query?: never;
@@ -1354,7 +1628,7 @@ export interface paths {
                         "application/json": components["schemas"]["Erro"];
                     };
                 };
-                /** @description Tipo não encontrado */
+                /** @description Prestador não encontrado */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -1363,7 +1637,7 @@ export interface paths {
                         "application/json": components["schemas"]["Erro"];
                     };
                 };
-                /** @description Último tipo ativo */
+                /** @description Prestador com acionamentos em aberto */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1376,7 +1650,7 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        /** Renomeia o tipo e/ou grava o checklist inteiro */
+        /** Edita o cadastro (status, cor e data de credenciamento não mudam) */
         patch: {
             parameters: {
                 query?: never;
@@ -1388,17 +1662,17 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["AtualizacaoTipo"];
+                    "application/json": components["schemas"]["DadosPrestador"];
                 };
             };
             responses: {
-                /** @description Tipo de demanda */
+                /** @description Cadastro do prestador */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["TipoDemanda"];
+                        "application/json": components["schemas"]["PrestadorCadastro"];
                     };
                 };
                 /** @description Sem sessão */
@@ -1419,7 +1693,7 @@ export interface paths {
                         "application/json": components["schemas"]["Erro"];
                     };
                 };
-                /** @description Tipo não encontrado */
+                /** @description Prestador não encontrado */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -1428,7 +1702,7 @@ export interface paths {
                         "application/json": components["schemas"]["Erro"];
                     };
                 };
-                /** @description Já existe um tipo com esse nome */
+                /** @description Documento já cadastrado */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1450,7 +1724,7 @@ export interface paths {
         };
         trace?: never;
     };
-    "/api/prestadores/{id}/convite": {
+    "/api/prestadores/{id}/status": {
         parameters: {
             query?: never;
             header?: never;
@@ -1459,11 +1733,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Envia ou reenvia o convite de acesso do prestador por e-mail
-         * @description Cria ou atualiza o usuário do prestador (sem senha) e manda um link de uso único, válido por 7 dias, para ele criar a senha. Invalida os convites anteriores. Quem já tem senha recebe o mesmo convite, que funciona como redefinição.
-         */
-        post: {
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Ativa ou desativa (o switch da lista e o "Desativar" da exclusão) */
+        patch: {
             parameters: {
                 query?: never;
                 header?: never;
@@ -1472,15 +1747,19 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StatusPrestador"];
+                };
+            };
             responses: {
-                /** @description Convite enviado */
+                /** @description Cadastro do prestador */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ConviteEnviado"];
+                        "application/json": components["schemas"]["PrestadorCadastro"];
                     };
                 };
                 /** @description Sem sessão */
@@ -1501,7 +1780,7 @@ export interface paths {
                         "application/json": components["schemas"]["Erro"];
                     };
                 };
-                /** @description Prestador não encontrado ou excluído */
+                /** @description Prestador não encontrado */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -1510,17 +1789,8 @@ export interface paths {
                         "application/json": components["schemas"]["Erro"];
                     };
                 };
-                /** @description Prestador sem e-mail, com e-mail inválido ou usado por outra conta */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Erro"];
-                    };
-                };
-                /** @description O servidor de e-mail não aceitou a mensagem */
-                502: {
+                /** @description Dados inválidos */
+                422: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1530,10 +1800,6 @@ export interface paths {
                 };
             };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
 }
@@ -1682,7 +1948,7 @@ export interface components {
             comentario: string;
         };
         InicioPrestador: {
-            proximo: components["schemas"]["ResumoAcionamento"] | null;
+            proximo: components["schemas"]["ResumoAcionamento"] & (Record<string, never> | null);
             hoje: components["schemas"]["ResumoAcionamento"][];
             metricas: {
                 hoje: number;
@@ -1695,70 +1961,71 @@ export interface components {
             };
             rotaDoDia: string[];
         };
-        PainelGestor: {
-            /** @example 2026-09-29 */
-            hoje: string;
-            periodo: 7 | 30;
-            /** @description Aberto, em execução ou reprovado */
-            emAberto: number;
-            /** @description Atendimentos de hoje não aprovados */
-            paraHoje: number;
-            aguardando: number;
-            aprovacao: {
-                aprovadas: number;
-                total: number;
-            };
-            /**
-             * @description Média de (1º envio − início) em minutos, com fração; null sem dados
-             * @example 106.15
-             */
-            tempoMedioMin: number | null;
-            inviaveis: {
-                quantidade: number;
-                totalPeriodo: number;
-            };
-            volume: {
-                /** @example 2026-09-29 */
-                data: string;
-                total: number;
-                aprovados: number;
+        PreviaPlanilha: {
+            linhas: {
+                /** @description Como veio na planilha (vazio = sem nome) */
+                nome: string;
+                /** @description Como veio na planilha */
+                documento: string;
+                /** @description Nomes como vieram, inclusive os não reconhecidos */
+                especialidades: string[];
+                /** @enum {string} */
+                acao: "novo" | "atualizar" | "erro";
+                /** @enum {string} */
+                selo: "Novo" | "Atualizar" | "Sem nome" | "Documento inválido" | "Duplicado na planilha" | "Telefone inválido";
             }[];
-            reprovacoesPorTipo: {
-                tipoNome: string;
-                reprovacoes: number;
-                demandas: number;
-            }[];
-            ranking: {
-                prestador: {
-                    id: string;
-                    nome: string;
-                    cor: string;
-                };
-                concluidos: number;
-                revisoes: {
-                    aprovadas: number;
-                    total: number;
-                };
-                /**
-                 * @description Média de (1º envio − início) em minutos, com fração; null sem dados
-                 * @example 106.15
-                 */
-                tempoMedioMin: number | null;
+            resumo: {
+                novos: number;
+                atualizados: number;
+                erros: number;
+            };
+            /** @description Ativos cujo documento não está na planilha, na ordem de cadastro */
+            ausentes: {
+                id: string;
+                nome: string;
             }[];
         };
-        NovoTipo: {
+        ResultadoImportacao: {
+            novos: number;
+            atualizados: number;
+            desativados: number;
+        };
+        PrestadorCadastro: {
+            id: string;
             nome: string;
+            /** @description Só dígitos (11 ou 14) */
+            documento: string;
+            /** @description Só dígitos, com DDD */
+            telefone: string;
+            email: string | null;
+            regiao: string | null;
+            /** @enum {string} */
+            status: "ativo" | "inativo";
+            cor: string;
+            /** @description AAAA-MM-DD */
+            credenciadoDesde: string;
+            /** @description Na ordem cadastrada, sem os tipos excluídos */
+            especialidades: {
+                id: string;
+                nome: string;
+            }[];
+            /** @description Acionamentos agendados, em execução, reprovados ou aguardando */
+            emAberto: number;
+            total: number;
         };
-        AtualizacaoTipo: {
-            nome?: string;
-            /** @description O checklist inteiro, na ordem (etapas vazias são descartadas) */
-            checklist?: string[];
+        DadosPrestador: {
+            nome: string;
+            /** @description CPF ou CNPJ, com ou sem máscara */
+            documento: string;
+            telefone: string;
+            email?: string | null;
+            regiao?: string | null;
+            /** @description Ids dos tipos, na ordem escolhida */
+            especialidades: string[];
         };
-        ConviteEnviado: {
-            /** @description E-mail que recebeu o convite e vira o login */
-            email: string;
-            /** @description Validade do link (ISO 8601) */
-            expiraEm: string;
+        StatusPrestador: {
+            /** @enum {string} */
+            status: "ativo" | "inativo";
         };
     };
     responses: never;

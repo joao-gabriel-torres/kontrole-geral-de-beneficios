@@ -641,12 +641,15 @@
         "type": "object",
         "properties": {
           "proximo": {
-            "anyOf": [
+            "allOf": [
               {
                 "$ref": "#/components/schemas/ResumoAcionamento"
               },
               {
-                "type": "null"
+                "type": [
+                  "object",
+                  "null"
+                ]
               }
             ]
           },
@@ -708,242 +711,267 @@
           "rotaDoDia"
         ]
       },
-      "PainelGestor": {
+      "PreviaPlanilha": {
         "type": "object",
         "properties": {
-          "hoje": {
-            "type": "string",
-            "example": "2026-09-29"
-          },
-          "periodo": {
-            "anyOf": [
-              {
-                "type": "number",
-                "enum": [
-                  7
-                ]
+          "linhas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "nome": {
+                  "type": "string",
+                  "description": "Como veio na planilha (vazio = sem nome)"
+                },
+                "documento": {
+                  "type": "string",
+                  "description": "Como veio na planilha"
+                },
+                "especialidades": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Nomes como vieram, inclusive os não reconhecidos"
+                },
+                "acao": {
+                  "type": "string",
+                  "enum": [
+                    "novo",
+                    "atualizar",
+                    "erro"
+                  ]
+                },
+                "selo": {
+                  "type": "string",
+                  "enum": [
+                    "Novo",
+                    "Atualizar",
+                    "Sem nome",
+                    "Documento inválido",
+                    "Duplicado na planilha",
+                    "Telefone inválido"
+                  ]
+                }
               },
-              {
-                "type": "number",
-                "enum": [
-                  30
-                ]
+              "required": [
+                "nome",
+                "documento",
+                "especialidades",
+                "acao",
+                "selo"
+              ]
+            }
+          },
+          "resumo": {
+            "type": "object",
+            "properties": {
+              "novos": {
+                "type": "integer"
+              },
+              "atualizados": {
+                "type": "integer"
+              },
+              "erros": {
+                "type": "integer"
               }
+            },
+            "required": [
+              "novos",
+              "atualizados",
+              "erros"
             ]
+          },
+          "ausentes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "nome": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "nome"
+              ]
+            },
+            "description": "Ativos cujo documento não está na planilha, na ordem de cadastro"
+          }
+        },
+        "required": [
+          "linhas",
+          "resumo",
+          "ausentes"
+        ]
+      },
+      "ResultadoImportacao": {
+        "type": "object",
+        "properties": {
+          "novos": {
+            "type": "integer"
+          },
+          "atualizados": {
+            "type": "integer"
+          },
+          "desativados": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "novos",
+          "atualizados",
+          "desativados"
+        ]
+      },
+      "PrestadorCadastro": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "documento": {
+            "type": "string",
+            "description": "Só dígitos (11 ou 14)"
+          },
+          "telefone": {
+            "type": "string",
+            "description": "Só dígitos, com DDD"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "regiao": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ativo",
+              "inativo"
+            ]
+          },
+          "cor": {
+            "type": "string"
+          },
+          "credenciadoDesde": {
+            "type": "string",
+            "description": "AAAA-MM-DD"
+          },
+          "especialidades": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "nome": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "nome"
+              ]
+            },
+            "description": "Na ordem cadastrada, sem os tipos excluídos"
           },
           "emAberto": {
             "type": "integer",
-            "description": "Aberto, em execução ou reprovado"
+            "description": "Acionamentos agendados, em execução, reprovados ou aguardando"
           },
-          "paraHoje": {
-            "type": "integer",
-            "description": "Atendimentos de hoje não aprovados"
-          },
-          "aguardando": {
+          "total": {
             "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "documento",
+          "telefone",
+          "email",
+          "regiao",
+          "status",
+          "cor",
+          "credenciadoDesde",
+          "especialidades",
+          "emAberto",
+          "total"
+        ]
+      },
+      "DadosPrestador": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 200
           },
-          "aprovacao": {
-            "type": "object",
-            "properties": {
-              "aprovadas": {
-                "type": "integer"
-              },
-              "total": {
-                "type": "integer"
-              }
-            },
-            "required": [
-              "aprovadas",
-              "total"
-            ]
+          "documento": {
+            "type": "string",
+            "maxLength": 40,
+            "description": "CPF ou CNPJ, com ou sem máscara"
           },
-          "tempoMedioMin": {
+          "telefone": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "email": {
             "type": [
-              "number",
+              "string",
               "null"
             ],
-            "description": "Média de (1º envio − início) em minutos, com fração; null sem dados",
-            "example": 106.15
+            "maxLength": 200
           },
-          "inviaveis": {
-            "type": "object",
-            "properties": {
-              "quantidade": {
-                "type": "integer"
-              },
-              "totalPeriodo": {
-                "type": "integer"
-              }
-            },
-            "required": [
-              "quantidade",
-              "totalPeriodo"
-            ]
+          "regiao": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
           },
-          "volume": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "data": {
-                  "type": "string",
-                  "example": "2026-09-29"
-                },
-                "total": {
-                  "type": "integer"
-                },
-                "aprovados": {
-                  "type": "integer"
-                }
-              },
-              "required": [
-                "data",
-                "total",
-                "aprovados"
-              ]
-            }
-          },
-          "reprovacoesPorTipo": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "tipoNome": {
-                  "type": "string"
-                },
-                "reprovacoes": {
-                  "type": "integer"
-                },
-                "demandas": {
-                  "type": "integer"
-                }
-              },
-              "required": [
-                "tipoNome",
-                "reprovacoes",
-                "demandas"
-              ]
-            }
-          },
-          "ranking": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "prestador": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "nome": {
-                      "type": "string"
-                    },
-                    "cor": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "nome",
-                    "cor"
-                  ]
-                },
-                "concluidos": {
-                  "type": "integer"
-                },
-                "revisoes": {
-                  "type": "object",
-                  "properties": {
-                    "aprovadas": {
-                      "type": "integer"
-                    },
-                    "total": {
-                      "type": "integer"
-                    }
-                  },
-                  "required": [
-                    "aprovadas",
-                    "total"
-                  ]
-                },
-                "tempoMedioMin": {
-                  "type": [
-                    "number",
-                    "null"
-                  ],
-                  "description": "Média de (1º envio − início) em minutos, com fração; null sem dados",
-                  "example": 106.15
-                }
-              },
-              "required": [
-                "prestador",
-                "concluidos",
-                "revisoes",
-                "tempoMedioMin"
-              ]
-            }
-          }
-        },
-        "required": [
-          "hoje",
-          "periodo",
-          "emAberto",
-          "paraHoje",
-          "aguardando",
-          "aprovacao",
-          "tempoMedioMin",
-          "inviaveis",
-          "volume",
-          "reprovacoesPorTipo",
-          "ranking"
-        ]
-      },
-      "NovoTipo": {
-        "type": "object",
-        "properties": {
-          "nome": {
-            "type": "string",
-            "maxLength": 500
-          }
-        },
-        "required": [
-          "nome"
-        ]
-      },
-      "AtualizacaoTipo": {
-        "type": "object",
-        "properties": {
-          "nome": {
-            "type": "string",
-            "maxLength": 500
-          },
-          "checklist": {
+          "especialidades": {
             "type": "array",
             "items": {
               "type": "string",
-              "maxLength": 1000
+              "maxLength": 64
             },
-            "maxItems": 100,
-            "description": "O checklist inteiro, na ordem (etapas vazias são descartadas)"
-          }
-        }
-      },
-      "ConviteEnviado": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "description": "E-mail que recebeu o convite e vira o login"
-          },
-          "expiraEm": {
-            "type": "string",
-            "description": "Validade do link (ISO 8601)"
+            "maxItems": 50,
+            "description": "Ids dos tipos, na ordem escolhida"
           }
         },
         "required": [
-          "email",
-          "expiraEm"
+          "nome",
+          "documento",
+          "telefone",
+          "especialidades"
+        ]
+      },
+      "StatusPrestador": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ativo",
+              "inativo"
+            ]
+          }
+        },
+        "required": [
+          "status"
         ]
       }
     },
@@ -1353,79 +1381,6 @@
             }
           }
         }
-      },
-      "post": {
-        "tags": [
-          "Catálogo"
-        ],
-        "summary": "Cria um tipo de demanda (checklist vazio, cor pela paleta)",
-        "security": [
-          {
-            "Bearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NovoTipo"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Tipo de demanda",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TipoDemanda"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sem sessão",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Erro"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Só para a gestão",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Erro"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Já existe um tipo com esse nome",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Erro"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Dados inválidos",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Erro"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/api/prestadores": {
@@ -1478,6 +1433,79 @@
           },
           "403": {
             "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Credencia um prestador (ativo, desde hoje; não cria login)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DadosPrestador"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cadastro do prestador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrestadorCadastro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Documento já cadastrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dados inválidos",
             "content": {
               "application/json": {
                 "schema": {
@@ -2275,41 +2303,41 @@
         }
       }
     },
-    "/api/painel": {
-      "get": {
+    "/api/prestadores/planilha/previa": {
+      "post": {
         "tags": [
-          "Painel"
+          "Prestadores"
         ],
-        "summary": "KPIs, volume por dia, reprovações por tipo e ranking do período",
+        "summary": "Confere a planilha sem gravar: selo de cada linha, resumo e ausentes",
         "security": [
           {
             "Bearer": []
           }
         ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "7",
-                "30"
-              ],
-              "default": "7",
-              "description": "Últimos 7 ou 30 dias"
-            },
-            "required": false,
-            "description": "Últimos 7 ou 30 dias",
-            "name": "periodo",
-            "in": "query"
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "arquivo": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": ".xlsx, .xls ou .csv, até 5 MB"
+                  }
+                }
+              }
+            }
           }
-        ],
+        },
         "responses": {
           "200": {
-            "description": "Painel do gestor",
+            "description": "Prévia da importação",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PainelGestor"
+                  "$ref": "#/components/schemas/PreviaPlanilha"
                 }
               }
             }
@@ -2334,8 +2362,18 @@
               }
             }
           },
+          "413": {
+            "description": "Planilha acima de 5 MB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
           "422": {
-            "description": "Período inválido",
+            "description": "Sem arquivo, ilegível, sem linhas ou acima de 2000 linhas",
             "content": {
               "application/json": {
                 "schema": {
@@ -2347,12 +2385,252 @@
         }
       }
     },
-    "/api/tipos/{id}": {
+    "/api/prestadores/planilha/importacao": {
+      "post": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Importa a planilha numa transação (recalcula a prévia) e grava a auditoria",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "arquivo": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": ".xlsx, .xls ou .csv, até 5 MB"
+                  },
+                  "desativarAusentes": {
+                    "type": "string",
+                    "enum": [
+                      "true",
+                      "false"
+                    ],
+                    "description": "Desativa os ativos que não estão na planilha (padrão: false)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contagens aplicadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoImportacao"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Os cadastros mudaram durante a importação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Planilha acima de 5 MB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Sem arquivo, ilegível, sem linhas ou acima de 2000 linhas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/planilha": {
+      "get": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Exporta os prestadores não excluídos (credenciados-russo-DD-MM-AAAA.xlsx)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Planilha de credenciados",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/planilha/modelo": {
+      "get": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Modelo da planilha (modelo-credenciados-russo.xlsx)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Modelo com o cabeçalho e uma linha de exemplo",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/cadastro": {
+      "get": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Prestadores não excluídos, por nome, com especialidades e carga",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cadastro",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PrestadorCadastro"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/{id}": {
       "patch": {
         "tags": [
-          "Catálogo"
+          "Prestadores"
         ],
-        "summary": "Renomeia o tipo e/ou grava o checklist inteiro",
+        "summary": "Edita o cadastro (status, cor e data de credenciamento não mudam)",
         "security": [
           {
             "Bearer": []
@@ -2373,18 +2651,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AtualizacaoTipo"
+                "$ref": "#/components/schemas/DadosPrestador"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Tipo de demanda",
+            "description": "Cadastro do prestador",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TipoDemanda"
+                  "$ref": "#/components/schemas/PrestadorCadastro"
                 }
               }
             }
@@ -2410,7 +2688,7 @@
             }
           },
           "404": {
-            "description": "Tipo não encontrado",
+            "description": "Prestador não encontrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2420,7 +2698,7 @@
             }
           },
           "409": {
-            "description": "Já existe um tipo com esse nome",
+            "description": "Documento já cadastrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2443,9 +2721,9 @@
       },
       "delete": {
         "tags": [
-          "Catálogo"
+          "Prestadores"
         ],
-        "summary": "Exclui o tipo (os acionamentos já criados não mudam)",
+        "summary": "Exclui (lógico) quem não tem acionamentos em aberto e derruba a sessão dele",
         "security": [
           {
             "Bearer": []
@@ -2504,7 +2782,7 @@
             }
           },
           "404": {
-            "description": "Tipo não encontrado",
+            "description": "Prestador não encontrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2514,7 +2792,7 @@
             }
           },
           "409": {
-            "description": "Último tipo ativo",
+            "description": "Prestador com acionamentos em aberto",
             "content": {
               "application/json": {
                 "schema": {
@@ -2526,13 +2804,12 @@
         }
       }
     },
-    "/api/prestadores/{id}/convite": {
-      "post": {
+    "/api/prestadores/{id}/status": {
+      "patch": {
         "tags": [
           "Prestadores"
         ],
-        "summary": "Envia ou reenvia o convite de acesso do prestador por e-mail",
-        "description": "Cria ou atualiza o usuário do prestador (sem senha) e manda um link de uso único, válido por 7 dias, para ele criar a senha. Invalida os convites anteriores. Quem já tem senha recebe o mesmo convite, que funciona como redefinição.",
+        "summary": "Ativa ou desativa (o switch da lista e o \"Desativar\" da exclusão)",
         "security": [
           {
             "Bearer": []
@@ -2548,13 +2825,23 @@
             "in": "path"
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusPrestador"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "Convite enviado",
+            "description": "Cadastro do prestador",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConviteEnviado"
+                  "$ref": "#/components/schemas/PrestadorCadastro"
                 }
               }
             }
@@ -2580,7 +2867,7 @@
             }
           },
           "404": {
-            "description": "Prestador não encontrado ou excluído",
+            "description": "Prestador não encontrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2589,18 +2876,8 @@
               }
             }
           },
-          "409": {
-            "description": "Prestador sem e-mail, com e-mail inválido ou usado por outra conta",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Erro"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "O servidor de e-mail não aceitou a mensagem",
+          "422": {
+            "description": "Dados inválidos",
             "content": {
               "application/json": {
                 "schema": {

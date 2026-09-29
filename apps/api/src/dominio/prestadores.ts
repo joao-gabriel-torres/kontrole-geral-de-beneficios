@@ -1,0 +1,115 @@
+import { ErroDominio, type StatusAcionamento } from './acionamento'
+import {
+  digitosVerificadoresValidos,
+  soDigitos,
+  telefoneValido,
+  tipoDeDocumento,
+} from './documentos'
+
+/** O que o formulário do cadastro envia (criar e editar). */
+export interface DadosPrestador {
+  nome: string
+  documento: string
+  telefone: string
+  email?: string | null
+  regiao?: string | null
+  especialidades: string[]
+}
+
+/** Como o cadastro é gravado: documento e telefone só com dígitos, opcionais vazios como null. */
+export interface PrestadorNormalizado {
+  nome: string
+  documento: string
+  telefone: string
+  email: string | null
+  regiao: string | null
+  especialidades: string[]
+}
+
+export function normalizarPrestador(d: DadosPrestador): PrestadorNormalizado {
+  const opcional = (texto?: string | null) => texto?.trim() || null
+  return {
+    nome: d.nome.trim(),
+    documento: soDigitos(d.documento),
+    telefone: soDigitos(d.telefone),
+    email: opcional(d.email),
+    regiao: opcional(d.regiao),
+    especialidades: [...new Set(d.especialidades)],
+  }
+}
+
+export interface ContextoValidacao {
+  /** Dígitos do documento já gravado (edição): o mesmo documento não passa pelo DV. */
+  documentoAtual?: string
+  /** Nome de outro prestador não excluído com os mesmos dígitos, se houver. */
+  donoDoDocumento?: string | null
+}
+
+/**
+ * Valida na ordem do protótipo e mostra só o primeiro erro: nome, tamanho do documento,
+ * duplicado, dígitos verificadores (só em documento novo ou alterado; os do seed não passam) e
+ * telefone com DDD.
+ */
+export function validarPrestador(
+  p: PrestadorNormalizado,
+  { documentoAtual, donoDoDocumento }: ContextoValidacao,
+): void {
+  if (!p.nome) throw new ErroDominio('nome_obrigatorio', 'Informe o nome')
+  if (!tipoDeDocumento(p.documento)) {
+    throw new ErroDominio('documento_invalido', 'CPF ou CNPJ inválido')
+  }
+  if (donoDoDocumento) {
+    throw new ErroDominio(
+      'documento_duplicado',
+      `Documento já cadastrado para ${donoDoDocumento}`,
+      409,
+    )
+  }
+  if (p.documento !== documentoAtual && !digitosVerificadoresValidos(p.documento)) {
+    throw new ErroDominio('documento_invalido', 'CPF ou CNPJ inválido')
+  }
+  if (!telefoneValido(p.telefone)) {
+    throw new ErroDominio('telefone_invalido', 'Informe o telefone com DDD')
+  }
+}
+
+/** Status que contam como "em aberto" na tela de Prestadores (inclui o aguardando aprovação). */
+export const STATUS_EM_ABERTO = [
+  'aberto',
+  'em_andamento',
+  'reprovado',
+  'aguardando',
+] as const satisfies readonly StatusAcionamento[]
+
+export interface Carga {
+  emAberto: number
+  total: number
+}
+
+/** "X em aberto · Y no total" de cada prestador, a partir das contagens por status. */
+export function somarCarga(
+  grupos: readonly { prestadorId: string; status: string; quantidade: number }[],
+): Map<string, Carga> {
+  const emAberto: readonly string[] = STATUS_EM_ABERTO
+  const carga = new Map<string, Carga>()
+  for (const g of grupos) {
+    const atual = carga.get(g.prestadorId) ?? { emAberto: 0, total: 0 }
+    atual.total += g.quantidade
+    if (emAberto.includes(g.status)) atual.emAberto += g.quantidade
+    carga.set(g.prestadorId, atual)
+  }
+  return carga
+}
+
+const COLACAO = new Intl.Collator('pt-BR')
+
+/** Ordem da lista do cadastro: por nome, como o `localeCompare` do protótipo. */
+export function ordenarPorNome<T extends { nome: string }>(lista: readonly T[]): T[] {
+  return [...lista].sort((a, b) => COLACAO.compare(a.nome, b.nome))
+}
+
+/** Texto da exclusão bloqueada (modal do protótipo e 409 do DELETE). */
+export function mensagemBloqueio(nome: string, emAberto: number): string {
+  const acionamentos = emAberto === 1 ? 'acionamento' : 'acionamentos'
+  return `${nome} tem ${emAberto} ${acionamentos} em aberto. Desative o cadastro para parar de receber novos, ou conclua os atuais antes de excluir.`
+}

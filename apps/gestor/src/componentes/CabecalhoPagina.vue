@@ -6,6 +6,8 @@ defineProps<{
   alturaMinima?: number
   /** "base" alinha título e ações pela base (cabeçalho do Painel no protótipo). */
   alinhamento?: 'centro' | 'base'
+  /** Espaço entre o título e as ações: 12 (padrão) ou 10 (Prestadores, no protótipo). */
+  espaco?: 10 | 12
 }>()
 </script>
 
@@ -13,7 +15,7 @@ defineProps<{
   <div
     class="cabecalho"
     :class="{ base: alinhamento === 'base' }"
-    :style="alturaMinima ? { minHeight: `${alturaMinima}px` } : undefined"
+    :style="{ gap: `${espaco ?? 12}px`, minHeight: alturaMinima ? `${alturaMinima}px` : undefined }"
   >
     <div class="textos">
       <div v-if="sobretitulo" class="sobretitulo">{{ sobretitulo }}</div>
@@ -29,7 +31,6 @@ defineProps<{
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
 }
 .cabecalho.base {
   align-items: flex-end;
