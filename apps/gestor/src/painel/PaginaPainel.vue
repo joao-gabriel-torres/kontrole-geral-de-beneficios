@@ -55,7 +55,7 @@ onUnmounted(() => clearInterval(relogio))
 
 <template>
   <PaginaGestor :largura="1280" :espaco="20">
-    <div class="topo">
+    <div class="topo" :class="{ compacto: !mdAndUp }">
       <CabecalhoPagina :sobretitulo="hoje" titulo="Seu painel" alinhamento="base">
         <template #acoes>
           <SeletorPeriodo v-model="periodoPainel" />
@@ -98,6 +98,13 @@ onUnmounted(() => clearInterval(relogio))
   position: absolute;
   top: 0;
   right: 0;
+}
+/* No celular, o avatar fica no canto do cabeçalho: os textos ocupam a 1ª linha inteira, com o
+   espaço do avatar (40 + 12) reservado, e as ações descem para a 2ª em qualquer largura. */
+.topo.compacto :deep(.textos) {
+  flex-basis: 100%;
+  padding-right: 52px;
+  box-sizing: border-box;
 }
 .linha {
   display: flex;

@@ -244,9 +244,17 @@ describe('PaginaPainel', () => {
     expect(router.currentRoute.value.name).toBe('login')
   })
 
+  it('no celular, as ações descem para a linha de baixo e deixam o canto do avatar livre', async () => {
+    // Em 430px, sem a reserva, o "30 dias" sobe para a 1ª linha, embaixo do avatar.
+    telaDe(430)
+    const { tela } = await montar(PaginaPainel, { rota: '/painel' })
+    expect(tela.find('.topo').classes()).toContain('compacto')
+  })
+
   it('no computador, a conta fica só na barra lateral', async () => {
     telaDe(1440)
     const { tela } = await montar(PaginaPainel, { rota: '/painel' })
     expect(tela.find('.conta').exists()).toBe(false)
+    expect(tela.find('.topo').classes()).not.toContain('compacto')
   })
 })
