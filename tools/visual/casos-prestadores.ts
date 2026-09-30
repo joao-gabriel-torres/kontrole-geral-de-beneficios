@@ -33,13 +33,15 @@ function prestadores(nome: string, modo: Modo, passos: Passo[] = []): Caso {
 }
 
 /**
- * Modal Novo/Editar prestador. A linha de e-mail e região ganhou o CEP e o botão de convite (no
- * rótulo do e-mail) a pedido do usuário (30/09): com o CEP, as larguras da linha mudam, então ela
- * toda fica fora da comparação. O resto do modal segue comparado.
+ * Modal Novo/Editar prestador. O corpo do formulário diverge do protótipo a pedido do usuário
+ * (30/09): o endereço pelo CEP vem primeiro, o botão de convite fica no rótulo do e-mail e as
+ * especialidades usam a busca de tipos do Novo acionamento. O corpo fica fora da comparação (no
+ * computador ele tem a altura do protótipo e rola por dentro); o cabeçalho, a linha de erro e os
+ * botões seguem comparados.
  */
 const comModal = (caso: Caso): Caso => ({
   ...caso,
-  ocultarNoApp: ['[aria-labelledby="prestador-titulo"] .contato'],
+  ocultarNoApp: ['[aria-labelledby="prestador-titulo"] .corpo'],
 })
 
 /**
@@ -56,6 +58,10 @@ export const CASOS_PRESTADORES: Caso[] = [
   comModal(
     prestadores('novo-especialidades', 'gw', [
       { clicar: 'Novo prestador' },
+      // No app, o rótulo abre a busca de tipos; no protótipo, o clique não faz nada.
+      { clicar: 'Especialidades', papel: 'text' },
+      // Os tipos são botões nos dois: os chips do protótipo e os itens da lista suspensa do app,
+      // que fica aberta dentro do corpo do modal (mascarado).
       { clicar: 'Vazamento' },
       { clicar: 'Pintura' },
     ]),
