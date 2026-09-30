@@ -1335,6 +1335,43 @@
             ],
             "description": "Só os 8 dígitos"
           },
+          "logradouro": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "numero": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "complemento": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bairro": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cidade": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "uf": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "2 letras maiúsculas"
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -1394,6 +1431,12 @@
           "email",
           "regiao",
           "cep",
+          "logradouro",
+          "numero",
+          "complemento",
+          "bairro",
+          "cidade",
+          "uf",
           "status",
           "cor",
           "credenciadoDesde",
@@ -1485,7 +1528,50 @@
               "null"
             ],
             "maxLength": 20,
-            "description": "8 dígitos, com ou sem hífen"
+            "description": "8 dígitos, com ou sem hífen (422 cep_invalido)"
+          },
+          "logradouro": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 200
+          },
+          "numero": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 20
+          },
+          "complemento": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "bairro": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "cidade": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "uf": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 20,
+            "description": "2 letras; gravada em maiúsculas (422 uf_invalida)"
           },
           "especialidades": {
             "type": "array",
