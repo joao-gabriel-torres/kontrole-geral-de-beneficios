@@ -94,6 +94,35 @@ describe('detectarSeparador', () => {
   })
 })
 
+describe('proteções da importação', () => {
+  it('coluna ausente do cabeçalho não apaga dados: "Atualizar" só sobrescreve o que veio', () => {
+    const p = montarPrevia(
+      [lida({ nome: 'Carlos Mendes', documento: '318.402.117-50' })],
+      EXISTENTES,
+      TIPOS,
+      new Set(['nome', 'documento', 'telefone']),
+    )
+    expect(p.linhas[0]!.selo).toBe('Atualizar')
+    const g = p.gravacoes[0]!
+    for (const campo of ['email', 'regiao', 'especialidades', 'status', 'credenciadoDesde']) {
+      expect(g.dados, campo).not.toHaveProperty(campo)
+    }
+  })
+
+  it('coluna presente com célula vazia continua valendo (a planilha manda apagar)', () => {
+    const p = previa({ nome: 'Carlos Mendes', documento: '318.402.117-50', email: '' })
+    expect(p.gravacoes[0]!.dados).toMatchObject({ email: null, regiao: null })
+  })
+
+  it('linha rejeitada ainda protege o prestador do "desativar quem não está na planilha"', () => {
+    const p = previa({ nome: 'Carlos Mendes', documento: '318.402.117-50', telefone: 'x' })
+    expect(p.linhas[0]!.selo).toBe('Telefone inválido')
+    const ausentes = p.ausentes.map((a) => a.id)
+    expect(ausentes).not.toContain('p1')
+    expect(ausentes).toContain('p2')
+  })
+})
+
 describe('mapearTabela', () => {
   const tabela = (...linhas: (Celula[] | null | undefined)[]) => linhas
 
@@ -276,15 +305,18 @@ describe('montarPrevia', () => {
     ])
   })
 
-  it('resumo e ausentes (ativos fora das linhas válidas, na ordem de cadastro)', () => {
+  it('resumo e ausentes (ativos cujo documento não aparece em NENHUMA linha, na ordem de cadastro)', () => {
     const p = previa(
       { nome: 'Ana', documento: '27415903000144' },
+      // Linhas rejeitadas ainda protegem o prestador: o documento apareceu na planilha.
       { nome: 'Carlos sem telefone', documento: '31840211750', telefone: '' },
       { nome: 'Pedro', documento: '52998224725' },
       { nome: '', documento: '41206557000190' },
     )
     expect(p.resumo).toEqual({ novos: 1, atualizados: 1, erros: 2 })
-    expect(p.ausentes).toEqual([
+    expect(p.ausentes).toEqual([])
+    const soAna = previa({ nome: 'Ana', documento: '27415903000144' })
+    expect(soAna.ausentes).toEqual([
       { id: 'p1', nome: 'Carlos Mendes' },
       { id: 'p6', nome: 'Luciana Prado' },
     ])

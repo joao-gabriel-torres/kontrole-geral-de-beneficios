@@ -12,12 +12,13 @@ import {
   LARGURAS_EXPORTACAO,
   LINHA_MODELO,
   linhasDeExportacao,
-  mapearTabela,
+  mapearTabelaComColunas,
   montarPrevia,
   NOME_MODELO,
   nomeDaExportacao,
   TAMANHO_MAXIMO_PLANILHA,
   type Celula,
+  type Campo,
   type LinhaLida,
   type Previa,
 } from '../dominio/planilha'
@@ -45,6 +46,11 @@ function valorDaCelula(c: XLSX.CellObject | undefined): Celula {
  * Windows-1252), com o separador detectado, e lido só como texto.
  */
 export function lerPlanilha(bytes: Uint8Array): LinhaLida[] {
+  return lerPlanilhaComColunas(bytes).linhas
+}
+
+/** Como `lerPlanilha`, dizendo também quais campos o cabeçalho trouxe. */
+export function lerPlanilhaComColunas(bytes: Uint8Array) {
   let livro: XLSX.WorkBook
   try {
     if (ehBinario(bytes)) {
@@ -64,7 +70,7 @@ export function lerPlanilha(bytes: Uint8Array): LinhaLida[] {
   const aba = livro.Sheets[livro.SheetNames[0] ?? '']
   const dados = aba?.['!data'] ?? []
   // `map` mantém os buracos das linhas e células que não existem na aba.
-  return mapearTabela(dados.map((linha) => linha?.map(valorDaCelula)))
+  return mapearTabelaComColunas(dados.map((linha) => linha?.map(valorDaCelula)))
 }
 
 /** Um .xlsx com a aba "Credenciados", todas as células como texto. */
@@ -84,14 +90,15 @@ export function gerarXlsx(
 type Db = Prisma.TransactionClient | typeof prisma
 
 /** O arquivo enviado no multipart, com o limite de 5 MB. */
-async function lerArquivo(arquivo: unknown): Promise<{ nome: string; linhas: LinhaLida[] }> {
+async function lerArquivo(arquivo: unknown) {
   if (!(arquivo instanceof File)) {
     throw new ErroDominio('arquivo_obrigatorio', 'Envie o arquivo da planilha')
   }
   if (arquivo.size > TAMANHO_MAXIMO_PLANILHA) {
     throw new ErroHttp(413, 'planilha_grande', 'A planilha passa de 5 MB')
   }
-  return { nome: arquivo.name, linhas: lerPlanilha(new Uint8Array(await arquivo.arrayBuffer())) }
+  const { linhas, presentes } = lerPlanilhaComColunas(new Uint8Array(await arquivo.arrayBuffer()))
+  return { nome: arquivo.name, linhas, presentes }
 }
 
 /** Os não excluídos na ordem de cadastro (a ordem dos ausentes e da exportação). */
@@ -100,7 +107,11 @@ const ORDEM_DE_CADASTRO = [
   { id: 'asc' },
 ] satisfies Prisma.PrestadorOrderByWithRelationInput[]
 
-async function previaNoBanco(db: Db, linhas: readonly LinhaLida[]): Promise<Previa> {
+async function previaNoBanco(
+  db: Db,
+  linhas: readonly LinhaLida[],
+  presentes: ReadonlySet<Campo>,
+): Promise<Previa> {
   const [existentes, tipos] = await Promise.all([
     db.prestador.findMany({
       where: { excluidoEm: null },
@@ -109,15 +120,15 @@ async function previaNoBanco(db: Db, linhas: readonly LinhaLida[]): Promise<Prev
     }),
     db.tipoDemanda.findMany({ where: { excluidoEm: null }, select: { id: true, nome: true } }),
   ])
-  return montarPrevia(linhas, existentes, tipos)
+  return montarPrevia(linhas, existentes, tipos, presentes)
 }
 
 export type PreviaPlanilha = Omit<Previa, 'gravacoes'>
 
 /** A conferência: lê o arquivo e calcula os selos, o resumo e os ausentes, sem gravar nada. */
 export async function previaDaPlanilha(arquivo: unknown): Promise<PreviaPlanilha> {
-  const { linhas } = await lerArquivo(arquivo)
-  const { linhas: selos, resumo, ausentes } = await previaNoBanco(prisma, linhas)
+  const { linhas, presentes } = await lerArquivo(arquivo)
+  const { linhas: selos, resumo, ausentes } = await previaNoBanco(prisma, linhas, presentes)
   return { linhas: selos, resumo, ausentes }
 }
 
@@ -139,13 +150,13 @@ export async function importarPlanilha(
   arquivo: unknown,
   opcoes: { desativarAusentes: boolean; autor: UsuarioSessao },
 ): Promise<ResultadoImportacao> {
-  const { nome, linhas } = await lerArquivo(arquivo)
+  const { nome, linhas, presentes } = await lerArquivo(arquivo)
   try {
     return await prisma.$transaction(
       async (tx) => {
         // Uma importação por vez: a segunda espera e recalcula sobre o resultado da primeira.
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('importacao_planilha'))`
-        const previa = await previaNoBanco(tx, linhas)
+        const previa = await previaNoBanco(tx, linhas, presentes)
         const { novos, atualizados, erros } = previa.resumo
         if (novos + atualizados === 0) {
           throw new ErroDominio(
@@ -172,7 +183,7 @@ export async function importarPlanilha(
             id = criado.id
           } else {
             id = g.id
-            atualizadosIds.push(id)
+            if (g.dados.especialidades) atualizadosIds.push(id)
             await tx.prestador.update({
               where: { id },
               data: {
@@ -181,10 +192,11 @@ export async function importarPlanilha(
               },
             })
           }
-          especialidades.forEach((tipoId, ordem) =>
+          especialidades?.forEach((tipoId, ordem) =>
             vinculos.push({ prestadorId: id, tipoId, ordem }),
           )
         }
+        // Sem a coluna de especialidades na planilha, os vínculos gravados ficam como estão.
         await tx.prestadorEspecialidade.deleteMany({
           where: { prestadorId: { in: atualizadosIds } },
         })

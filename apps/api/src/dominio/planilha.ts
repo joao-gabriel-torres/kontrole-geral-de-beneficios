@@ -95,7 +95,7 @@ export interface LinhaLida {
   credenciadoDesde: string
 }
 
-type Campo = keyof LinhaLida
+export type Campo = keyof LinhaLida
 
 /** Cabeçalhos aceitos, já normalizados (os do protótipo e "Credenciado desde"). */
 const CAMPOS: Record<string, Campo> = {
@@ -136,6 +136,14 @@ const linhaVazia = (): LinhaLida => ({
 export function mapearTabela(
   tabela: readonly (readonly Celula[] | null | undefined)[],
 ): LinhaLida[] {
+  return mapearTabelaComColunas(tabela).linhas
+}
+
+/** Como `mapearTabela`, dizendo também quais campos o cabeçalho trouxe (para não apagar os outros). */
+export function mapearTabelaComColunas(tabela: readonly (readonly Celula[] | null | undefined)[]): {
+  linhas: LinhaLida[]
+  presentes: ReadonlySet<Campo>
+} {
   const preenchidas = tabela.filter(
     (l): l is readonly Celula[] => !!l && l.some((c) => textoDaCelula(c) !== ''),
   )
@@ -159,7 +167,7 @@ export function mapearTabela(
   if (linhas.length > LIMITE_LINHAS) {
     throw new ErroDominio('planilha_muitas_linhas', `A planilha passa de ${LIMITE_LINHAS} linhas`)
   }
-  return linhas
+  return { linhas, presentes: new Set(colunas.map(([, campo]) => campo)) }
 }
 
 /** "Credenciado desde": DD/MM/AAAA, D/M/AAAA ou AAAA-MM-DD, com dia de calendário válido. */
@@ -209,18 +217,21 @@ export interface LinhaPrevia {
   selo: Selo
 }
 
-/** O que a importação grava de uma linha válida. */
+/**
+ * O que a importação grava de uma linha válida. Campo cuja coluna não veio no cabeçalho fica
+ * ausente (undefined): numa atualização, o valor gravado é mantido; num novo, valem os padrões.
+ */
 export interface DadosImportados {
   nome: string
   documento: string
   telefone: string
-  email: string | null
-  regiao: string | null
+  email?: string | null
+  regiao?: string | null
   /** Ids dos tipos ativos reconhecidos, na ordem da planilha e sem repetição. */
-  especialidades: string[]
-  status: StatusPlanilha
+  especialidades?: string[]
+  status?: StatusPlanilha
   /** AAAA-MM-DD, ou null quando a célula não é uma data válida. */
-  credenciadoDesde: string | null
+  credenciadoDesde?: string | null
 }
 
 export type Gravacao =
@@ -244,15 +255,19 @@ export function montarPrevia(
   lidas: readonly LinhaLida[],
   existentes: readonly PrestadorExistente[],
   tipos: readonly TipoAtivo[],
+  presentes: ReadonlySet<Campo> = new Set(Object.keys(linhaVazia()) as Campo[]),
 ): Previa {
   const porDocumento = new Map(existentes.map((p) => [p.documento, p]))
   const tipoPorNome = new Map(tipos.map((t) => [normalizarTexto(t.nome), t.id]))
   const vistos = new Set<string>()
+  /** Todo documento que apareceu na planilha, mesmo em linha rejeitada: não conta como ausente. */
+  const documentosNaPlanilha = new Set<string>()
   const linhas: LinhaPrevia[] = []
   const gravacoes: Gravacao[] = []
 
   for (const l of lidas) {
     const documento = soDigitos(l.documento)
+    if (documento) documentosNaPlanilha.add(documento)
     const telefone = soDigitos(l.telefone)
     const nomes = l.especialidades
       .split(/[;,/]/)
@@ -286,11 +301,15 @@ export function montarPrevia(
       nome: l.nome,
       documento,
       telefone,
-      email: l.email.trim() || null,
-      regiao: l.regiao || null,
-      especialidades: [...new Set(ids)],
-      status: normalizarTexto(l.status).startsWith('inativ') ? 'inativo' : 'ativo',
-      credenciadoDesde: dataDaPlanilha(l.credenciadoDesde),
+      ...(presentes.has('email') ? { email: l.email.trim() || null } : {}),
+      ...(presentes.has('regiao') ? { regiao: l.regiao || null } : {}),
+      ...(presentes.has('especialidades') ? { especialidades: [...new Set(ids)] } : {}),
+      ...(presentes.has('status')
+        ? { status: normalizarTexto(l.status).startsWith('inativ') ? 'inativo' : 'ativo' }
+        : {}),
+      ...(presentes.has('credenciadoDesde')
+        ? { credenciadoDesde: dataDaPlanilha(l.credenciadoDesde) }
+        : {}),
     }
     gravacoes.push(
       existente ? { acao: 'atualizar', id: existente.id, dados } : { acao: 'novo', dados },
@@ -302,7 +321,7 @@ export function montarPrevia(
     linhas,
     resumo: { novos: contar('novo'), atualizados: contar('atualizar'), erros: contar('erro') },
     ausentes: existentes
-      .filter((p) => p.status === 'ativo' && !vistos.has(p.documento))
+      .filter((p) => p.status === 'ativo' && !documentosNaPlanilha.has(p.documento))
       .map(({ id, nome }) => ({ id, nome })),
     gravacoes,
   }
