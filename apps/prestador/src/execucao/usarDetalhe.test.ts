@@ -163,6 +163,31 @@ describe('usarDetalhe: ordem das respostas no cache', () => {
     expect(estado()).toEqual({ e2: true, e3: false, fotos: 1 })
   })
 
+  it('na sobreposição, a ação de status segura o "ocupado" até o Detalhe novo chegar', async () => {
+    const { acoes, estado } = await montarDetalhe()
+    const patch = adiada()
+    const post = adiada()
+    api.PATCH.mockReturnValueOnce(patch.promessa)
+    api.POST.mockReturnValueOnce(post.promessa)
+    void acoes.marcarEtapa('e2', true)
+    void acoes.enviar()
+    await flushPromises()
+    const getFinal = adiada()
+    api.GET.mockReturnValueOnce(getFinal.promessa)
+    servidor = { e2: true, e3: false, foto: false }
+    post.resolver(ok(retrato({ e2: true })))
+    await flushPromises()
+    // A resposta do envio chegou sobreposta pela marcação: sem o estado final, o botão
+    // "Enviar para aprovação" voltaria ativo com o status antigo (segundo toque daria 409).
+    expect(acoes.ocupado.value).toBe(true)
+    getFinal.resolver(ok(retrato(servidor)))
+    await flushPromises()
+    expect(acoes.ocupado.value).toBe(false)
+    patch.resolver(ok(retrato({ e2: true })))
+    await flushPromises()
+    expect(estado()).toMatchObject({ e2: true, e3: false })
+  })
+
   it('duas marcações sobrepostas e uma falha: o cache termina no estado do servidor', async () => {
     const { acoes, estado } = await montarDetalhe()
     const a = adiada()

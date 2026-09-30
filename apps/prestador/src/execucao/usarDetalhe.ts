@@ -73,17 +73,19 @@ export function usarDetalhe(id: Ref<string>) {
     return useMutation({
       mutationFn: executar,
       onMutate: () => pedidos.abrir(),
-      onSuccess: (detalhe, _args, pedido) => {
+      onSuccess: async (detalhe, _args, pedido) => {
         const chave = CHAVES.detalhe(id.value)
-        if (pedidos.fechar(pedido)) {
+        const sozinho = pedidos.fechar(pedido)
+        if (sozinho) {
           const getEmVoo = cliente.isFetching({ queryKey: chave }) > 0
           cliente.setQueryData(chave, detalhe)
           if (getEmVoo) void buscarDetalhe()
-        } else {
-          void buscarDetalhe()
         }
         invalidarListas()
         if (sucesso) avisar(sucesso)
+        // Sobreposta, a resposta é um retrato incerto: a mutação (e o "ocupado" dos botões de
+        // status) só termina quando o estado final chega, senão o botão reativa com o status antigo.
+        if (!sozinho) await buscarDetalhe()
       },
       onError: (erro, _args, pedido) => {
         pedidos.fechar(pedido)
