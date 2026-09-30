@@ -43,7 +43,13 @@ function servidorFalso(extra: Record<string, unknown> = {}) {
     },
     'POST /api/tipos': (o: OpcoesChamada) => {
       const nome = (o.body as { nome: string }).nome.trim()
-      const tipo = { id: `t${tipos.length + 10}`, nome, cor: '#0069BD', checklist: [] }
+      const tipo: TipoDemanda = {
+        id: `t${tipos.length + 10}`,
+        nome,
+        cor: '#0069BD',
+        categoria: null,
+        checklist: [],
+      }
       tipos = [...tipos, tipo]
       return { data: structuredClone(tipo), status: 201 }
     },
