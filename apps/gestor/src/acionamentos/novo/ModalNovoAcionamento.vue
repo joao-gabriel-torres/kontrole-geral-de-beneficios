@@ -13,6 +13,7 @@ import {
   cepDeReferencia,
   corpoDoFormulario,
   digitosCep,
+  enderecoDoFormulario,
   enderecoDoMapa,
   erroDoCep,
   filtrarPrestadores,
@@ -247,7 +248,7 @@ onUnmounted(() => focoAnterior?.focus())
               id="novo-endereco"
               class="entrada"
               readonly
-              :value="form.assinante?.endereco ?? ''"
+              :value="enderecoDoFormulario(form)"
               placeholder="Escolha o cliente para preencher o endereço"
             />
             <label class="outro-endereco">

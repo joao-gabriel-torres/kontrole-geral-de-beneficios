@@ -3,6 +3,7 @@ import { ASSINANTES, PRESTADORES, TIPOS } from '../../../test/fixtures'
 import {
   alternarTipo,
   cepDeReferencia,
+  cidadeForaDaCapital,
   corpoDoFormulario,
   digitosCep,
   enderecoDoFormulario,
@@ -18,6 +19,7 @@ import {
   previaChecklist,
   rotuloContagem,
   rotuloPrestador,
+  ufDoCep,
   type FormularioAcionamento,
 } from './formulario'
 
@@ -210,6 +212,77 @@ describe('CEP e endereço', () => {
     expect(enderecoDoFormulario(outro)).toBe('Avenida Paulista, 1578, sala 3 · Bela Vista')
     expect(cepDeReferencia(outro)).toBe('01310200')
     expect(cepDeReferencia(outroEndereco({ cep: '0131' }))).toBe('')
+  })
+
+  it.each([
+    ['01310200', 'SP'],
+    ['06010000', 'SP'],
+    ['19999999', 'SP'],
+    ['20040002', 'RJ'],
+    ['29000000', 'ES'],
+    ['30130010', 'MG'],
+    ['40010000', 'BA'],
+    ['49000000', 'SE'],
+    ['50010000', 'PE'],
+    ['57000000', 'AL'],
+    ['58000000', 'PB'],
+    ['59000000', 'RN'],
+    ['60000000', 'CE'],
+    ['64000000', 'PI'],
+    ['65000000', 'MA'],
+    ['66000000', 'PA'],
+    ['68900000', 'AP'],
+    ['69000000', 'AM'],
+    ['69301000', 'RR'],
+    ['69400000', 'AM'],
+    ['69900000', 'AC'],
+    ['70040010', 'DF'],
+    ['72800000', 'GO'],
+    ['73000000', 'DF'],
+    ['73700000', 'GO'],
+    ['76801000', 'RO'],
+    ['77000000', 'TO'],
+    ['78000000', 'MT'],
+    ['79000000', 'MS'],
+    ['80010000', 'PR'],
+    ['88010000', 'SC'],
+    ['90010000', 'RS'],
+    ['00999999', ''],
+    ['0131', ''],
+  ])('a UF sai da faixa de CEP dos Correios: %s → "%s"', (cep, uf) => {
+    expect(ufDoCep(cep)).toBe(uf)
+  })
+
+  it('a cidade só entra no endereço fora da capital, com a UF', () => {
+    expect(cidadeForaDaCapital('Osasco', '06010-000')).toBe('Osasco - SP')
+    expect(cidadeForaDaCapital(' Niterói ', '24020000')).toBe('Niterói - RJ')
+    expect(cidadeForaDaCapital('São Paulo', '01310200')).toBe('')
+    expect(cidadeForaDaCapital('sao paulo', '01310200')).toBe('')
+    expect(cidadeForaDaCapital('', '06010000')).toBe('')
+  })
+
+  it('com outra cidade, o endereço termina com "Cidade - UF"', () => {
+    const base = { logradouro: 'Rua X', numero: '12', complemento: '', bairro: 'Centro' }
+    expect(montarEndereco({ ...base, cidade: 'Osasco - SP' })).toBe(
+      'Rua X, 12 · Centro · Osasco - SP',
+    )
+    expect(montarEndereco({ ...base, bairro: '', cidade: 'Osasco - SP' })).toBe(
+      'Rua X, 12 · Osasco - SP',
+    )
+
+    const osasco = outroEndereco({ cep: '06010-000', ...base, cidade: 'Osasco' })
+    expect(enderecoDoFormulario(osasco)).toBe('Rua X, 12 · Centro · Osasco - SP')
+    expect(enderecoDoMapa({ ...osasco, complemento: 'casa 2' })).toBe(
+      'Rua X, 12 · Centro · Osasco - SP',
+    )
+    expect(corpoDoFormulario(osasco).endereco).toBe('Rua X, 12 · Centro · Osasco - SP')
+
+    // O assinante de outra cidade também: o endereço de exibição da API não traz a cidade.
+    const deOsasco = valido({
+      assinante: { ...aurora, cep: '06010000', cidade: 'Osasco', endereco: 'Rua X, 12 · Centro' },
+    })
+    expect(enderecoDoFormulario(deOsasco)).toBe('Rua X, 12 · Centro · Osasco - SP')
+    expect(enderecoDoMapa(deOsasco)).toBe('Rua X, 12 · Centro · Osasco - SP')
   })
 
   it('o mapa usa o endereço sem o complemento, e só com rua e número', () => {

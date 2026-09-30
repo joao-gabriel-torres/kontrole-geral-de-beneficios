@@ -47,6 +47,7 @@ const ENDERECOS_CEP: Record<string, unknown> = {
     bairro: 'Bela Vista',
     cidade: 'São Paulo',
   },
+  '06010000': { cep: '06010000', logradouro: 'Rua Antônio Agú', bairro: 'Centro', cidade: 'Osasco' },
 }
 function consultarCep(o: OpcoesChamada): RespostaFalsa {
   const endereco = ENDERECOS_CEP[o.params?.path?.cep ?? '']
@@ -319,6 +320,34 @@ describe('ModalNovoAcionamento', () => {
       )
     })
 
+    it('assinante de outra cidade: o endereço mostrado e gravado leva a cidade', async () => {
+      const deOsasco = {
+        ...ASSINANTES[1]!,
+        id: 'a9',
+        nome: 'Condomínio Osasco',
+        cep: '06010000',
+        cidade: 'Osasco',
+        endereco: 'Rua Antônio Agú, 12 · Centro',
+      }
+      simulada = simularApi(api, { ...rotas(), 'GET /api/assinantes': [deOsasco] })
+      const { tela } = await abrir()
+      await escolherCliente(tela, 'Condomínio Osasco')
+      expect(tela.get<HTMLInputElement>('#novo-endereco').element.value).toBe(
+        'Rua Antônio Agú, 12 · Centro · Osasco - SP',
+      )
+      expect(tela.get('a.mapa').attributes('href')).toBe(
+        urlMapa('Rua Antônio Agú, 12 · Centro · Osasco - SP'),
+      )
+      await tela.get('input[placeholder="Ex.: Vazamento no banheiro social"]').setValue('Vazamento')
+      await escolherTipo(tela, 'Vazamento')
+      await tela.get('button.enviar').trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('POST', '/api/acionamentos')[0]!.body).toMatchObject({
+        endereco: 'Rua Antônio Agú, 12 · Centro · Osasco - SP',
+        cep: '06010000',
+      })
+    })
+
     it('a escolha da gestora vale até o CEP mudar', async () => {
       const { tela } = await abrir()
       await escolherCliente(tela, 'Clínica Vida')
@@ -416,6 +445,25 @@ describe('ModalNovoAcionamento', () => {
         assinanteId: 'a1',
         cep: '01310200',
         prestadorId: 'p2',
+      })
+    })
+
+    it('CEP de outra cidade: o endereço gravado e o mapa terminam com "Cidade - UF"', async () => {
+      const { tela } = await abrir()
+      await preencher(tela)
+      await outroEndereco(tela)
+      await tela.get('#novo-cep').setValue('06010000')
+      await aguardar()
+      expect(tela.get<HTMLInputElement>('.cidade input').element.value).toBe('Osasco')
+      await tela.get('.casa input').setValue('12')
+      expect(tela.get('a.mapa').attributes('href')).toBe(
+        urlMapa('Rua Antônio Agú, 12 · Centro · Osasco - SP'),
+      )
+      await tela.get('button.enviar').trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('POST', '/api/acionamentos')[0]!.body).toMatchObject({
+        endereco: 'Rua Antônio Agú, 12 · Centro · Osasco - SP',
+        cep: '06010000',
       })
     })
 

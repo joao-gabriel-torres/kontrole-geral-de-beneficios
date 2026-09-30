@@ -76,29 +76,101 @@ export function erroDoCep(texto: string): string {
   return n > 0 && n < 8 ? MENSAGEM_CEP : ''
 }
 
-/** "Rua Harmonia, 410 · Vila Madalena", no formato do protótipo; o complemento vem após o número. */
+/**
+ * Faixas de CEP por UF (Correios), pelos 5 primeiros dígitos: a consulta de CEP da API devolve a
+ * cidade sem a UF.
+ */
+const FAIXAS_UF: readonly (readonly [inicio: number, fim: number, uf: string])[] = [
+  [1000, 19999, 'SP'],
+  [20000, 28999, 'RJ'],
+  [29000, 29999, 'ES'],
+  [30000, 39999, 'MG'],
+  [40000, 48999, 'BA'],
+  [49000, 49999, 'SE'],
+  [50000, 56999, 'PE'],
+  [57000, 57999, 'AL'],
+  [58000, 58999, 'PB'],
+  [59000, 59999, 'RN'],
+  [60000, 63999, 'CE'],
+  [64000, 64999, 'PI'],
+  [65000, 65999, 'MA'],
+  [66000, 68899, 'PA'],
+  [68900, 68999, 'AP'],
+  [69000, 69299, 'AM'],
+  [69300, 69399, 'RR'],
+  [69400, 69899, 'AM'],
+  [69900, 69999, 'AC'],
+  [70000, 72799, 'DF'],
+  [72800, 72999, 'GO'],
+  [73000, 73699, 'DF'],
+  [73700, 76799, 'GO'],
+  [76800, 76999, 'RO'],
+  [77000, 77999, 'TO'],
+  [78000, 78899, 'MT'],
+  [79000, 79999, 'MS'],
+  [80000, 87999, 'PR'],
+  [88000, 89999, 'SC'],
+  [90000, 99999, 'RS'],
+]
+
+/** A UF de um CEP de 8 dígitos (com ou sem hífen), ou vazio. */
+export function ufDoCep(cep: string): string {
+  const digitos = digitosCep(cep)
+  if (digitos.length !== 8) return ''
+  const prefixo = Number(digitos.slice(0, 5))
+  return FAIXAS_UF.find(([inicio, fim]) => prefixo >= inicio && prefixo <= fim)?.[2] ?? ''
+}
+
+/**
+ * "Osasco - SP": a cidade que vai no fim do endereço quando o CEP é de outra cidade. Na capital
+ * (ou sem cidade), vazio: os endereços de São Paulo continuam sem a cidade.
+ */
+export function cidadeForaDaCapital(cidade: string, cep: string): string {
+  const nome = cidade.trim()
+  if (!nome || normalizarBusca(nome) === 'sao paulo') return ''
+  const uf = ufDoCep(cep)
+  return uf ? `${nome} - ${uf}` : nome
+}
+
+/**
+ * "Rua Harmonia, 410 · Vila Madalena", no formato do protótipo; o complemento vem após o número e,
+ * fora da capital, a cidade vai no fim ("Rua X, 12 · Centro · Osasco - SP").
+ */
 export function montarEndereco(p: {
   logradouro: string
   numero: string
   complemento: string
   bairro: string
+  /** Já no formato "Osasco - SP" (`cidadeForaDaCapital`); vazio na capital. */
+  cidade?: string
 }): string {
   const rua = [p.logradouro, p.numero, p.complemento].map((x) => x.trim()).filter(Boolean)
-  const bairro = p.bairro.trim()
-  return bairro ? `${rua.join(', ')} · ${bairro}` : rua.join(', ')
+  return [rua.join(', '), p.bairro.trim(), p.cidade?.trim() ?? ''].filter(Boolean).join(' · ')
+}
+
+/** O endereço de exibição do assinante, com a cidade no fim quando não é a capital. */
+function enderecoDoAssinante(a: Assinante | null): string {
+  if (!a) return ''
+  const cidade = cidadeForaDaCapital(a.cidade, a.cep)
+  return cidade && !a.endereco.endsWith(cidade) ? `${a.endereco} · ${cidade}` : a.endereco
+}
+
+/** O endereço digitado em outro endereço, com a cidade do CEP (fora da capital). */
+function enderecoDigitado(f: FormularioAcionamento, complemento: string): string {
+  return montarEndereco({ ...f, complemento, cidade: cidadeForaDaCapital(f.cidade, f.cep) })
 }
 
 /** O endereço do atendimento: o do assinante ou o digitado em outro endereço. */
 export function enderecoDoFormulario(f: FormularioAcionamento): string {
-  if (f.outroEndereco) return montarEndereco(f)
-  return f.assinante?.endereco ?? ''
+  if (f.outroEndereco) return enderecoDigitado(f, f.complemento)
+  return enderecoDoAssinante(f.assinante)
 }
 
 /** O endereço para o "Ver no mapa" (sem o complemento), ou vazio enquanto não há rua e número. */
 export function enderecoDoMapa(f: FormularioAcionamento): string {
-  if (!f.outroEndereco) return f.assinante?.endereco ?? ''
+  if (!f.outroEndereco) return enderecoDoAssinante(f.assinante)
   if (!f.logradouro.trim() || !f.numero.trim()) return ''
-  return montarEndereco({ ...f, complemento: '' })
+  return enderecoDigitado(f, '')
 }
 
 /** O CEP em uso (8 dígitos) para ordenar os prestadores, ou vazio. */
