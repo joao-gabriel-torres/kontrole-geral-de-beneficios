@@ -9,6 +9,8 @@ interface OpcoesMontar {
   props?: Record<string, unknown>
   rotas?: RouteRecordRaw[]
   rotaInicial?: string
+  /** Reaproveita o cache de uma montagem anterior (remontar a tela no mesmo app). */
+  cliente?: QueryClient
 }
 
 const vazio = { template: '<div />' }
@@ -30,9 +32,11 @@ export async function montar(componente: Component, opcoes: OpcoesMontar = {}) {
   })
   await router.push(opcoes.rotaInicial ?? '/inicio')
   await router.isReady()
-  const cliente = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  })
+  const cliente =
+    opcoes.cliente ??
+    new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    })
   const wrapper = mount(componente, {
     props: opcoes.props,
     attachTo: document.body,
