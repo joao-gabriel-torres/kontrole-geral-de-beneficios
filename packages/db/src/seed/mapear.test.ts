@@ -81,6 +81,54 @@ describe('mapearDadosPrototipo', () => {
     ).toBe(true)
   })
 
+  it('dá a categoria do spec a cada um dos 8 tipos', () => {
+    expect(seed.tipos.map((t) => [t.nome, t.categoria])).toEqual([
+      ['Vazamento', 'Hidráulica'],
+      ['Revisão elétrica', 'Elétrica'],
+      ['Ponto de luz', 'Elétrica'],
+      ['Troca de disjuntor', 'Elétrica'],
+      ['Pintura', 'Acabamento'],
+      ['Reparo em gesso', 'Acabamento'],
+      ['Limpeza de ar-condicionado', 'Climatização'],
+      ['Chaveiro', 'Segurança'],
+    ])
+  })
+
+  it('deriva um assinante ativo por cliente distinto, com endereço separado e CEP do bairro', () => {
+    expect(seed.assinantes).toHaveLength(14)
+    expect(seed.assinantes[0]).toEqual({
+      id: 'a1',
+      nome: 'Loja Casa Bela',
+      cep: '01304001',
+      logradouro: 'Rua Augusta',
+      numero: '1492',
+      complemento: null,
+      bairro: 'Consolação',
+      cidade: 'São Paulo',
+      status: 'ativo',
+    })
+    expect(new Set(seed.assinantes.map((a) => a.nome)).size).toBe(14)
+    expect(seed.assinantes.every((a) => /^\d{8}$/.test(a.cep))).toBe(true)
+    expect(seed.assinantes.every((a) => a.status === 'ativo')).toBe(true)
+  })
+
+  it('liga cada acionamento ao assinante do cliente', () => {
+    const porNome = new Map(seed.assinantes.map((a) => [a.nome, a.id]))
+    expect(seed.acionamentos.length).toBeGreaterThan(0)
+    expect(seed.acionamentos.every((a) => a.assinanteId === porNome.get(a.cliente!))).toBe(true)
+  })
+
+  it('dá um CEP plausível da região a cada prestador', () => {
+    expect(seed.prestadores.map((p) => p.dados.cep)).toEqual([
+      '05422001',
+      '04010000',
+      '01001000',
+      '05018000',
+      '02011000',
+      '03071000',
+    ])
+  })
+
   it('só a gestora e o prestador de dev recebem senha', () => {
     const comSenha = seed.usuarios
       .filter((u) => u.comSenha)

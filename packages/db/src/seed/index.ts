@@ -11,6 +11,7 @@ export interface ResumoSeed {
   tipos: number
   prestadores: number
   usuarios: number
+  assinantes: number
   acionamentos: number
 }
 
@@ -35,6 +36,7 @@ export async function semear(
       await tx.revisao.deleteMany()
       await tx.eventoAcionamento.deleteMany()
       await tx.acionamento.deleteMany()
+      await tx.assinante.deleteMany()
       await tx.session.deleteMany()
       await tx.account.deleteMany()
       await tx.verification.deleteMany()
@@ -75,6 +77,7 @@ export async function semear(
             password: hash,
           })),
       })
+      await tx.assinante.createMany({ data: dados.assinantes })
       await tx.acionamento.createMany({ data: dados.acionamentos })
       await tx.demanda.createMany({ data: dados.demandas })
       await tx.etapa.createMany({ data: dados.etapas })
@@ -90,6 +93,7 @@ export async function semear(
     tipos: dados.tipos.length,
     prestadores: dados.prestadores.length,
     usuarios: dados.usuarios.length,
+    assinantes: dados.assinantes.length,
     acionamentos: dados.acionamentos.length,
   }
 }
