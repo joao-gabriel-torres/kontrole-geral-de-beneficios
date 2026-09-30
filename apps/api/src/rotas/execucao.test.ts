@@ -266,6 +266,18 @@ describe('fotos', () => {
     expect(await r.json()).toMatchObject({ erro: { codigo: 'nao_encontrado' } })
   })
 
+  it('id com byte nulo responde 404, não 500', async () => {
+    // O Postgres recusa texto com \0 (22021): não pode virar 500 com stack no log.
+    const r = await req(
+      'POST',
+      '/api/acionamentos/a%00b/fotos',
+      carlos,
+      formularioFoto({ contexto: 'conclusao' }),
+    )
+    expect(r.status).toBe(404)
+    expect(await r.json()).toMatchObject({ erro: { codigo: 'nao_encontrado' } })
+  })
+
   it('falha ao gravar a foto: a limpeza não troca o erro original', async () => {
     const id = await novoIniciado()
     const original = new Error('disco cheio')
