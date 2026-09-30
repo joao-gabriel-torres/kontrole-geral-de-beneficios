@@ -196,7 +196,8 @@ Decisão do usuário em 29/09: o acesso de prestadores novos é por **convite po
 
 **Gestor** (depois da integração com a frente de Prestadores):
 - **Toast ao cadastrar com e-mail:** "Prestador cadastrado. Convite enviado para {e-mail}".
-- **No modal Editar:** o botão de texto "Enviar convite de acesso" ou "Reenviar convite", quando há e-mail e o acesso não é `ativo`. Fica logo abaixo do campo de e-mail, no estilo de link do protótipo (`#0069BD`, 13/600). Não aparece para o Carlos do seed, que já tem senha, então o caso visual do Editar não muda.
+- **No modal Editar:** o botão de texto "Enviar convite de acesso" (acesso pendente), "Reenviar convite" (convidado) ou "Redefinir acesso" (ativo, que já tem senha: o convite funciona como redefinição), na linha do rótulo do e-mail, no estilo de link do protótipo (`#0069BD`, 13/600). A linha de e-mail, região e CEP fica fora da comparação visual (`ocultarNoApp`).
+- **Cadastro e login andam juntos:** editar o e-mail (no Editar ou pela planilha) troca o login do usuário vinculado, com a mesma checagem de conflito do convite; remover o e-mail ou excluir o prestador anonimiza o login e derruba sessões e convites.
 
 ## Agenda (prestador)
 
@@ -335,6 +336,8 @@ perfect; no comparador, os casos do modal mascaram a coluna de campos (`ocultarN
 
 ### Prestador por proximidade
 
+- Endereço de outra cidade: gravado com a cidade no fim ("Rua X, 12 · Centro · Osasco - SP"); `urlMapa`/`urlRota` só acrescentam ", São Paulo" quando o endereço não termina em " - UF". CEP inexistente (404) bloqueia o envio; a digitação livre de rua e bairro vale só quando o ViaCEP não responde.
+- "Mais próximo" só é escolhido e rotulado quando o primeiro da lista tem CEP.
 - `Prestador.cep` (opcional). Seed: CEP plausível para a região de cada um. O modal de
   Novo/Editar prestador ganha o campo CEP (mascarado no comparador). A planilha não importa CEP
   por enquanto.
