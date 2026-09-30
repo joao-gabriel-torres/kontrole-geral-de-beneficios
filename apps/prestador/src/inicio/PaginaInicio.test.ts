@@ -35,22 +35,21 @@ const resumo = (id: string, extra: Partial<ResumoAcionamento> = {}): ResumoAcion
   ultimoEnvioEm: null,
   ...extra,
 })
-const inicio = (extra: Partial<InicioPrestador> = {}): InicioPrestador =>
-  ({
-    proximo: resumo('1063'),
-    hoje: [
-      resumo('1062', {
-        inicio: '07:30',
-        titulo: 'Limpeza de ar-condicionado',
-        status: 'aguardando',
-        cliente: 'Clínica Vida',
-      }),
-      resumo('1063'),
-    ],
-    metricas: { hoje: 2, noMes: 7, aprovacao: { taxa: 83, dePrimeira: null }, paraCorrigir: 1 },
-    rotaDoDia: ['Rua Bela Cintra, 1200 · Consolação', 'Av. Paulista, 900 · Bela Vista'],
-    ...extra,
-  }) as InicioPrestador
+const inicio = (extra: Partial<InicioPrestador> = {}): InicioPrestador => ({
+  proximo: resumo('1063'),
+  hoje: [
+    resumo('1062', {
+      inicio: '07:30',
+      titulo: 'Limpeza de ar-condicionado',
+      status: 'aguardando',
+      cliente: 'Clínica Vida',
+    }),
+    resumo('1063'),
+  ],
+  metricas: { hoje: 2, noMes: 7, aprovacao: { taxa: 83, dePrimeira: null }, paraCorrigir: 1 },
+  rotaDoDia: ['Rua Bela Cintra, 1200 · Consolação', 'Av. Paulista, 900 · Bela Vista'],
+  ...extra,
+})
 const ok = (data: unknown) => ({ data, response: new Response(null, { status: 200 }) })
 
 describe('PaginaInicio', () => {
@@ -112,7 +111,7 @@ describe('PaginaInicio', () => {
 
   it('"Em execução agora" quando o próximo já começou', async () => {
     const emExecucao = resumo('1063', { status: 'em_andamento' })
-    api.GET.mockResolvedValue(ok(inicio({ proximo: emExecucao as InicioPrestador['proximo'] })))
+    api.GET.mockResolvedValue(ok(inicio({ proximo: emExecucao })))
     const { wrapper } = await montar(PaginaInicio)
     expect(wrapper.find('.proximo .selo').text()).toBe('Em execução agora')
   })
