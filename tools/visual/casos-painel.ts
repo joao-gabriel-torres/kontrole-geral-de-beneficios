@@ -50,7 +50,11 @@ export const CASOS_PAINEL: Caso[] = [
   web('-fila-detalhe', [rolarAte('Pintura da fachada lateral')]),
   // O rótulo do KPI vem antes dos chips da fila no DOM: o clique nele leva às Aprovações.
   web('-kpi-aprovacoes', [rolarAte('Aguardando aprovação')]),
-  web('-novo-acionamento', [{ clicar: 'Novo acionamento' }]),
+  {
+    ...web('-novo-acionamento', [{ clicar: 'Novo acionamento' }]),
+    // Coluna de campos do Novo acionamento: fora do protótipo a pedido do usuário (30/09).
+    ocultarNoApp: ['[aria-labelledby="novo-titulo"] .campos'],
+  },
   mobile('', [], topoMobile),
   mobile('-graficos', [rolarAte('Reprovações por tipo')]),
   mobile('-fila', [rolarAte('Fila de aprovação')]),

@@ -4,9 +4,17 @@ import { telaInteira, type Caso, type Modo, type Passo } from './tipos'
 const chip = (nome: string): Passo => ({ clicar: nome, inicio: true })
 const BUSCA = 'Buscar por nome, documento, região ou e-mail'
 /**
+ * Especialidades não reconhecidas ficam laranja na conferência (achado de revisão, fora do
+ * protótipo): só esses trechos saem da comparação.
+ */
+const IGNORADAS = ['.especialidades .ignorada']
+
+/**
  * Anexa uma planilha de `fixtures/` e espera a conferência abrir: o clique no título não muda
  * nada, mas aguarda o modal nos dois lados (o protótipo busca o SheetJS na CDN antes de abrir).
  */
+const comIgnoradas = (caso: Caso): Caso => ({ ...caso, ocultarNoApp: IGNORADAS })
+
 const conferir = (arquivo: string): Passo[] => [
   { anexar: arquivo },
   { clicar: 'Conferir importação', papel: 'text' },
@@ -61,16 +69,18 @@ export const CASOS_PRESTADORES: Caso[] = [
   comModal(prestadores('editar', 'gw', [{ clicar: 'Carlos Mendes', papel: 'text' }])),
   prestadores('excluir-bloqueado', 'gw', [{ clicar: 'Excluir' }]),
   prestadores('excluir-livre', 'gw', [chip('Inativos'), { clicar: 'Excluir' }]),
-  prestadores('importar', 'gw', conferir('credenciados.csv')),
-  prestadores('importar-desativar', 'gw', [
-    ...conferir('credenciados.csv'),
-    { clicar: 'Desativar quem não está na planilha', inicio: true },
-  ]),
-  prestadores('importar-completa', 'gw', conferir('credenciados-completa.csv')),
-  prestadores('importar-com-erros', 'gw', conferir('credenciados-com-erros.csv')),
+  comIgnoradas(prestadores('importar', 'gw', conferir('credenciados.csv'))),
+  comIgnoradas(
+    prestadores('importar-desativar', 'gw', [
+      ...conferir('credenciados.csv'),
+      { clicar: 'Desativar quem não está na planilha', inicio: true },
+    ]),
+  ),
+  comIgnoradas(prestadores('importar-completa', 'gw', conferir('credenciados-completa.csv'))),
+  comIgnoradas(prestadores('importar-com-erros', 'gw', conferir('credenciados-com-erros.csv'))),
   prestadores('', 'gm'),
   prestadores('inativos', 'gm', [chip('Inativos')]),
   comModal(prestadores('novo', 'gm', [{ clicar: 'Novo prestador' }])),
   prestadores('excluir-bloqueado', 'gm', [{ clicar: 'Excluir' }]),
-  prestadores('importar', 'gm', conferir('credenciados.csv')),
+  comIgnoradas(prestadores('importar', 'gm', conferir('credenciados.csv'))),
 ]
