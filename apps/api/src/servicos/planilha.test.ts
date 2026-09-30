@@ -85,6 +85,14 @@ describe('lerPlanilha', () => {
     ])
   })
 
+  it('.xlsx: CPF digitado como número volta a ter os zeros à esquerda', () => {
+    const bytes = xlsxDe([
+      ['Nome', 'CPF'],
+      ['Ana', 1234567890],
+    ])
+    expect(lerPlanilha(bytes)[0]).toMatchObject({ nome: 'Ana', documento: '01234567890' })
+  })
+
   it('.xls (Excel 97–2003)', () => {
     const bytes = xlsxDe(
       [

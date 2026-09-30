@@ -185,6 +185,22 @@ describe('mapearTabela', () => {
     expect(linha).toMatchObject({ documento: '31840211750', status: 'true' })
   })
 
+  it('documento que o Excel guardou como número volta a ter os zeros à esquerda', () => {
+    const linhas = mapearTabela(
+      tabela(
+        ['Nome', 'CPF/CNPJ', 'Telefone'],
+        ['CPF', 1234567890, 1134567890],
+        ['CNPJ', 1234567000189, 11912345678],
+        ['Texto', '0123', ''],
+      ),
+    )
+    expect(linhas.map((l) => [l.documento, l.telefone])).toEqual([
+      ['01234567890', '1134567890'],
+      ['01234567000189', '11912345678'],
+      ['0123', ''],
+    ])
+  })
+
   it('linhas nulas antes do cabeçalho são ignoradas', () => {
     const linhas = mapearTabela(tabela(null, undefined, ['Nome'], ['Ana']))
     expect(linhas.map((l) => l.nome)).toEqual(['Ana'])

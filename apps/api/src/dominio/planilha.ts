@@ -117,6 +117,16 @@ const CAMPOS: Record<string, Campo> = {
 
 const textoDaCelula = (c: Celula): string => (c === null || c === undefined ? '' : String(c).trim())
 
+/**
+ * CPF ou CNPJ que o Excel guardou como número perdeu os zeros à esquerda: volta a ter 11 dígitos
+ * (CPF) ou, com 12 ou 13, os 14 do CNPJ. Texto fica como veio.
+ */
+function textoDoDocumento(c: Celula): string {
+  if (typeof c !== 'number' || !Number.isSafeInteger(c) || c < 0) return textoDaCelula(c)
+  const digitos = String(c)
+  return digitos.padStart(digitos.length > 11 ? 14 : 11, '0')
+}
+
 const linhaVazia = (): LinhaLida => ({
   nome: '',
   documento: '',
@@ -157,7 +167,8 @@ export function mapearTabelaComColunas(tabela: readonly (readonly Celula[] | nul
   for (const celulas of resto) {
     const linha = linhaVazia()
     for (const [i, campo] of colunas) {
-      if (!linha[campo]) linha[campo] = textoDaCelula(celulas[i])
+      if (linha[campo]) continue
+      linha[campo] = campo === 'documento' ? textoDoDocumento(celulas[i]) : textoDaCelula(celulas[i])
     }
     if (Object.values(linha).some(Boolean)) linhas.push(linha)
   }
