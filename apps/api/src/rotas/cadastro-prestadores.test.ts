@@ -451,6 +451,43 @@ describe('DELETE /api/prestadores/{id}', () => {
     expect((await excluir('p6')).status).toBe(404)
   })
 
+  it('libera o e-mail e apaga o convite: recredenciar com o mesmo e-mail volta a convidar', async () => {
+    const dados = { ...NOVO, nome: 'Vera Lins', email: 'vera@lins.com' }
+    const antigo = await corpo<Criado>(criar(dados))
+    expect(antigo.convite.situacao).toBe('enviado')
+    const linkAntigo = /\/convite\?token=([\w%-]+)/.exec(caixa.enviados[0].texto)?.[1] ?? ''
+    const usuarioAntigo = await prisma.user.findUniqueOrThrow({
+      where: { prestadorId: antigo.id },
+    })
+
+    expect((await excluir(antigo.id)).status).toBe(200)
+
+    // O usuário fica (os eventos do acionamento apontam para ele), com o e-mail anonimizado.
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: usuarioAntigo.id } })).toMatchObject({
+      email: `excluido+${antigo.id}@invalido.local`,
+      prestadorId: antigo.id,
+    })
+    expect(await prisma.verification.count({ where: { value: usuarioAntigo.id } })).toBe(0)
+    const reuso = await app.request('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'http://localhost:5174' },
+      body: JSON.stringify({
+        newPassword: 'senha-da-vera-1',
+        token: decodeURIComponent(linkAntigo),
+      }),
+    })
+    expect(reuso.status).toBe(400)
+
+    const r = await criar(dados)
+    expect(r.status).toBe(201)
+    const novo = await corpo<Criado>(r)
+    expect(novo.convite).toEqual({ situacao: 'enviado', email: 'vera@lins.com', mensagem: null })
+    expect(novo.acesso).toBe('convidado')
+    expect(await prisma.user.findUniqueOrThrow({ where: { prestadorId: novo.id } })).toMatchObject({
+      email: 'vera@lins.com',
+    })
+  })
+
   it('404 para prestador inexistente', async () => {
     expect((await excluir('nao-existe')).status).toBe(404)
   })

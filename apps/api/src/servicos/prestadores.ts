@@ -16,8 +16,14 @@ import {
   type DadosPrestador,
   type PrestadorNormalizado,
 } from '../dominio/prestadores'
+import { emailDoExcluido } from '../dominio/convites'
 import { ErroHttp, naoEncontrado } from '../erros'
-import { acessosDosPrestadores, enviarConvite, type AcessoPrestador } from './convites'
+import {
+  acessosDosPrestadores,
+  convitesDoUsuario,
+  enviarConvite,
+  type AcessoPrestador,
+} from './convites'
 
 type Db = Prisma.TransactionClient | typeof prisma
 export type StatusPrestador = 'ativo' | 'inativo'
@@ -239,7 +245,9 @@ export async function alterarStatus(
 
 /**
  * Exclusão lógica. Recusa quem tem acionamentos em aberto; senão marca `excluidoEm`, desativa e
- * derruba as sessões do login vinculado (o excluído não entra mais).
+ * encerra o login vinculado: derruba as sessões, apaga os convites e troca o e-mail por um
+ * anônimo. O usuário fica (os eventos dos acionamentos apontam para ele), e o e-mail volta a
+ * valer para um novo credenciamento.
  */
 export async function excluirPrestador(id: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
@@ -258,6 +266,10 @@ export async function excluirPrestador(id: string): Promise<void> {
       where: { id },
       data: { excluidoEm: new Date(), status: 'inativo' },
     })
-    await tx.session.deleteMany({ where: { user: { prestadorId: id } } })
+    const usuario = await tx.user.findUnique({ where: { prestadorId: id }, select: { id: true } })
+    if (!usuario) return
+    await tx.session.deleteMany({ where: { userId: usuario.id } })
+    await tx.verification.deleteMany({ where: convitesDoUsuario(usuario.id) })
+    await tx.user.update({ where: { id: usuario.id }, data: { email: emailDoExcluido(id) } })
   })
 }

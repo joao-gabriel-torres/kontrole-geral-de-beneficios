@@ -38,6 +38,11 @@ export class ErroEnvioConvite extends HTTPException {
   }
 }
 
+/** Os convites (tokens de redefinição do Better Auth) de um usuário. */
+export function convitesDoUsuario(userId: string): Prisma.VerificationWhereInput {
+  return { value: userId, identifier: { startsWith: PREFIXO_CONVITE } }
+}
+
 interface PrestadorTravado {
   nome: string
   email: string | null
@@ -88,9 +93,7 @@ export async function enviarConvite(
             select: { id: true },
           })
 
-      await tx.verification.deleteMany({
-        where: { value: usuario.id, identifier: { startsWith: PREFIXO_CONVITE } },
-      })
+      await tx.verification.deleteMany({ where: convitesDoUsuario(usuario.id) })
       // O mesmo registro que o internalAdapter do Better Auth grava (identificador em texto puro,
       // sem verification.storeIdentifier), mas nesta transação: usa a conexão que segura a trava
       // do prestador, em vez de pedir outra ao pool, e some junto se a transação falhar.
