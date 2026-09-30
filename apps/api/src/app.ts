@@ -10,6 +10,7 @@ import { corpoErro, ErroHttp } from './erros'
 import { sessao } from './middlewares/sessao'
 import { rotasAcionamentos } from './rotas/acionamentos'
 import { rotasArquivos } from './rotas/arquivos'
+import { rotasAssinantes } from './rotas/assinantes'
 import { rotasCadastroPrestadores } from './rotas/cadastro-prestadores'
 import { rotasCatalogo } from './rotas/catalogo'
 import { rotasConvites } from './rotas/convites'
@@ -66,6 +67,7 @@ export function criarApp() {
   app.route('/', rotasSaude)
   app.route('/', rotasMe)
   app.route('/', rotasAcionamentos)
+  app.route('/', rotasAssinantes)
   app.route('/', rotasCatalogo)
   app.route('/', rotasExecucao)
   app.route('/', rotasPrestador)
