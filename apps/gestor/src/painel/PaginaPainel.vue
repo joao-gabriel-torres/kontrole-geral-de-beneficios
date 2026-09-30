@@ -37,6 +37,10 @@ const consultas = useQueryClient()
 const painel = usarPainel(periodoPainel)
 const fila = usarLista('aguardando')
 const erro = computed(() => painel.error.value ?? fila.error.value)
+/** Trocando o período, os números na tela ainda são os do anterior: os blocos ficam marcados. */
+const trocaDePeriodo = computed(() =>
+  painel.isPlaceholderData.value ? { class: 'trocando', 'aria-busy': 'true' as const } : {},
+)
 
 const agora = ref(new Date())
 const hoje = computed(() => dataPorExtenso(agora.value))
@@ -74,16 +78,20 @@ onUnmounted(() => clearInterval(relogio))
         </MenuUsuario>
       </div>
     </div>
-    <!-- Com os números na tela, uma atualização que falha não os tira: a próxima tenta de novo. -->
+    <!-- Com os números na tela, uma atualização que falha não os tira: a próxima tenta de novo,
+         e um aviso discreto conta que os números são os da última resposta boa. -->
     <template v-if="painel.data.value && fila.data.value">
-      <KpisPainel :kpis="kpisDoPainel(painel.data.value)" />
+      <div v-if="erro" class="desatualizado" role="status">
+        {{ mensagemDeErro(erro) }} — mostrando a última atualização.
+      </div>
+      <KpisPainel :kpis="kpisDoPainel(painel.data.value)" v-bind="trocaDePeriodo" />
       <div class="linha">
-        <VolumePeriodo :barras="barrasDoVolume(painel.data.value)" />
-        <ReprovacoesTipo :linhas="linhasDeReprovacao(painel.data.value)" />
+        <VolumePeriodo :barras="barrasDoVolume(painel.data.value)" v-bind="trocaDePeriodo" />
+        <ReprovacoesTipo :linhas="linhasDeReprovacao(painel.data.value)" v-bind="trocaDePeriodo" />
       </div>
       <div class="linha">
         <FilaAprovacao :total="fila.data.value.length" :itens="itensDaFila(fila.data.value)" />
-        <RankingPrestadores :linhas="linhasDoRanking(painel.data.value)" />
+        <RankingPrestadores :linhas="linhasDoRanking(painel.data.value)" v-bind="trocaDePeriodo" />
       </div>
     </template>
     <div v-else-if="erro" class="erro">{{ mensagemDeErro(erro) }}</div>
@@ -118,5 +126,15 @@ onUnmounted(() => clearInterval(relogio))
   text-align: center;
   font-size: 14px;
   color: var(--kgb-terciario);
+}
+/* Aviso discreto: os números continuam na tela, só envelhecem até a próxima resposta boa. */
+.desatualizado {
+  font-size: 13px;
+  text-align: center;
+  color: var(--kgb-terciario);
+}
+/* Blocos com os números do período anterior, enquanto o novo não chega. */
+.trocando {
+  opacity: 0.6;
 }
 </style>

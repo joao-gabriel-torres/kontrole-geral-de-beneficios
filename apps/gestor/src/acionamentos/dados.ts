@@ -37,6 +37,9 @@ export function usarLista(
         ),
       ),
     placeholderData: keepPreviousData,
+    // Voltar do Detalhe restaura a rolagem da lista: o cache vive 30 min sem observadores para a
+    // página não voltar vazia (com o padrão de 5 min, uma leitura longa do Detalhe a coletaria).
+    gcTime: 30 * 60_000,
   })
 }
 
@@ -81,7 +84,9 @@ export function usarCriarAcionamento() {
   return useMutation({
     mutationFn: (corpo: NovoAcionamento) =>
       exigir(comLimite((s) => api.POST('/api/acionamentos', { body: corpo, signal: s }))),
-    onSuccess: () => {
+    // Também no erro: com o tempo esgotado a API pode ter gravado, e a lista precisa mostrar o
+    // acionamento criado antes de a gestora tentar de novo.
+    onSettled: () => {
       void consultas.invalidateQueries({ queryKey: CHAVES.acionamentos })
     },
   })

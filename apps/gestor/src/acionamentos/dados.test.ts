@@ -4,7 +4,7 @@ import { VueQueryPlugin } from '@tanstack/vue-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, type Ref } from 'vue'
 import { aguardar, criarClienteDeTeste } from '../../test/montar'
-import { nuncaResponde, simularApi } from '../../test/api-falsa'
+import { erroApi, nuncaResponde, simularApi } from '../../test/api-falsa'
 import { contagem, detalhe, resumo } from '../../test/fixtures'
 import { api } from '../api'
 import { CHAVES } from '../consultas'
@@ -36,8 +36,19 @@ function montarUso<T>(usar: () => T) {
     },
   })
   const consultas = criarClienteDeTeste()
-  mount(Teste, { global: { plugins: [[VueQueryPlugin, { queryClient: consultas }]] } })
-  return { uso: () => exposto, consultas }
+  const tela = mount(Teste, { global: { plugins: [[VueQueryPlugin, { queryClient: consultas }]] } })
+  return { uso: () => exposto, consultas, tela }
+}
+
+const NOVO: NovoAcionamento = {
+  titulo: 'T',
+  cliente: 'C',
+  endereco: 'E',
+  data: '2026-09-28',
+  inicio: '09:00',
+  fim: '11:00',
+  tipoIds: ['t1'],
+  prestadorId: 'p1',
 }
 
 function montarComposables() {
@@ -83,6 +94,21 @@ describe('composables de acionamentos', () => {
     expect(simulada.chamadas('GET', '/api/acionamentos')).toHaveLength(2)
   })
 
+  it('mesmo com a criação falhando, recarrega contagem e lista (a API pode ter gravado)', async () => {
+    simulada = simularApi(api, {
+      'GET /api/acionamentos/contagem': contagem(),
+      'GET /api/acionamentos': [resumo()],
+      'POST /api/acionamentos/{id}/revisao': detalhe({ status: 'aprovado' }),
+      'POST /api/acionamentos': () => erroApi(500, 'interno', 'Erro interno'),
+    })
+    const { expostos } = montarComposables()
+    await aguardar()
+    await expect(expostos().criar.mutateAsync(NOVO)).rejects.toThrow()
+    await aguardar()
+    expect(simulada.chamadas('GET', '/api/acionamentos/contagem')).toHaveLength(2)
+    expect(simulada.chamadas('GET', '/api/acionamentos')).toHaveLength(2)
+  })
+
   it('depois de criar, recarrega contagem e lista', async () => {
     const { expostos } = montarComposables()
     await aguardar()
@@ -111,16 +137,26 @@ function acompanhar(promessa: Promise<unknown>) {
   return estado
 }
 
-const NOVO: NovoAcionamento = {
-  titulo: 'T',
-  cliente: 'C',
-  endereco: 'E',
-  data: '2026-09-28',
-  inicio: '09:00',
-  fim: '11:00',
-  tipoIds: ['t1'],
-  prestadorId: 'p1',
-}
+describe('cache da lista sem observadores (Detalhe aberto)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('a lista fica 30 min no cache: voltar do Detalhe restaura a rolagem numa página com linhas', async () => {
+    simularApi(api, { 'GET /api/acionamentos': [resumo()] })
+    const { consultas, tela } = montarUso(() => usarLista('aguardando'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(consultas.getQueryData(CHAVES.lista('aguardando', ''))).toBeDefined()
+    tela.unmount()
+    await vi.advanceTimersByTimeAsync(29 * 60_000)
+    expect(consultas.getQueryData(CHAVES.lista('aguardando', ''))).toBeDefined()
+    await vi.advanceTimersByTimeAsync(2 * 60_000)
+    expect(consultas.getQueryData(CHAVES.lista('aguardando', ''))).toBeUndefined()
+  })
+})
 
 describe('tempo limite das chamadas de dados', () => {
   beforeEach(() => {
