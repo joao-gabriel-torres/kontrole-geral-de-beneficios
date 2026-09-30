@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { semear } from '@kgb/db/seed'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { criarCorreioEmMemoria, trocarCorreio, type CorreioEmMemoria } from '../correio'
@@ -40,10 +41,15 @@ async function novoPrestador(
   })
 }
 
+/** Convites do usuário: com hash (`reset-password-sha256:`) e os antigos, em texto puro. */
 const convitesDoUsuario = (userId: string) =>
   prisma.verification.findMany({
-    where: { value: userId, identifier: { startsWith: 'reset-password:' } },
+    where: { value: userId, identifier: { startsWith: 'reset-password' } },
   })
+
+/** O que fica no banco para um token: só o SHA-256 do identificador do Better Auth. */
+const gravado = (token: string) =>
+  `reset-password-sha256:${createHash('sha256').update(`reset-password:${token}`).digest('base64url')}`
 
 /** Token do link do e-mail (texto puro). */
 function tokenDoEmail(texto: string): string {
@@ -87,7 +93,10 @@ describe('enviarConvite', () => {
 
     const convites = await convitesDoUsuario(usuario.id)
     expect(convites).toHaveLength(1)
-    expect(convites[0].identifier).toBe(`reset-password:${tokenDoEmail(email.texto)}`)
+    // O banco guarda só o hash: quem lê a tabela não consegue usar o convite.
+    const token = tokenDoEmail(email.texto)
+    expect(convites[0].identifier).toBe(gravado(token))
+    expect(convites[0].identifier).not.toContain(token)
     expect(convites[0].expiresAt.getTime()).toBe(agora.getTime() + 7 * DIA)
   })
 
@@ -117,7 +126,7 @@ describe('enviarConvite', () => {
     const [primeiro, segundo] = caixa.enviados.map((e) => tokenDoEmail(e.texto))
     expect(primeiro).not.toBe(segundo)
     const convites = await convitesDoUsuario('u-p3')
-    expect(convites.map((c) => c.identifier)).toEqual([`reset-password:${segundo}`])
+    expect(convites.map((c) => c.identifier)).toEqual([gravado(segundo)])
   })
 
   it('prestador inativo recebe convite: ele continua entrando', async () => {
@@ -256,10 +265,34 @@ describe('enviarConvite', () => {
     })
     const convites = await convitesDoUsuario(usuario.id)
     expect(convites).toHaveLength(1)
-    const tokensQueSairam = saiu.map((texto) => `reset-password:${tokenDoEmail(texto)}`)
+    const tokensQueSairam = saiu.map((texto) => gravado(tokenDoEmail(texto)))
     expect(tokensQueSairam).toContain(convites[0].identifier)
     vi.restoreAllMocks()
   })
+
+  it('convite antigo, em texto puro (de antes do hash): conta como convidado e cai no reenvio', async () => {
+    await novoPrestador('p-conv-legado')
+    await enviarConvite('p-conv-legado', GESTOR)
+    const usuario = await prisma.user.findUniqueOrThrow({
+      where: { prestadorId: 'p-conv-legado' },
+    })
+    await prisma.verification.deleteMany({ where: { value: usuario.id } })
+    await prisma.verification.create({
+      data: {
+        id: 'v-conv-legado',
+        identifier: 'reset-password:token-em-texto-puro',
+        value: usuario.id,
+        expiresAt: new Date(Date.now() + DIA),
+      },
+    })
+    expect((await acessosDosPrestadores(['p-conv-legado'])).get('p-conv-legado')).toBe('convidado')
+
+    await enviarConvite('p-conv-legado', GESTOR)
+
+    const novo = tokenDoEmail(caixa.enviados[1].texto)
+    expect((await convitesDoUsuario(usuario.id)).map((c) => c.identifier)).toEqual([gravado(novo)])
+  })
+
   it('servidor de e-mail que não responde: 502 dentro do limite e o token sai', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const mudo = { sendMail: () => new Promise<never>(() => {}) }

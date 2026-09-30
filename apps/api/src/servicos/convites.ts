@@ -7,11 +7,13 @@ import { ErroDominio } from '../dominio/acionamento'
 import {
   emailDoConvite,
   expiracaoDoConvite,
+  identificadorGravado,
   linkDoConvite,
   MENSAGENS_CONVITE,
   momentoDoConvite,
   normalizarEmail,
   PREFIXO_CONVITE,
+  PREFIXO_CONVITE_GRAVADO,
   situacaoDoAcesso,
   verificarConvite,
   type AcessoPrestador,
@@ -36,9 +38,17 @@ export class ErroEnvioConvite extends ErroHttp {
   }
 }
 
+/** Registros de convite: os com hash e os antigos, em texto puro, que valem até vencer. */
+const EH_CONVITE = {
+  OR: [
+    { identifier: { startsWith: PREFIXO_CONVITE_GRAVADO } },
+    { identifier: { startsWith: PREFIXO_CONVITE } },
+  ],
+} satisfies Prisma.VerificationWhereInput
+
 /** Os convites (tokens de redefinição do Better Auth) de um usuário. */
 export function convitesDoUsuario(userId: string): Prisma.VerificationWhereInput {
-  return { value: userId, identifier: { startsWith: PREFIXO_CONVITE } }
+  return { value: userId, ...EH_CONVITE }
 }
 
 /** Outra conta pegou o e-mail entre a conferência e a gravação: o índice único responde. */
@@ -104,7 +114,7 @@ export async function enviarConvite(
     throw new ErroHttp(403, 'sem_permissao', 'Seu papel não tem acesso a este recurso')
   }
   const token = randomBytes(32).toString('base64url')
-  const identificador = `${PREFIXO_CONVITE}${token}`
+  const identificador = identificadorGravado(`${PREFIXO_CONVITE}${token}`)
   const expiraEm = expiracaoDoConvite(agora)
 
   const { nome, email, usuarioId, criadoEm } = await prisma
@@ -139,9 +149,9 @@ export async function enviarConvite(
         select: { createdAt: true },
       })
       const criadoEm = momentoDoConvite(ultimo?.createdAt ?? null, agora)
-      // O mesmo registro que o internalAdapter do Better Auth grava (identificador em texto puro,
-      // sem verification.storeIdentifier), mas nesta transação: usa a conexão que segura a trava
-      // do prestador, em vez de pedir outra ao pool, e some junto se a transação falhar.
+      // O mesmo registro que o internalAdapter do Better Auth grava com o storeIdentifier de
+      // auth.ts (só o hash do identificador), mas nesta transação: usa a conexão que segura a
+      // trava do prestador, em vez de pedir outra ao pool, e some junto se a transação falhar.
       await tx.verification.create({
         data: {
           id: randomUUID(),
@@ -202,8 +212,8 @@ export async function acessosDosPrestadores(
     ? await prisma.verification.findMany({
         where: {
           value: { in: usuarios },
-          identifier: { startsWith: PREFIXO_CONVITE },
           expiresAt: { gt: agora },
+          ...EH_CONVITE,
         },
         select: { value: true },
       })

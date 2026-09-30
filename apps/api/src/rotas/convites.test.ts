@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { mkdtemp, readdir, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -57,6 +58,10 @@ function tokenDoLink(conteudo: string): string {
   if (!token) throw new Error('e-mail sem o link do convite')
   return decodeURIComponent(token)
 }
+
+/** O que fica no banco para um token: só o SHA-256 do identificador do Better Auth. */
+const gravado = (token: string) =>
+  `reset-password-sha256:${createHash('sha256').update(`reset-password:${token}`).digest('base64url')}`
 
 let documentos = 0
 async function prestadorDeTeste(id: string, email: string | null, excluidoEm: Date | null = null) {
@@ -135,10 +140,10 @@ describe('POST /api/prestadores/{id}/convite', () => {
 
     expect(respostas.map((r) => r.status)).toEqual(Array<number>(12).fill(200))
     const convites = await prisma.verification.findMany({
-      where: { value: 'u-p3', identifier: { startsWith: 'reset-password:' } },
+      where: { value: 'u-p3', identifier: { startsWith: 'reset-password' } },
     })
     expect(convites).toHaveLength(1)
-    const enviados = caixa.enviados.map((e) => `reset-password:${tokenDoLink(e.texto)}`)
+    const enviados = caixa.enviados.map((e) => gravado(tokenDoLink(e.texto)))
     expect(enviados).toHaveLength(12)
     expect(enviados).toContain(convites[0].identifier)
   })
@@ -169,6 +174,9 @@ describe('convite ponta a ponta', () => {
     const arquivos = await readdir(pasta)
     expect(arquivos).toHaveLength(1)
     const token = tokenDoLink(await readFile(join(pasta, arquivos[0]), 'utf8'))
+    // O banco guarda só o hash do token.
+    expect(await prisma.verification.count({ where: { identifier: { contains: token } } })).toBe(0)
+    expect(await prisma.verification.count({ where: { identifier: gravado(token) } })).toBe(1)
 
     expect((await tentarEntrar(email, 'senha-da-ana-1')).status).toBe(401)
     const criada = await criarSenha(token, 'senha-da-ana-1')
@@ -217,6 +225,37 @@ describe('convite ponta a ponta', () => {
     expect((await tentarEntrar('contato@marinacosta.com.br', 'senha-da-marina')).status).toBe(200)
   })
 
+  it('o que fica no banco não abre o convite: só o token do e-mail cria a senha', async () => {
+    await convidar('p6')
+    const token = tokenDoLink(caixa.enviados[0].texto)
+    const { identifier } = await prisma.verification.findFirstOrThrow({
+      where: { value: 'u-p6', identifier: { startsWith: 'reset-password' } },
+    })
+    const hash = identifier.slice(identifier.indexOf(':') + 1)
+
+    for (const lido of [identifier, hash, `sha256:${hash}`]) {
+      const r = await criarSenha(lido, 'senha-de-quem-leu-o-banco')
+      expect(r.status).toBe(400)
+      expect(await r.json()).toMatchObject({ code: 'INVALID_TOKEN' })
+    }
+    expect((await criarSenha(token, 'senha-da-luciana')).status).toBe(200)
+    expect((await tentarEntrar('luciana.prado@email.com', 'senha-da-luciana')).status).toBe(200)
+  })
+
+  it('convite antigo, gravado em texto puro antes do hash, ainda cria a senha', async () => {
+    await prisma.verification.create({
+      data: {
+        id: 'v-convite-legado',
+        identifier: 'reset-password:token-legado-do-roberto',
+        value: 'u-p5',
+        expiresAt: new Date(Date.now() + DIA),
+      },
+    })
+
+    expect((await criarSenha('token-legado-do-roberto', 'senha-do-roberto')).status).toBe(200)
+    expect((await tentarEntrar('roberto.alves@email.com', 'senha-do-roberto')).status).toBe(200)
+  })
+
   it('o link anterior deixa de valer depois do reenvio', async () => {
     await convidar('p3')
     await convidar('p3')
@@ -233,7 +272,7 @@ describe('convite ponta a ponta', () => {
       where: {
         id: (
           await prisma.verification.findFirstOrThrow({
-            where: { identifier: `reset-password:${token}` },
+            where: { value: 'u-p5', identifier: { startsWith: 'reset-password' } },
           })
         ).id,
       },

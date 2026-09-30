@@ -1,10 +1,31 @@
+import { createHash } from 'node:crypto'
 import { z } from 'zod'
 import { ErroDominio } from './acionamento'
 
 export const VALIDADE_CONVITE_DIAS = 7
 
-/** O convite usa o formato de redefinição de senha do Better Auth (tabela `verification`). */
+/**
+ * O convite usa a redefinição de senha do Better Auth: o identificador dele é `reset-password:`
+ * seguido do token do link.
+ */
 export const PREFIXO_CONVITE = 'reset-password:'
+
+/**
+ * Prefixo do convite como fica na tabela `verification`: só o hash do identificador, para quem lê
+ * o banco não conseguir usar o link. Tem de ser diferente de `PREFIXO_CONVITE`: depois de procurar
+ * o hash, o Better Auth ainda procura o identificador em texto puro (registros antigos), e um hash
+ * gravado com o mesmo prefixo viraria um token válido para quem o lesse.
+ */
+export const PREFIXO_CONVITE_GRAVADO = 'reset-password-sha256:'
+
+/**
+ * O que se grava para o identificador `reset-password:<token>` (o `storeIdentifier` de auth.ts
+ * chama esta mesma função). O token tem 256 bits aleatórios: SHA-256 sem sal basta.
+ */
+export function identificadorGravado(identificador: string): string {
+  const hash = createHash('sha256').update(identificador).digest('base64url')
+  return `${PREFIXO_CONVITE_GRAVADO}${hash}`
+}
 
 export const ASSUNTO_CONVITE = 'Seu acesso ao app da Russo Assistência'
 
