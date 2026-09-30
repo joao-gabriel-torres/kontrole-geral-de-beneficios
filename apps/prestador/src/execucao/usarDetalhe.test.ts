@@ -1,4 +1,5 @@
 import type { DetalheAcionamento } from '@kgb/api-client'
+import type { QueryClient } from '@tanstack/vue-query'
 import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
@@ -45,7 +46,8 @@ function retrato({ e2 = false, e3 = false, foto = false } = {}): DetalheAcioname
 }
 const foto = { arquivo: new Blob(['j']), tiradaEm: '2026-09-28T15:10:00-03:00' }
 
-async function montarDetalhe() {
+/** `anterior`: o cache de uma montagem anterior (o prestador saiu do Detalhe e voltou). */
+async function montarDetalhe(anterior?: QueryClient) {
   let acoes!: ReturnType<typeof usarDetalhe>
   const Detalhe = defineComponent({
     setup() {
@@ -53,14 +55,14 @@ async function montarDetalhe() {
       return () => h('div')
     },
   })
-  const { cliente } = await montar(Detalhe)
+  const { cliente, wrapper } = await montar(Detalhe, { cliente: anterior })
   const estado = () => {
     const d = cliente.getQueryData<DetalheAcionamento>(CHAVES.detalhe('a1'))!
     const etapas = d.demandas.flatMap((dm) => dm.etapas)
     const e = (id: string) => etapas.find((x) => x.id === id)!
     return { e2: e('e2').feita, e3: e('e3').feita, fotos: e('e2').fotos.length }
   }
-  return { acoes, cliente, estado }
+  return { acoes, cliente, estado, wrapper }
 }
 
 /** Estado no banco: o GET devolve o retrato atual; cada teste faz os "commits" na ordem que quer. */
@@ -102,6 +104,50 @@ describe('usarDetalhe: ordem das respostas no cache', () => {
     a.resolver(ok(retrato({ e2: true })))
     await flushPromises()
     expect(estado()).toMatchObject({ e2: true, e3: true })
+  })
+
+  it('saiu do Detalhe e voltou: a marcação da tela anterior, sobreposta, não desfaz a da nova', async () => {
+    const anterior = await montarDetalhe()
+    const a = adiada()
+    const b = adiada()
+    api.PATCH.mockReturnValueOnce(a.promessa).mockReturnValueOnce(b.promessa)
+    void anterior.acoes.marcarEtapa('e2', true)
+    await flushPromises()
+    // A mutação continua em voo depois de a tela sair; a nova tela é outra instância.
+    anterior.wrapper.unmount()
+    const nova = await montarDetalhe(anterior.cliente)
+    void nova.acoes.marcarEtapa('e3', true)
+    await flushPromises()
+    expect(api.PATCH).toHaveBeenCalledTimes(2)
+    servidor = { e2: true, e3: true, foto: false }
+    b.resolver(ok(retrato({ e2: true, e3: true })))
+    await flushPromises()
+    // A resposta da tela anterior é um retrato de antes do commit de e3 e chega por último.
+    a.resolver(ok(retrato({ e2: true })))
+    await flushPromises()
+    expect(nova.estado()).toMatchObject({ e2: true, e3: true })
+  })
+
+  it('outro acionamento não conta como sobreposição: a marcação sozinha grava sem buscar de novo', async () => {
+    const outro = await montarDetalhe()
+    const emVoo = adiada()
+    api.PATCH.mockReturnValueOnce(emVoo.promessa)
+    void outro.acoes.marcarEtapa('e2', true)
+    await flushPromises()
+    const Outro = defineComponent({
+      setup() {
+        const acoes = usarDetalhe(ref('a2'))
+        void acoes.marcarEtapa('x1', true)
+        return () => h('div')
+      },
+    })
+    api.PATCH.mockImplementationOnce(async () => ok(detalheExemplo({ id: 'a2' })))
+    await montar(Outro, { cliente: outro.cliente })
+    await flushPromises()
+    const gets = api.GET.mock.calls.filter(([, opcoes]) => opcoes.params.path.id === 'a2')
+    expect(gets).toHaveLength(1)
+    emVoo.resolver(ok(retrato({ e2: true })))
+    await flushPromises()
   })
 
   it('um GET do Detalhe que já estava em voo não desfaz a marcação que respondeu antes dele', async () => {
