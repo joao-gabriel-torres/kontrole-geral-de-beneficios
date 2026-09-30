@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { ErroDominio } from './acionamento'
 import {
   chaveDoEndereco,
+  chaveDoPonto,
   consultasDoEndereco,
   dentroDoBrasil,
   ehEnderecoDoAssinante,
   normalizarCoordenadas,
   normalizarEnderecoDeBusca,
+  pontoDaBusca,
   TAMANHO_MAXIMO_ENDERECO,
 } from './localizacao'
 
@@ -96,6 +98,67 @@ describe('normalizarCoordenadas', () => {
         message: 'A localização precisa ficar no Brasil',
       })
     }
+  })
+})
+
+describe('pontoDaBusca', () => {
+  it('lê a latitude e a longitude da busca e arredonda para 6 casas', () => {
+    expect(pontoDaBusca('-23.5671492', ' -46.6644067 ')).toEqual({
+      latitude: -23.567149,
+      longitude: -46.664407,
+    })
+  })
+
+  it('sem uma das duas (ou vazia) é recusado', () => {
+    for (const [latitude, longitude] of [
+      [undefined, undefined],
+      ['-23.5', undefined],
+      [undefined, '-46.6'],
+      ['', '-46.6'],
+      ['-23.5', '  '],
+    ] as const) {
+      const erro = erroDe(() => pontoDaBusca(latitude, longitude))
+      expect(erro, `${latitude}, ${longitude}`).toBeInstanceOf(ErroDominio)
+      expect(erro).toMatchObject({
+        codigo: 'localizacao_invalida',
+        status: 422,
+        message: 'Informe a latitude e a longitude',
+      })
+    }
+  })
+
+  it('o que não é número é recusado', () => {
+    for (const [latitude, longitude] of [
+      ['abc', '-46.6'],
+      ['-23.5', '-46,6'],
+      ['Infinity', '-46.6'],
+    ] as const) {
+      const erro = erroDe(() => pontoDaBusca(latitude, longitude))
+      expect(erro, `${latitude}, ${longitude}`).toBeInstanceOf(ErroDominio)
+      expect(erro).toMatchObject({
+        codigo: 'localizacao_invalida',
+        message: 'Informe a latitude e a longitude em graus decimais',
+      })
+    }
+  })
+
+  it('fora da faixa do Brasil é recusado', () => {
+    const erro = erroDe(() => pontoDaBusca('40.7128', '-74.006'))
+    expect(erro).toBeInstanceOf(ErroDominio)
+    expect(erro).toMatchObject({
+      codigo: 'localizacao_invalida',
+      status: 422,
+      message: 'A localização precisa ficar no Brasil',
+    })
+  })
+})
+
+describe('chaveDoPonto', () => {
+  it('a posição com 6 casas: o mesmo ponto dá a mesma chave', () => {
+    expect(chaveDoPonto({ latitude: -23.5, longitude: -46.6 })).toBe('-23.500000,-46.600000')
+    expect(chaveDoPonto({ latitude: -23.5671492, longitude: -46.6644067 })).toBe(
+      chaveDoPonto({ latitude: -23.567149, longitude: -46.664407 }),
+    )
   })
 })
 

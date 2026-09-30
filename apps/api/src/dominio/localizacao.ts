@@ -50,6 +50,46 @@ export function normalizarCoordenadas(
   return { latitude: arredondar(latitude), longitude: arredondar(longitude) }
 }
 
+/**
+ * O ponto da consulta reversa (o pino movido no mapa), como veio na busca: as duas coordenadas em
+ * graus decimais, dentro do Brasil. Devolve arredondado a 6 casas, como a localização conferida.
+ */
+export function pontoDaBusca(
+  latitude: string | undefined,
+  longitude: string | undefined,
+): Coordenadas {
+  const textos = [latitude?.trim() ?? '', longitude?.trim() ?? '']
+  if (textos.some((t) => !t)) {
+    throw new ErroDominio('localizacao_invalida', 'Informe a latitude e a longitude')
+  }
+  const [lat, lng] = textos.map(Number) as [number, number]
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    throw new ErroDominio(
+      'localizacao_invalida',
+      'Informe a latitude e a longitude em graus decimais',
+    )
+  }
+  return normalizarCoordenadas(lat, lng)!
+}
+
+/** A chave do cache de endereços por ponto: a posição com 6 casas (uns 10 cm). */
+export function chaveDoPonto({ latitude, longitude }: Coordenadas): string {
+  return `${latitude.toFixed(6)},${longitude.toFixed(6)}`
+}
+
+/**
+ * O endereço de um ponto do mapa (consulta reversa), para preencher o outro endereço quando a
+ * gestora move o pino. Cada campo vem quando o mapa o conhece; o CEP, só com os 8 dígitos.
+ */
+export interface EnderecoDoPonto {
+  cep: string | null
+  logradouro: string | null
+  numero: string | null
+  bairro: string | null
+  cidade: string | null
+  uf: string | null
+}
+
 /** O mesmo limite do endereço do Novo acionamento. */
 export const TAMANHO_MAXIMO_ENDERECO = 300
 
