@@ -94,7 +94,13 @@ export const TipoDemandaSchema = z
   .openapi('TipoDemanda')
 
 export const PrestadorOpcaoSchema = z
-  .object({ id: z.string(), nome: z.string(), regiao: z.string().nullable(), cor: z.string() })
+  .object({
+    id: z.string(),
+    nome: z.string(),
+    regiao: z.string().nullable(),
+    cep: z.string().nullable().openapi({ description: 'Só os 8 dígitos' }),
+    cor: z.string(),
+  })
   .openapi('PrestadorOpcao')
 
 export const FiltroListaSchema = z.object({

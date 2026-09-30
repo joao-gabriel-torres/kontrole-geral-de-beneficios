@@ -1,4 +1,5 @@
 import { ErroDominio, type StatusAcionamento } from './acionamento'
+import { normalizarCepOpcional } from './cep'
 import { emailValido } from './convites'
 import {
   digitosVerificadoresValidos,
@@ -14,16 +15,18 @@ export interface DadosPrestador {
   telefone: string
   email?: string | null
   regiao?: string | null
+  cep?: string | null
   especialidades: string[]
 }
 
-/** Como o cadastro é gravado: documento e telefone só com dígitos, opcionais vazios como null. */
+/** Como o cadastro é gravado: documento, telefone e CEP só com dígitos, opcionais vazios como null. */
 export interface PrestadorNormalizado {
   nome: string
   documento: string
   telefone: string
   email: string | null
   regiao: string | null
+  cep: string | null
   especialidades: string[]
 }
 
@@ -35,6 +38,7 @@ export function normalizarPrestador(d: DadosPrestador): PrestadorNormalizado {
     telefone: soDigitos(d.telefone),
     email: opcional(d.email),
     regiao: opcional(d.regiao),
+    cep: normalizarCepOpcional(d.cep),
     especialidades: [...new Set(d.especialidades)],
   }
 }

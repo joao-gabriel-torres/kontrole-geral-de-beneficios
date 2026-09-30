@@ -18,6 +18,7 @@ import {
 } from '../dominio/acionamento'
 import { dataSP } from '../dominio/datas'
 import { calcularInicio } from '../dominio/inicio-prestador'
+import { ordenarPorProximidade } from '../dominio/proximidade'
 import { ErroHttp, naoEncontrado } from '../erros'
 import {
   incluirDetalhe,
@@ -88,12 +89,14 @@ export async function listarTipos() {
   })
 }
 
-export async function listarPrestadoresAtivos() {
-  return prisma.prestador.findMany({
+/** Ativos na ordem do cadastro; com um CEP de referência, do mais próximo para o mais distante. */
+export async function listarPrestadoresAtivos(cepDeReferencia?: string) {
+  const ativos = await prisma.prestador.findMany({
     where: { status: 'ativo', excluidoEm: null },
     orderBy: [{ criadoEm: 'asc' }, { id: 'asc' }],
-    select: { id: true, nome: true, regiao: true, cor: true },
+    select: { id: true, nome: true, regiao: true, cep: true, cor: true },
   })
+  return cepDeReferencia ? ordenarPorProximidade(ativos, cepDeReferencia) : ativos
 }
 
 export interface LinhaTravada {
