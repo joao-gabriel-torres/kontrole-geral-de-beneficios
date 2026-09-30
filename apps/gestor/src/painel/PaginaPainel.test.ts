@@ -89,6 +89,7 @@ describe('PaginaPainel', () => {
     expect(botao().attributes('aria-pressed')).toBe('true')
     expect(periodoPainel.value).toBe(30)
     expect(tela.find('.kpi .valor').text()).toBe('99')
+    expect(tela.find('[aria-busy="true"]').exists()).toBe(false)
   })
 
   it('mostra os 5 KPIs com os textos do protótipo', async () => {
@@ -231,6 +232,43 @@ describe('PaginaPainel', () => {
     expect(simulada.chamadas('GET', '/api/painel')).toHaveLength(2)
     expect(tela.find('.erro').exists()).toBe(false)
     expect(tela.find('.kpi .valor').text()).toBe('10')
+  })
+
+  it('uma atualização que falha avisa que os números são da última atualização', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    const { tela } = await montar(PaginaPainel, { rota: '/painel' })
+    expect(tela.find('.desatualizado').exists()).toBe(false)
+    painel = () => erroApi(500, 'interno', 'Erro interno')
+    vi.advanceTimersByTime(30_000)
+    await aguardar()
+    expect(tela.find('.desatualizado').text()).toBe(
+      'Erro interno — mostrando a última atualização.',
+    )
+    expect(tela.find('.kpi .valor').text()).toBe('10')
+    painel = () => ({ data: painelDoSeed() })
+    vi.advanceTimersByTime(30_000)
+    await aguardar()
+    expect(tela.find('.desatualizado').exists()).toBe(false)
+  })
+
+  it('trocando o período, os blocos do painel ficam marcados até os números novos chegarem', async () => {
+    simulada = simularApi(api, {
+      'GET /api/painel': (o: { params?: { query?: Record<string, unknown> } }) =>
+        o.params?.query?.periodo === '30' ? new Promise<RespostaFalsa>(() => {}) : painel(),
+      'GET /api/acionamentos': () => ({ data: fila }),
+    })
+    const { tela } = await montar(PaginaPainel, { rota: '/painel' })
+    expect(tela.find('[aria-busy="true"]').exists()).toBe(false)
+    const botao = tela.findAll('.seletor button').find((b) => b.text() === '30 dias')!
+    await botao.trigger('click')
+    await aguardar()
+    expect(tela.find('.kpi .valor').text()).toBe('10')
+    for (const bloco of ['.kpis', '.volume', '.reprovacoes', '.ranking']) {
+      expect(tela.find(bloco).attributes('aria-busy')).toBe('true')
+      expect(tela.find(bloco).classes()).toContain('trocando')
+    }
+    // A fila não depende do período: continua como está, sem marcação.
+    expect(tela.find('.fila').attributes('aria-busy')).toBeUndefined()
   })
 
   it('no celular, o avatar abre o menu com "Sair", que volta ao login', async () => {
