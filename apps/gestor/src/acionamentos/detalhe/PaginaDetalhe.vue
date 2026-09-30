@@ -99,7 +99,7 @@ async function decidir(decisao: Decisao, texto: string) {
               <div class="rotulo">Endereço</div>
               <a
                 class="endereco"
-                :href="urlMapa(acionamento.endereco)"
+                :href="urlMapa(acionamento.endereco, acionamento)"
                 target="_blank"
                 rel="noopener"
                 >{{ acionamento.endereco }}</a

@@ -50,6 +50,10 @@ No modal Novo acionamento, o gestor:
 - pode atender em outro endereço digitando um CEP — a rua, o bairro e a cidade vêm do ViaCEP (precisa de internet em dev) e o modal pede número e complemento — e conferir o local pelo "Ver no mapa";
 - escolhe o prestador numa busca já ordenada pela proximidade entre o CEP do prestador (editável no cadastro) e o do atendimento.
 
+### Mapa e geocodificação
+
+"Ver no mapa" no Novo acionamento usa o Leaflet com os tiles do OpenStreetMap, e a posição inicial vem de `GET /api/geocodificacao`, que consulta o Nominatim (OpenStreetMap) com cache e no máximo 1 requisição por segundo, como pede a [política de uso](https://operations.osmfoundation.org/policies/nominatim/). Antes de produção, troque o contato do `User-Agent` em `apps/api/src/servicos/geocodificacao.ts` por um e-mail da Russo; se o volume crescer, use um provedor de tiles e geocodificação com chave. A posição confirmada fica no acionamento e, no endereço do próprio assinante, também nele: o próximo acionamento dele já nasce com a localização conferida.
+
 ## Convite por e-mail
 
 O prestador entra no app por convite. O gestor chama `POST /api/prestadores/{id}/convite` e a API cria o usuário com o e-mail do cadastro, que vira o login. O prestador recebe um link de uso único, válido por 7 dias, e cria a senha na tela "Crie sua senha" do app (`/convite?token=…`). Reenviar invalida o link anterior e, para quem já tem senha, funciona como redefinição. O e-mail do cadastro precisa ser um endereço só e válido (o mesmo critério do login); senão o convite responde 409 `email_invalido`.

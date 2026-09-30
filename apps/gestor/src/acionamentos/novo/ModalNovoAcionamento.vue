@@ -22,6 +22,7 @@ import { usarAssinantes, usarEnderecoDoCep, usarPrestadoresProximos } from './da
 import {
   cepDeReferencia,
   chaveDaLocalizacao,
+  localizacaoDoAssinante,
   corpoDoFormulario,
   digitosCep,
   enderecoDoFormulario,
@@ -133,12 +134,13 @@ const mapa = computed(() => enderecoDoMapa(form))
 
 // Localização conferida no mapa (fora do protótipo, a pedido do usuário em 30/09): "Ver no mapa"
 // abre o mapa com o pino no endereço em uso, e "Confirmar localização" grava a posição no
-// formulário. Ela vale para o cliente, o CEP e o endereço em uso: trocar qualquer um a descarta.
+// formulário. Ela vale para o cliente, o CEP e o endereço em uso: trocar qualquer um a descarta,
+// e no endereço do próprio assinante volta a última conferida para ele.
 const mapaAberto = ref(false)
 const botaoMapa = ref<HTMLButtonElement>()
 watch(
   () => chaveDaLocalizacao(form),
-  () => (form.localizacao = null),
+  () => (form.localizacao = localizacaoDoAssinante(form)),
 )
 /**
  * O mapa (com o Leaflet) só é baixado quando a gestora abre "Ver no mapa". Se o download falhar

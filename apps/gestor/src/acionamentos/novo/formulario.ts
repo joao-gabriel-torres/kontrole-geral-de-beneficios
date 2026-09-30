@@ -193,7 +193,15 @@ export const CENTRO_SAO_PAULO: Localizacao = { latitude: -23.55052, longitude: -
  * procura o endereço.
  */
 export function posicaoConhecida(f: FormularioAcionamento): Localizacao | null {
-  if (f.localizacao) return f.localizacao
+  return f.localizacao ?? localizacaoDoAssinante(f)
+}
+
+/**
+ * A última localização conferida para o assinante, quando o atendimento é no endereço dele: o
+ * acionamento já nasce com ela conferida (o gestor validou aquele local antes). Em outro endereço,
+ * ou sem posição salva, null.
+ */
+export function localizacaoDoAssinante(f: FormularioAcionamento): Localizacao | null {
   const a = f.assinante
   if (f.outroEndereco || a?.latitude == null || a.longitude == null) return null
   return { latitude: a.latitude, longitude: a.longitude }

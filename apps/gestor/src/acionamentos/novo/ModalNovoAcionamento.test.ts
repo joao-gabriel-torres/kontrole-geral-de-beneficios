@@ -720,6 +720,20 @@ describe('ModalNovoAcionamento', () => {
       expect(leafletFalso.pino.getLatLng()).toEqual({ lat: -23.5571, lng: -46.6912 })
     })
 
+    it('assinante com posição salva: o acionamento já nasce com a localização conferida', async () => {
+      const salvo = { ...ASSINANTES[1]!, latitude: -23.5571, longitude: -46.6912 }
+      simulada = simularApi(api, { ...rotas(), 'GET /api/assinantes': [salvo] })
+      const { tela } = await abrir()
+      await preencher(tela)
+      expect(conferida(tela).text()).toBe('Localização conferida')
+      await tela.get('button.enviar').trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('POST', '/api/acionamentos')[0]!.body).toMatchObject({
+        latitude: -23.5571,
+        longitude: -46.6912,
+      })
+    })
+
     it('reabrir abre na posição conferida, e dá para trocar', async () => {
       const { tela } = await abrir()
       await preencher(tela)
