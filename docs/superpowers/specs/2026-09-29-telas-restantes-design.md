@@ -91,7 +91,10 @@ O título da página é **"Tipos de demanda"**, como no código do protótipo.
   - depois de excluir, vai para o primeiro da lista, como no protótipo;
   - criar um tipo seleciona o tipo novo.
 - **Excluir tipo** não pede confirmação, como no protótipo.
-- **"Subir" na primeira etapa** fica com opacidade .3 e não faz nada (não é `disabled`). Não existe "Descer".
+- **Ordem das etapas (pedido do usuário, 30/09, substitui o parágrafo do protótipo):** cada etapa
+  tem alça de arrastar (SortableJS), "Subir" e "Descer" (apagados nas pontas, sem `disabled`) e
+  Alt+↑/↓ no campo; o texto da etapa aparece como campo editável. As linhas das etapas ficam
+  mascaradas no comparador (`ocultarNoApp`).
 - **"Adicionar etapa" com o campo vazio** não faz nada, sem `disabled` e sem erro (o caso visual rola até o botão).
 - **O rascunho "Nova etapa"** é limpo ao trocar de tipo.
 
@@ -140,6 +143,9 @@ O título da página é **"Tipos de demanda"**, como no código do protótipo.
   - **Status:** o que começa com "inativ" é inativo; vazio é ativo.
   - **"Credenciado desde":** vale quando for uma data válida. Senão, o novo recebe hoje e o atualizado mantém a data.
 - **"Atualizar" sobrescreve os dados**, como diz o README, e não mexe na cor.
+- **A importação não envia convites em massa** (decisão registrada em 30/09): linhas "Novo" com
+  e-mail entram como acesso pendente, e o convite sai um a um pelo Editar. A conferência da
+  importação deve avisar isso quando houver novos com e-mail.
 - **DV:** só nas linhas **Novo**, porque o documento é novo.
 
 **Gestor:**
