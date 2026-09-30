@@ -104,9 +104,7 @@ describe('proteções da importação', () => {
     )
     expect(p.linhas[0]!.selo).toBe('Atualizar')
     const g = p.gravacoes[0]!
-    for (const campo of ['email', 'regiao', 'especialidades', 'status', 'credenciadoDesde']) {
-      expect(g.dados, campo).not.toHaveProperty(campo)
-    }
+    expect(Object.keys(g.dados).sort()).toEqual(['documento', 'nome', 'telefone'])
   })
 
   it('coluna presente com célula vazia continua valendo (a planilha manda apagar)', () => {

@@ -26,9 +26,8 @@ import { rotasTipos } from './rotas/tipos'
 
 /** SQLSTATE do Postgres dentro do erro do Prisma (P2010 traz o código no driver ou na mensagem). */
 function codigoPostgres(erro: Prisma.PrismaClientKnownRequestError): string | undefined {
-  const causa = (
-    erro.meta as { driverAdapterError?: { cause?: { code?: unknown } } } | undefined
-  )?.driverAdapterError?.cause
+  const causa = (erro.meta as { driverAdapterError?: { cause?: { code?: unknown } } } | undefined)
+    ?.driverAdapterError?.cause
   if (typeof causa?.code === 'string') return causa.code
   return /Code: `(\w+)`/.exec(erro.message)?.[1]
 }

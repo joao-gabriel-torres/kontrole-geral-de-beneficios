@@ -22,12 +22,10 @@ const rotaConsultar = createRoute({
   middleware: [exigePapel('gestor')] as const,
   request: {
     params: z.object({
-      cep: z
-        .string()
-        .openapi({
-          param: { name: 'cep', in: 'path' },
-          description: '8 dígitos, com ou sem hífen',
-        }),
+      cep: z.string().openapi({
+        param: { name: 'cep', in: 'path' },
+        description: '8 dígitos, com ou sem hífen',
+      }),
     }),
   },
   responses: {
