@@ -14,6 +14,7 @@ const PAULISTA: EnderecoCep = {
   logradouro: 'Avenida Paulista',
   bairro: 'Bela Vista',
   cidade: 'São Paulo',
+  uf: 'SP',
 }
 
 const app = criarApp()
@@ -87,7 +88,7 @@ describe('criarBuscaViaCep', () => {
       headers: { 'content-type': 'application/json' },
     })
 
-  it('consulta o ViaCEP e traduz a resposta (localidade → cidade, CEP sem hífen)', async () => {
+  it('consulta o ViaCEP e traduz a resposta (localidade → cidade, CEP sem hífen, UF)', async () => {
     let url = ''
     const busca = criarBuscaViaCep(async (entrada) => {
       url = String(entrada)
@@ -113,6 +114,7 @@ describe('criarBuscaViaCep', () => {
       logradouro: '',
       bairro: '',
       cidade: 'São Carlos',
+      uf: 'SP',
     })
   })
 

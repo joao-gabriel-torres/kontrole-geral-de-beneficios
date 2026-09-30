@@ -435,7 +435,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Endereço de um CEP (ViaCEP), para atendimento em outro endereço */
+        /** Endereço de um CEP (ViaCEP), para atendimento em outro endereço e para o cadastro de prestadores */
         get: {
             parameters: {
                 query?: never;
@@ -2646,6 +2646,8 @@ export interface components {
             logradouro: string;
             bairro: string;
             cidade: string;
+            /** @description Sigla do estado, como "SP" */
+            uf: string;
         };
         Localizacao: {
             /** @description Graus decimais, 6 casas */

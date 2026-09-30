@@ -684,13 +684,18 @@
           },
           "cidade": {
             "type": "string"
+          },
+          "uf": {
+            "type": "string",
+            "description": "Sigla do estado, como \"SP\""
           }
         },
         "required": [
           "cep",
           "logradouro",
           "bairro",
-          "cidade"
+          "cidade",
+          "uf"
         ]
       },
       "Localizacao": {
@@ -2040,7 +2045,7 @@
         "tags": [
           "Assinantes"
         ],
-        "summary": "Endereço de um CEP (ViaCEP), para atendimento em outro endereço",
+        "summary": "Endereço de um CEP (ViaCEP), para atendimento em outro endereço e para o cadastro de prestadores",
         "security": [
           {
             "Bearer": []
