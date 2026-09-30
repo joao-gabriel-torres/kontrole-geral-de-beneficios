@@ -17,6 +17,10 @@ export const AssinanteSchema = z
     endereco: z
       .string()
       .openapi({ description: 'Pronto para exibir: "Logradouro, número · bairro"' }),
+    latitude: z.number().nullable().openapi({
+      description: 'Última posição conferida no mapa para este endereço; null quando não há',
+    }),
+    longitude: z.number().nullable(),
   })
   .openapi('Assinante')
 

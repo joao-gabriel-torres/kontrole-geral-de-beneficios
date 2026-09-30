@@ -119,6 +119,9 @@ export interface DadosNovoAcionamento {
   assinanteId?: string
   /** CEP do atendimento (8 dígitos, com ou sem hífen); o serviço normaliza e valida. */
   cep?: string
+  /** Posição conferida no mapa (as duas ou nenhuma); o serviço valida com `normalizarCoordenadas`. */
+  latitude?: number | null
+  longitude?: number | null
   data: string
   inicio: string
   fim: string

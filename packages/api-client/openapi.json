@@ -238,6 +238,20 @@
               "string",
               "null"
             ]
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Posição conferida no mapa (graus decimais); null quando não há"
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Posição conferida no mapa (graus decimais); null quando não há"
           }
         },
         "required": [
@@ -254,7 +268,9 @@
           "prestador",
           "tipos",
           "etapas",
-          "ultimoEnvioEm"
+          "ultimoEnvioEm",
+          "latitude",
+          "longitude"
         ]
       },
       "DetalheAcionamento": {
@@ -518,6 +534,20 @@
             "maxLength": 20,
             "description": "CEP do atendimento: 8 dígitos, com ou sem hífen"
           },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Posição conferida no mapa, com a longitude (as duas ou nenhuma), no Brasil. No endereço do próprio assinante, também vai para o cadastro dele"
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Posição conferida no mapa, com a latitude"
+          },
           "data": {
             "type": "string",
             "format": "date"
@@ -605,6 +635,19 @@
           "endereco": {
             "type": "string",
             "description": "Pronto para exibir: \"Logradouro, número · bairro\""
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Última posição conferida no mapa para este endereço; null quando não há"
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ]
           }
         },
         "required": [
@@ -616,7 +659,9 @@
           "complemento",
           "bairro",
           "cidade",
-          "endereco"
+          "endereco",
+          "latitude",
+          "longitude"
         ]
       },
       "EnderecoCep": {
@@ -642,6 +687,23 @@
           "logradouro",
           "bairro",
           "cidade"
+        ]
+      },
+      "Localizacao": {
+        "type": "object",
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "description": "Graus decimais, 6 casas"
+          },
+          "longitude": {
+            "type": "number",
+            "description": "Graus decimais, 6 casas"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
         ]
       },
       "TipoDemanda": {
@@ -1908,6 +1970,93 @@
           },
           "502": {
             "description": "O ViaCEP não respondeu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/geocodificacao": {
+      "get": {
+        "tags": [
+          "Acionamentos"
+        ],
+        "summary": "Posição de um endereço no mapa (Nominatim), para conferir no Novo acionamento",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "No formato do sistema (\"Rua Harmonia, 410 · Vila Madalena\", com \" · Osasco - SP\" no fim fora da capital); até 300 caracteres"
+            },
+            "required": false,
+            "description": "No formato do sistema (\"Rua Harmonia, 410 · Vila Madalena\", com \" · Osasco - SP\" no fim fora da capital); até 300 caracteres",
+            "name": "endereco",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Posição do primeiro resultado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Localizacao"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Endereço não encontrado no mapa (localizacao_nao_encontrada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Endereço vazio ou longo demais",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "O serviço de mapas não respondeu (geocodificacao_indisponivel)",
             "content": {
               "application/json": {
                 "schema": {

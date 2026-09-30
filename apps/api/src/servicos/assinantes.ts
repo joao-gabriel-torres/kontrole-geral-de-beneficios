@@ -34,5 +34,7 @@ export async function buscarAssinantes(busca: string) {
     bairro: a.bairro,
     cidade: a.cidade,
     endereco: montarEndereco(a),
+    latitude: a.latitude,
+    longitude: a.longitude,
   }))
 }

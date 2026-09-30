@@ -512,6 +512,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/geocodificacao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Posição de um endereço no mapa (Nominatim), para conferir no Novo acionamento */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description No formato do sistema ("Rua Harmonia, 410 · Vila Madalena", com " · Osasco - SP" no fim fora da capital); até 300 caracteres */
+                    endereco?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Posição do primeiro resultado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Localizacao"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Endereço não encontrado no mapa (localizacao_nao_encontrada) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Endereço vazio ou longo demais */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description O serviço de mapas não respondeu (geocodificacao_indisponivel) */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tipos": {
         parameters: {
             query?: never;
@@ -2375,6 +2459,10 @@ export interface components {
                 total: number;
             };
             ultimoEnvioEm: string | null;
+            /** @description Posição conferida no mapa (graus decimais); null quando não há */
+            latitude: number | null;
+            /** @description Posição conferida no mapa (graus decimais); null quando não há */
+            longitude: number | null;
         };
         DetalheAcionamento: components["schemas"]["ResumoAcionamento"] & {
             criadoEm: string;
@@ -2431,6 +2519,10 @@ export interface components {
             assinanteId?: string;
             /** @description CEP do atendimento: 8 dígitos, com ou sem hífen */
             cep?: string;
+            /** @description Posição conferida no mapa, com a longitude (as duas ou nenhuma), no Brasil. No endereço do próprio assinante, também vai para o cadastro dele */
+            latitude?: number | null;
+            /** @description Posição conferida no mapa, com a latitude */
+            longitude?: number | null;
             /** Format: date */
             data: string;
             inicio: string;
@@ -2455,6 +2547,9 @@ export interface components {
             cidade: string;
             /** @description Pronto para exibir: "Logradouro, número · bairro" */
             endereco: string;
+            /** @description Última posição conferida no mapa para este endereço; null quando não há */
+            latitude: number | null;
+            longitude: number | null;
         };
         EnderecoCep: {
             /** @description Só os 8 dígitos */
@@ -2463,6 +2558,12 @@ export interface components {
             logradouro: string;
             bairro: string;
             cidade: string;
+        };
+        Localizacao: {
+            /** @description Graus decimais, 6 casas */
+            latitude: number;
+            /** @description Graus decimais, 6 casas */
+            longitude: number;
         };
         TipoDemanda: {
             id: string;
