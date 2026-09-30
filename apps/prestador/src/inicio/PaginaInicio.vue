@@ -11,8 +11,10 @@ import {
   urlRota,
   type NomeIcone,
 } from '@kgb/ui'
+import { useQueryClient } from '@tanstack/vue-query'
 import { computed } from 'vue'
 import { useRouter, type RouteLocationRaw } from 'vue-router'
+import { reiniciarAgenda } from '../agenda/usarAgenda'
 import { mensagemDeErro } from '../consultas'
 import { sair, sessao } from '../sessao'
 import CartaoProximo from './CartaoProximo.vue'
@@ -56,8 +58,12 @@ function abrirRotaDoDia() {
 function abrir(id: string) {
   void router.push({ name: 'detalhe', params: { id } })
 }
+const consultas = useQueryClient()
+/** Sair da conta sem deixar dados nem a escolha da Agenda da sessão anterior para o próximo login. */
 async function encerrarSessao() {
   await sair()
+  consultas.clear()
+  reiniciarAgenda()
   await router.replace({ name: 'login' })
 }
 </script>
