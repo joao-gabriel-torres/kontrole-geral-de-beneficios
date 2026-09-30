@@ -12,11 +12,11 @@ import {
   watch,
 } from 'vue'
 import { useRouter } from 'vue-router'
+import BuscaTipos from '../../componentes/BuscaTipos.vue'
 import { ErroApi, mensagemDeErro } from '../../erros'
 import { toastGestor } from '../../toast'
 import { usarCriarAcionamento, usarTipos } from '../dados'
 import { reiniciarLista } from '../estadoLista'
-import BuscaTipos from './BuscaTipos.vue'
 import CampoBusca from './CampoBusca.vue'
 import {
   usarAssinantes,

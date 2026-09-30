@@ -2,7 +2,7 @@
 import type { TipoDemanda } from '@kgb/api-client'
 import { RussoIcone } from '@kgb/ui'
 import { computed, nextTick, ref } from 'vue'
-import { alternarTipo, gruposDeTipos, tipoDoEnter } from './formulario'
+import { alternarTipo, gruposDeTipos, tipoDoEnter } from './buscaTipos'
 
 /**
  * Busca de tipos de demanda, de escolha múltipla: o campo é um combobox cuja lista suspensa
