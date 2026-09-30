@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+import { nextTick } from 'vue'
 import { createVuetify } from 'vuetify'
 import FormularioLogin from './FormularioLogin.vue'
 
@@ -28,12 +29,25 @@ describe('FormularioLogin', () => {
     await tela.find('form').trigger('submit')
     expect(tela.emitted('enviar')).toBeUndefined()
   })
-  it('mostra o aviso recebido (senha criada pelo convite)', () => {
+  it('mostra o aviso recebido (senha criada pelo convite) depois de montar', async () => {
     const aviso = 'Senha criada. Entre com seu e-mail e a nova senha.'
-    expect(montar({ aviso }).find('p[role="status"]').text()).toBe(aviso)
+    const tela = montar({ aviso })
+    const regiao = tela.find('p[role="status"]')
+    // A região nasce vazia e o texto entra depois: região viva que monta já
+    // preenchida não é anunciada por muitos leitores de tela.
+    expect(regiao.text()).toBe('')
+    await nextTick()
+    expect(regiao.text()).toBe(aviso)
+    expect(regiao.classes()).not.toContain('vazio')
   })
-  it('sem aviso, não mostra a faixa', () => {
-    expect(montar().find('p[role="status"]').exists()).toBe(false)
+  it('sem aviso, a região viva continua montada, vazia e fora do fluxo', async () => {
+    const tela = montar()
+    const regiao = tela.find('p[role="status"]')
+    expect(regiao.exists()).toBe(true)
+    await nextTick()
+    expect(regiao.text()).toBe('')
+    // Vazia, não pode ocupar espaço (o cartão usa gap) nem desenhar a faixa verde.
+    expect(regiao.classes()).toContain('vazio')
   })
   it('mostra o erro recebido', () => {
     expect(montar({ erro: 'E-mail ou senha incorretos' }).find('p[role="alert"]').text()).toBe(
