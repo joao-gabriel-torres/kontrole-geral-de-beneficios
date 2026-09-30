@@ -47,11 +47,11 @@ function retrato({ e2 = false, e3 = false, foto = false } = {}): DetalheAcioname
 const foto = { arquivo: new Blob(['j']), tiradaEm: '2026-09-28T15:10:00-03:00' }
 
 /** `anterior`: o cache de uma montagem anterior (o prestador saiu do Detalhe e voltou). */
-async function montarDetalhe(anterior?: QueryClient) {
+async function montarDetalhe(anterior?: QueryClient, id = 'a1') {
   let acoes!: ReturnType<typeof usarDetalhe>
   const Detalhe = defineComponent({
     setup() {
-      acoes = usarDetalhe(ref('a1'))
+      acoes = usarDetalhe(ref(id))
       return () => h('div')
     },
   })
@@ -129,23 +129,19 @@ describe('usarDetalhe: ordem das respostas no cache', () => {
   })
 
   it('outro acionamento não conta como sobreposição: a marcação sozinha grava sem buscar de novo', async () => {
-    const outro = await montarDetalhe()
+    const a1 = await montarDetalhe()
     const emVoo = adiada()
     api.PATCH.mockReturnValueOnce(emVoo.promessa)
-    void outro.acoes.marcarEtapa('e2', true)
+    void a1.acoes.marcarEtapa('e2', true)
     await flushPromises()
-    const Outro = defineComponent({
-      setup() {
-        const acoes = usarDetalhe(ref('a2'))
-        void acoes.marcarEtapa('x1', true)
-        return () => h('div')
-      },
-    })
-    api.PATCH.mockImplementationOnce(async () => ok(detalheExemplo({ id: 'a2' })))
-    await montar(Outro, { cliente: outro.cliente })
+    const a2 = await montarDetalhe(a1.cliente, 'a2')
+    const resposta = detalheExemplo({ id: 'a2', codigo: 'AC-2000' })
+    api.PATCH.mockResolvedValueOnce(ok(resposta))
+    await a2.acoes.marcarEtapa('x1', true)
     await flushPromises()
-    const gets = api.GET.mock.calls.filter(([, opcoes]) => opcoes.params.path.id === 'a2')
-    expect(gets).toHaveLength(1)
+    expect(a2.cliente.getQueryData(CHAVES.detalhe('a2'))).toEqual(resposta)
+    const getsDeA2 = api.GET.mock.calls.filter(([, opcoes]) => opcoes.params.path.id === 'a2')
+    expect(getsDeA2).toHaveLength(1)
     emVoo.resolver(ok(retrato({ e2: true })))
     await flushPromises()
   })
