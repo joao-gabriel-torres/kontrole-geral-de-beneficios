@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { ASSINANTES, PRESTADORES, TIPOS } from '../../../test/fixtures'
 import {
   alternarTipo,
+  CENTRO_SAO_PAULO,
   cepDeReferencia,
+  chaveDaLocalizacao,
   cidadeForaDaCapital,
   corpoDoFormulario,
   digitosCep,
@@ -15,6 +17,7 @@ import {
   formularioValido,
   gruposDeTipos,
   montarEndereco,
+  posicaoConhecida,
   prestadorMaisProximo,
   prestadorPadrao,
   previaChecklist,
@@ -65,6 +68,7 @@ describe('formulário do Novo acionamento', () => {
       inicio: '09:00',
       fim: '11:00',
       prestadorId: 'p1',
+      localizacao: null,
     })
   })
 
@@ -344,5 +348,64 @@ describe('corpo do POST', () => {
       assinanteId: 'a1',
       cep: '01310200',
     })
+  })
+})
+
+describe('localização conferida no mapa', () => {
+  const conferida = { latitude: -23.556789, longitude: -46.690123 }
+  const auroraNoMapa = { ...aurora, latitude: -23.5571, longitude: -46.6912 }
+
+  it('o POST leva latitude e longitude só quando a localização foi conferida', () => {
+    expect(corpoDoFormulario(valido())).not.toHaveProperty('latitude')
+    expect(corpoDoFormulario(valido())).not.toHaveProperty('longitude')
+    expect(corpoDoFormulario(valido({ localizacao: conferida }))).toMatchObject(conferida)
+  })
+
+  it('o mapa abre na conferida; sem ela, na do assinante (só no endereço dele)', () => {
+    expect(posicaoConhecida(valido({ localizacao: conferida }))).toEqual(conferida)
+    expect(posicaoConhecida(valido({ assinante: auroraNoMapa }))).toEqual({
+      latitude: -23.5571,
+      longitude: -46.6912,
+    })
+    expect(posicaoConhecida(valido({ assinante: auroraNoMapa, localizacao: conferida }))).toEqual(
+      conferida,
+    )
+    // Em outro endereço, a posição do assinante não vale; sem nenhuma, o mapa procura o endereço.
+    expect(posicaoConhecida(outroEndereco({ assinante: auroraNoMapa }))).toBeNull()
+    expect(posicaoConhecida(valido())).toBeNull()
+    expect(posicaoConhecida(valido({ assinante: { ...aurora, latitude: -23.5 } }))).toBeNull()
+    expect(posicaoConhecida(valido({ assinante: null }))).toBeNull()
+  })
+
+  it('o centro de São Paulo é a posição sem endereço no mapa', () => {
+    expect(CENTRO_SAO_PAULO.latitude).toBeCloseTo(-23.55, 1)
+    expect(CENTRO_SAO_PAULO.longitude).toBeCloseTo(-46.63, 1)
+  })
+
+  it('a chave muda com o cliente, com o CEP e com o endereço em uso (a conferida é descartada)', () => {
+    const base = chaveDaLocalizacao(outroEndereco())
+    // Não mudam o lugar: complemento, título, horários, prestador e a própria localização.
+    expect(
+      chaveDaLocalizacao(
+        outroEndereco({
+          complemento: 'sala 3',
+          titulo: 'Outro',
+          inicio: '10:00',
+          prestadorId: 'p2',
+          localizacao: conferida,
+        }),
+      ),
+    ).toBe(base)
+    expect(chaveDaLocalizacao(outroEndereco({ cep: '01310-201' }))).not.toBe(base)
+    expect(chaveDaLocalizacao(outroEndereco({ numero: '1579' }))).not.toBe(base)
+    expect(chaveDaLocalizacao(outroEndereco({ assinante: ASSINANTES[0]! }))).not.toBe(base)
+    expect(chaveDaLocalizacao(outroEndereco({ outroEndereco: false }))).not.toBe(base)
+    // No endereço do assinante, trocar de cliente muda a chave; o mesmo cliente, não.
+    expect(chaveDaLocalizacao(valido({ assinante: { ...aurora } }))).toBe(
+      chaveDaLocalizacao(valido()),
+    )
+    expect(chaveDaLocalizacao(valido({ assinante: ASSINANTES[2]! }))).not.toBe(
+      chaveDaLocalizacao(valido()),
+    )
   })
 })

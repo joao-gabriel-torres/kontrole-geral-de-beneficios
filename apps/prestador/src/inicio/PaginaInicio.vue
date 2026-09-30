@@ -18,7 +18,7 @@ import { reiniciarAgenda } from '../agenda/usarAgenda'
 import { mensagemDeErro } from '../consultas'
 import { sair, sessao } from '../sessao'
 import CartaoProximo from './CartaoProximo.vue'
-import { cartoesMetricas } from './inicio'
+import { cartoesMetricas, paradasDaRota } from './inicio'
 import { usarInicio } from './usarInicio'
 
 const agora = new Date()
@@ -51,9 +51,10 @@ const atalhos = computed<Atalho[]>(() => [
   },
 ])
 
+/** Os endereços pendentes de hoje, com a posição conferida no mapa de cada um quando há. */
 function abrirRotaDoDia() {
-  const enderecos = data.value?.rotaDoDia ?? []
-  if (enderecos.length) window.open(urlRota(enderecos), '_blank')
+  const paradas = data.value ? paradasDaRota(data.value.rotaDoDia, data.value.hoje) : []
+  if (paradas.length) window.open(urlRota(paradas), '_blank')
 }
 function abrir(id: string) {
   void router.push({ name: 'detalhe', params: { id } })

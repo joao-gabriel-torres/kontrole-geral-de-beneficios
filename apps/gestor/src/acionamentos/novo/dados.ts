@@ -66,3 +66,31 @@ export function usarPrestadoresProximos(cep: MaybeRefOrGetter<string>) {
     staleTime: 60_000,
   })
 }
+
+/**
+ * A posição de um endereço no mapa (Nominatim pela API), para abrir o "Ver no mapa" nela. Uma
+ * tentativa só: sem resultado ou com o serviço fora, o mapa abre no centro de São Paulo e a gestora
+ * arrasta o pino. Só busca quando `habilitada` (sem posição já conhecida) e com um endereço.
+ */
+export function usarGeocodificacao(
+  endereco: MaybeRefOrGetter<string>,
+  habilitada: MaybeRefOrGetter<boolean>,
+) {
+  return useQuery({
+    queryKey: computed(() => ['geocodificacao', toValue(endereco)] as const),
+    queryFn: ({ queryKey, signal }) =>
+      exigir(
+        comLimite(
+          (s) =>
+            api.GET('/api/geocodificacao', {
+              params: { query: { endereco: queryKey[1] } },
+              signal: s,
+            }),
+          signal,
+        ),
+      ),
+    enabled: computed(() => toValue(habilitada) && !!toValue(endereco)),
+    retry: false,
+    staleTime: Infinity,
+  })
+}

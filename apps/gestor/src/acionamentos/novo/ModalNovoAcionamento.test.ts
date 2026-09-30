@@ -1,7 +1,7 @@
 import { ErroTempoEsgotado } from '@kgb/api-client'
-import { dataISO, urlMapa } from '@kgb/ui'
-import type { VueWrapper } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { dataISO } from '@kgb/ui'
+import { DOMWrapper, type VueWrapper } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import {
   erroApi,
@@ -10,6 +10,7 @@ import {
   type RespostaFalsa,
 } from '../../../test/api-falsa'
 import { ASSINANTES, PRESTADORES, resumo, TIPOS } from '../../../test/fixtures'
+import { leafletFalso } from '../../../test/leaflet-falso'
 import { aguardar, montar } from '../../../test/montar'
 import { api } from '../../api'
 import { MENSAGEM_FALHA } from '../../erros'
@@ -22,6 +23,7 @@ vi.mock('../../api', () => ({
   auth: {},
   BASE_API: 'http://api.test',
 }))
+vi.mock('leaflet', () => import('../../../test/leaflet-falso'))
 
 /** A API ordena pela distância numérica entre CEPs; sem CEP vai ao fim. */
 const distancia = (cep: string | null, referencia: string) =>
@@ -98,6 +100,30 @@ async function preencher(tela: Tela) {
   await escolherCliente(tela, 'Edifício Aurora')
 }
 
+/** A posição que a geocodificação falsa acha para qualquer endereço. */
+const ACHADA = { latitude: -23.556789, longitude: -46.690123 }
+
+// Mapa: o diálogo vai para #modais-gestor (no app, fica no layout) e é carregado sob demanda.
+const dialogoMapa = () => document.querySelector<HTMLElement>('#modais-gestor [role="dialog"]')
+async function abrirMapa(tela: Tela) {
+  await tela.get('button.mapa').trigger('click')
+  await vi.waitFor(() => expect(dialogoMapa()).not.toBeNull())
+  await aguardar()
+  return new DOMWrapper(dialogoMapa()!)
+}
+/** O endereço que o mapa procura (e mostra), fechando o mapa em seguida. */
+async function enderecoNoMapa(tela: Tela) {
+  const mapa = await abrirMapa(tela)
+  const endereco = mapa.get('.endereco').text()
+  expect(simulada.chamadas('GET', '/api/geocodificacao').at(-1)!.params?.query).toEqual({
+    endereco,
+  })
+  await mapa.get('button.cancelar').trigger('click')
+  await aguardar()
+  return endereco
+}
+let simulada: ReturnType<typeof simularApi>
+
 const tecla = (key: string) => ({ key })
 const foco = () => document.activeElement?.textContent?.trim()
 /** A busca de clientes espera 250 ms depois da última tecla. */
@@ -107,24 +133,29 @@ const esperarBusca = async () => {
 }
 
 describe('ModalNovoAcionamento', () => {
-  let simulada: ReturnType<typeof simularApi>
   let criar: () => RespostaFalsa | Promise<RespostaFalsa>
   const rotas = () => ({
     'GET /api/tipos': TIPOS,
     'GET /api/prestadores': prestadoresPorCep,
     'GET /api/assinantes': buscarAssinantes,
     'GET /api/cep/{cep}': consultarCep,
+    'GET /api/geocodificacao': ACHADA,
     'GET /api/acionamentos': [],
     'GET /api/acionamentos/contagem': {},
     'POST /api/acionamentos': () => criar(),
   })
+  let destinoModais: HTMLElement
   beforeEach(() => {
+    destinoModais = Object.assign(document.createElement('div'), { id: 'modais-gestor' })
+    document.body.appendChild(destinoModais)
+    leafletFalso.limpar()
     toastGestor.mensagem.value = null
     criar = () => ({
       data: resumo({ id: 'a2000', prestador: { id: 'p1', nome: 'Carlos Mendes', cor: '#0069BD' } }),
     })
     simulada = simularApi(api, rotas())
   })
+  afterEach(() => destinoModais.remove())
 
   const abrir = (anexar = false) => montar(ModalNovoAcionamento, { rota: '/painel', anexar })
 
@@ -341,7 +372,7 @@ describe('ModalNovoAcionamento', () => {
     it('escolher pelo teclado preenche o endereço, o mapa e o prestador mais próximo', async () => {
       const { tela } = await abrir(true)
       const entrada = campo(tela, 'novo-cliente')
-      expect(tela.find('a.mapa').exists()).toBe(false)
+      expect(tela.find('.mapa').exists()).toBe(false)
       expect(tela.get<HTMLInputElement>('#novo-endereco').element.readOnly).toBe(true)
 
       entrada.element.focus()
@@ -361,8 +392,8 @@ describe('ModalNovoAcionamento', () => {
       expect(tela.get<HTMLInputElement>('#novo-endereco').element.value).toBe(
         'Av. Paulista, 1578 · Bela Vista',
       )
-      expect(tela.get('a.mapa').attributes('href')).toBe(urlMapa('Av. Paulista, 1578 · Bela Vista'))
-      expect(tela.get('a.mapa').attributes('target')).toBe('_blank')
+      expect(tela.get('button.mapa').text()).toBe('Ver no mapa')
+      expect(await enderecoNoMapa(tela)).toBe('Av. Paulista, 1578 · Bela Vista')
       // A lista de prestadores volta ordenada pelo CEP do assinante, com o mais próximo escolhido.
       expect(simulada.chamadas('GET', '/api/prestadores').at(-1)!.params?.query).toEqual({
         status: 'ativo',
@@ -395,9 +426,7 @@ describe('ModalNovoAcionamento', () => {
       expect(tela.get<HTMLInputElement>('#novo-endereco').element.value).toBe(
         'Rua Antônio Agú, 12 · Centro · Osasco - SP',
       )
-      expect(tela.get('a.mapa').attributes('href')).toBe(
-        urlMapa('Rua Antônio Agú, 12 · Centro · Osasco - SP'),
-      )
+      expect(await enderecoNoMapa(tela)).toBe('Rua Antônio Agú, 12 · Centro · Osasco - SP')
       await tela.get('input[placeholder="Ex.: Vazamento no banheiro social"]').setValue('Vazamento')
       await escolherTipo(tela, 'Vazamento')
       await tela.get('button.enviar').trigger('click')
@@ -481,7 +510,7 @@ describe('ModalNovoAcionamento', () => {
       await preencher(tela)
       await outroEndereco(tela)
       expect(tela.find('#novo-endereco').exists()).toBe(false)
-      expect(tela.find('a.mapa').exists()).toBe(false)
+      expect(tela.find('.mapa').exists()).toBe(false)
       const enviar = () => tela.get('button.enviar')
       expect(enviar().attributes('aria-disabled')).toBe('true')
 
@@ -511,9 +540,7 @@ describe('ModalNovoAcionamento', () => {
 
       await tela.get('.casa input').setValue('1578')
       await tela.get('.complemento input').setValue('sala 3')
-      expect(tela.get('a.mapa').attributes('href')).toBe(
-        urlMapa('Avenida Paulista, 1578 · Bela Vista'),
-      )
+      expect(await enderecoNoMapa(tela)).toBe('Avenida Paulista, 1578 · Bela Vista')
       expect(enviar().attributes('aria-disabled')).toBe('false')
       await enviar().trigger('click')
       await aguardar()
@@ -534,9 +561,7 @@ describe('ModalNovoAcionamento', () => {
       await aguardar()
       expect(tela.get<HTMLInputElement>('.cidade input').element.value).toBe('Osasco')
       await tela.get('.casa input').setValue('12')
-      expect(tela.get('a.mapa').attributes('href')).toBe(
-        urlMapa('Rua Antônio Agú, 12 · Centro · Osasco - SP'),
-      )
+      expect(await enderecoNoMapa(tela)).toBe('Rua Antônio Agú, 12 · Centro · Osasco - SP')
       await tela.get('button.enviar').trigger('click')
       await aguardar()
       expect(simulada.chamadas('POST', '/api/acionamentos')[0]!.body).toMatchObject({
@@ -598,7 +623,7 @@ describe('ModalNovoAcionamento', () => {
       await rua.setValue('Rua Nova')
       await bairro.setValue('Bela Vista')
       await tela.get('.casa input').setValue('10')
-      expect(tela.get('a.mapa').attributes('href')).toBe(urlMapa('Rua Nova, 10 · Bela Vista'))
+      expect(await enderecoNoMapa(tela)).toBe('Rua Nova, 10 · Bela Vista')
       const enviar = tela.get('button.enviar')
       expect(enviar.attributes('aria-disabled')).toBe('false')
       await enviar.trigger('click')
@@ -625,6 +650,150 @@ describe('ModalNovoAcionamento', () => {
         endereco: 'Rua Harmonia, 410 · Vila Madalena',
         cep: '05433000',
       })
+    })
+  })
+
+  describe('localização no mapa', () => {
+    const botaoMapa = (tela: Tela) => tela.get('button.mapa')
+    const conferida = (tela: Tela) => tela.find('.conferida')
+    const ARRASTADA = { latitude: -23.557, longitude: -46.6905 }
+    async function conferir(tela: Tela, posicao = ARRASTADA) {
+      const mapa = await abrirMapa(tela)
+      leafletFalso.pino.arrastarPara(posicao.latitude, posicao.longitude)
+      await aguardar()
+      await mapa.get('button.confirmar').trigger('click')
+      await aguardar()
+    }
+
+    it('"Ver no mapa" abre o mapa no endereço; confirmar mostra "Localização conferida" e o POST leva a posição', async () => {
+      const { tela } = await abrir(true)
+      await preencher(tela)
+      const mapa = await abrirMapa(tela)
+      expect(mapa.get('#mapa-titulo').text()).toBe('Conferir localização')
+      expect(simulada.chamadas('GET', '/api/geocodificacao')[0]!.params?.query).toEqual({
+        endereco: 'Rua Harmonia, 410 · Vila Madalena',
+      })
+      expect(leafletFalso.pino.getLatLng()).toEqual({
+        lat: ACHADA.latitude,
+        lng: ACHADA.longitude,
+      })
+      // Com o mapa aberto, o formulário por trás fica inerte.
+      expect(tela.get('.sobreposicao').attributes('inert')).toBeDefined()
+      leafletFalso.pino.arrastarPara(ARRASTADA.latitude, ARRASTADA.longitude)
+      await aguardar()
+      await mapa.get('button.confirmar').trigger('click')
+      await aguardar()
+
+      expect(dialogoMapa()).toBeNull()
+      expect(tela.get('.sobreposicao').attributes('inert')).toBeUndefined()
+      expect(conferida(tela).text()).toBe('Localização conferida')
+      expect(botaoMapa(tela).text()).toBe('Trocar')
+      expect(botaoMapa(tela).attributes('aria-label')).toBe('Trocar a localização no mapa')
+      expect(document.activeElement).toBe(botaoMapa(tela).element)
+      await tela.get('button.enviar').trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('POST', '/api/acionamentos')[0]!.body).toMatchObject({
+        endereco: 'Rua Harmonia, 410 · Vila Madalena',
+        latitude: ARRASTADA.latitude,
+        longitude: ARRASTADA.longitude,
+      })
+    })
+
+    it('sem conferir, o POST não leva posição', async () => {
+      const { tela } = await abrir()
+      await preencher(tela)
+      expect(conferida(tela).exists()).toBe(false)
+      await tela.get('button.enviar').trigger('click')
+      await aguardar()
+      const corpo = simulada.chamadas('POST', '/api/acionamentos')[0]!.body
+      expect(corpo).not.toHaveProperty('latitude')
+      expect(corpo).not.toHaveProperty('longitude')
+    })
+
+    it('assinante com posição salva: o mapa abre nela, sem procurar o endereço', async () => {
+      const salvo = { ...ASSINANTES[1]!, latitude: -23.5571, longitude: -46.6912 }
+      simulada = simularApi(api, { ...rotas(), 'GET /api/assinantes': [salvo] })
+      const { tela } = await abrir()
+      await escolherCliente(tela, 'Edifício Aurora')
+      await abrirMapa(tela)
+      expect(simulada.chamadas('GET', '/api/geocodificacao')).toHaveLength(0)
+      expect(leafletFalso.pino.getLatLng()).toEqual({ lat: -23.5571, lng: -46.6912 })
+    })
+
+    it('reabrir abre na posição conferida, e dá para trocar', async () => {
+      const { tela } = await abrir()
+      await preencher(tela)
+      await conferir(tela)
+      const mapa = await abrirMapa(tela)
+      expect(simulada.chamadas('GET', '/api/geocodificacao')).toHaveLength(1)
+      expect(leafletFalso.pino.getLatLng()).toEqual({
+        lat: ARRASTADA.latitude,
+        lng: ARRASTADA.longitude,
+      })
+      leafletFalso.mapa.clicar(-23.558, -46.691)
+      await aguardar()
+      await mapa.get('button.confirmar').trigger('click')
+      await aguardar()
+      await tela.get('button.enviar').trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('POST', '/api/acionamentos')[0]!.body).toMatchObject({
+        latitude: -23.558,
+        longitude: -46.691,
+      })
+    })
+
+    it('Cancelar e Esc fecham só o mapa, sem conferir, e devolvem o foco ao botão', async () => {
+      const { tela } = await abrir(true)
+      await preencher(tela)
+      const mapa = await abrirMapa(tela)
+      leafletFalso.pino.arrastarPara(ARRASTADA.latitude, ARRASTADA.longitude)
+      await mapa.get('button.cancelar').trigger('click')
+      await aguardar()
+      expect(dialogoMapa()).toBeNull()
+      expect(conferida(tela).exists()).toBe(false)
+      expect(document.activeElement).toBe(botaoMapa(tela).element)
+
+      await abrirMapa(tela)
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+      await aguardar()
+      expect(dialogoMapa()).toBeNull()
+      expect(tela.emitted('fechar')).toBeUndefined()
+      expect(conferida(tela).exists()).toBe(false)
+      // Com o mapa fechado, o Esc volta a fechar o Novo acionamento.
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+      expect(tela.emitted('fechar')).toHaveLength(1)
+    })
+
+    it('trocar de cliente descarta a localização conferida', async () => {
+      const { tela } = await abrir()
+      await preencher(tela)
+      await conferir(tela)
+      expect(conferida(tela).exists()).toBe(true)
+      await escolherCliente(tela, 'Hotel Ipê')
+      expect(conferida(tela).exists()).toBe(false)
+      expect(botaoMapa(tela).text()).toBe('Ver no mapa')
+      await tela.get('button.enviar').trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('POST', '/api/acionamentos')[0]!.body).not.toHaveProperty('latitude')
+    })
+
+    it('trocar o CEP do outro endereço (ou voltar ao do assinante) descarta a localização conferida', async () => {
+      const { tela } = await abrir()
+      await preencher(tela)
+      await tela.get('.outro-endereco input[type="checkbox"]').setValue(true)
+      await tela.get('#novo-cep').setValue('01310200')
+      await aguardar()
+      await tela.get('.casa input').setValue('1578')
+      await conferir(tela)
+      expect(conferida(tela).exists()).toBe(true)
+      await tela.get('#novo-cep').setValue('06010000')
+      await aguardar()
+      expect(conferida(tela).exists()).toBe(false)
+
+      await conferir(tela)
+      expect(conferida(tela).exists()).toBe(true)
+      await tela.get('.outro-endereco input[type="checkbox"]').setValue(false)
+      expect(conferida(tela).exists()).toBe(false)
     })
   })
 

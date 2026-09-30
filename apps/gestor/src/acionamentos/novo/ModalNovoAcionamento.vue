@@ -1,6 +1,16 @@
 <script setup lang="ts">
-import { dataISO, RussoIcone, urlMapa } from '@kgb/ui'
-import { computed, onBeforeUnmount, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { dataISO, RussoIcone } from '@kgb/ui'
+import {
+  computed,
+  defineAsyncComponent,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  onUnmounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue'
 import { useRouter } from 'vue-router'
 import { ErroApi, mensagemDeErro } from '../../erros'
 import { toastGestor } from '../../toast'
@@ -11,6 +21,7 @@ import CampoBusca from './CampoBusca.vue'
 import { usarAssinantes, usarEnderecoDoCep, usarPrestadoresProximos } from './dados'
 import {
   cepDeReferencia,
+  chaveDaLocalizacao,
   corpoDoFormulario,
   digitosCep,
   enderecoDoFormulario,
@@ -20,8 +31,10 @@ import {
   formatarCep,
   formularioInicial,
   formularioValido,
+  posicaoConhecida,
   prestadorMaisProximo,
   prestadorPadrao,
+  type Localizacao,
   type OpcaoBusca,
   previaChecklist,
   rotuloContagem,
@@ -118,6 +131,42 @@ const erroCep = computed(() => {
 })
 const mapa = computed(() => enderecoDoMapa(form))
 
+// Localização conferida no mapa (fora do protótipo, a pedido do usuário em 30/09): "Ver no mapa"
+// abre o mapa com o pino no endereço em uso, e "Confirmar localização" grava a posição no
+// formulário. Ela vale para o cliente, o CEP e o endereço em uso: trocar qualquer um a descarta.
+const mapaAberto = ref(false)
+const botaoMapa = ref<HTMLButtonElement>()
+watch(
+  () => chaveDaLocalizacao(form),
+  () => (form.localizacao = null),
+)
+/**
+ * O mapa (com o Leaflet) só é baixado quando a gestora abre "Ver no mapa". Se o download falhar
+ * (sem rede ou versão nova publicada), o mapa fecha com um aviso: o formulário não fica inerte.
+ */
+const DialogoMapa = defineAsyncComponent({
+  loader: () => import('./DialogoMapa.vue'),
+  errorComponent: { render: () => null },
+  onError: (_erro, _tentar, falhar) => {
+    falhar()
+    void fecharMapa()
+    toastGestor.mostrar('Não foi possível abrir o mapa, tente de novo')
+  },
+})
+function abrirMapa() {
+  mapaAberto.value = true
+}
+/** Fecha o mapa e devolve o foco ao botão que o abre ("Ver no mapa" ou "Trocar"). */
+async function fecharMapa() {
+  mapaAberto.value = false
+  await nextTick()
+  botaoMapa.value?.focus()
+}
+function confirmarLocalizacao(posicao: Localizacao) {
+  form.localizacao = posicao
+  void fecharMapa()
+}
+
 // Prestador: a lista vem do mais próximo ao mais distante do CEP em uso, e o mais próximo já vem
 // escolhido (uma vez por CEP: a escolha da gestora vale até o CEP mudar). Sem nenhum prestador com
 // CEP, a lista vem por nome: nada é trocado nem rotulado.
@@ -203,7 +252,8 @@ const painel = ref<HTMLElement>()
 // Quem abriu o modal (o botão "Novo acionamento") recebe o foco de volta ao fechar.
 const focoAnterior = document.activeElement instanceof HTMLElement ? document.activeElement : null
 function aoTeclar(e: KeyboardEvent) {
-  if (e.key === 'Escape') fechar()
+  // Com o mapa aberto, o Esc é dele: fecha só o mapa.
+  if (e.key === 'Escape' && !mapaAberto.value) fechar()
 }
 onMounted(() => {
   painel.value?.focus()
@@ -214,7 +264,7 @@ onUnmounted(() => focoAnterior?.focus())
 </script>
 
 <template>
-  <div class="sobreposicao">
+  <div class="sobreposicao" :inert="mapaAberto || undefined">
     <div
       ref="painel"
       class="painel"
@@ -273,16 +323,21 @@ onUnmounted(() => focoAnterior?.focus())
           <div class="campo endereco">
             <div class="rotulo-linha">
               <label :for="form.outroEndereco ? 'novo-cep' : 'novo-endereco'">Endereço</label>
-              <a
-                v-if="mapa"
-                class="mapa"
-                :href="urlMapa(mapa)"
-                target="_blank"
-                rel="noopener"
-                title="Abrir o endereço no Google Maps"
-              >
-                <RussoIcone nome="pin" :tamanho="16" />Ver no mapa
-              </a>
+              <div v-if="mapa" class="localizacao">
+                <span v-if="form.localizacao" class="conferida">
+                  <RussoIcone nome="check" :tamanho="16" />Localização conferida
+                </span>
+                <button
+                  ref="botaoMapa"
+                  type="button"
+                  class="mapa"
+                  :aria-label="form.localizacao ? 'Trocar a localização no mapa' : undefined"
+                  @click="abrirMapa"
+                >
+                  <template v-if="form.localizacao">Trocar</template>
+                  <template v-else><RussoIcone nome="pin" :tamanho="16" />Ver no mapa</template>
+                </button>
+              </div>
             </div>
             <input
               v-if="!form.outroEndereco"
@@ -423,6 +478,15 @@ onUnmounted(() => focoAnterior?.focus())
         </button>
       </div>
     </div>
+    <!-- Fora da área inerte: no app, #modais-gestor fica no layout, depois deste modal. -->
+    <Teleport v-if="mapaAberto" defer to="#modais-gestor">
+      <DialogoMapa
+        :endereco="mapa"
+        :inicial="posicaoConhecida(form)"
+        @confirmar="confirmarLocalizacao"
+        @cancelar="fecharMapa"
+      />
+    </Teleport>
   </div>
 </template>
 
@@ -533,13 +597,30 @@ onUnmounted(() => focoAnterior?.focus())
   justify-content: space-between;
   gap: 12px;
 }
-.mapa {
+.localizacao {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.conferida {
   display: flex;
   align-items: center;
   gap: 4px;
   font-size: 13px;
   font-weight: 600;
+  color: var(--kgb-sucesso);
+}
+.mapa {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--kgb-primaria);
+  cursor: pointer;
 }
 .mapa:hover {
   color: var(--kgb-primaria-hover);

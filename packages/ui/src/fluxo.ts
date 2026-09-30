@@ -58,19 +58,35 @@ export function progresso(etapas: { feitas: number; total: number }): {
   }
 }
 
+/** A posição conferida no mapa, em graus decimais. Sem as duas, vale o endereço. */
+export interface PosicaoNoMapa {
+  latitude?: number | null
+  longitude?: number | null
+}
+
+/** Uma parada da rota: o endereço e, quando houver, a posição conferida no mapa. */
+export interface ParadaRota extends PosicaoNoMapa {
+  endereco: string
+}
+
 /**
  * O endereço como busca do Google Maps: " · " vira ", ". Os endereços da capital não levam a
- * cidade e ganham ", São Paulo"; os de outra cidade já terminam com ela ("… · Osasco - SP").
+ * cidade e ganham ", São Paulo"; os de outra cidade já terminam com ela ("… · Osasco - SP"). Com a
+ * posição conferida no mapa, o destino é ela ("lat,lng"), mais precisa que o endereço.
  */
-function destino(endereco: string): string {
+function destino(endereco: string, posicao?: PosicaoNoMapa | null): string {
+  const { latitude, longitude } = posicao ?? {}
+  if (Number.isFinite(latitude) && Number.isFinite(longitude)) return `${latitude},${longitude}`
   const texto = endereco.replace(/ · /g, ', ')
   return encodeURIComponent(/ - [A-Z]{2}$/.test(texto) ? texto : `${texto}, São Paulo`)
 }
 
-export function urlMapa(endereco: string): string {
-  return `https://www.google.com/maps/search/?api=1&query=${destino(endereco)}`
+export function urlMapa(endereco: string, posicao?: PosicaoNoMapa | null): string {
+  return `https://www.google.com/maps/search/?api=1&query=${destino(endereco, posicao)}`
 }
 
-export function urlRota(enderecos: readonly string[]): string {
-  return `https://www.google.com/maps/dir/${enderecos.map(destino).join('/')}`
+/** A rota na ordem das paradas: cada uma é um endereço ou o endereço com a posição conferida. */
+export function urlRota(paradas: readonly (string | ParadaRota)[]): string {
+  const destinos = paradas.map((p) => (typeof p === 'string' ? destino(p) : destino(p.endereco, p)))
+  return `https://www.google.com/maps/dir/${destinos.join('/')}`
 }

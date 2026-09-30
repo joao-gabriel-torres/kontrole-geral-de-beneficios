@@ -15,6 +15,8 @@ interface Assinante {
   bairro: string
   cidade: string
   endereco: string
+  latitude: number | null
+  longitude: number | null
 }
 
 const app = criarApp()
@@ -61,7 +63,23 @@ describe('GET /api/assinantes', () => {
       bairro: 'Bela Vista',
       cidade: 'São Paulo',
       endereco: 'Av. Paulista, 1578 · Bela Vista',
+      latitude: null,
+      longitude: null,
     })
+  })
+
+  it('traz a localização conferida no mapa, quando o assinante tem', async () => {
+    const { id } = await prisma.assinante.findFirstOrThrow({ where: { nome: 'Clínica Vida' } })
+    await prisma.assinante.update({
+      where: { id },
+      data: { latitude: -23.561414, longitude: -46.655881 },
+    })
+    try {
+      const [clinica] = await buscar('clinica')
+      expect(clinica).toMatchObject({ latitude: -23.561414, longitude: -46.655881 })
+    } finally {
+      await prisma.assinante.update({ where: { id }, data: { latitude: null, longitude: null } })
+    }
   })
 
   it('o endereço traz o complemento depois do número, quando o assinante tem', async () => {

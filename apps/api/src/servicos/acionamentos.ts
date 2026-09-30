@@ -19,6 +19,7 @@ import {
 import { normalizarCepOpcional } from '../dominio/cep'
 import { dataSP } from '../dominio/datas'
 import { calcularInicio } from '../dominio/inicio-prestador'
+import { ehEnderecoDoAssinante, normalizarCoordenadas } from '../dominio/localizacao'
 import { ordenarPorProximidade } from '../dominio/proximidade'
 import { ErroHttp, naoEncontrado } from '../erros'
 import {
@@ -136,6 +137,7 @@ export async function removerArquivos(chaves: readonly string[]): Promise<void> 
 export async function criarAcionamento(u: UsuarioSessao, dados: DadosNovoAcionamento) {
   const d = normalizarNovoAcionamento(dados)
   const cep = normalizarCepOpcional(d.cep)
+  const localizacao = normalizarCoordenadas(d.latitude, d.longitude)
   const assinanteId = d.assinanteId?.trim() || null
   const id = await prisma.$transaction(async (tx) => {
     // FOR SHARE segura o prestador até o INSERT: uma exclusão ou desativação em andamento termina
@@ -149,9 +151,21 @@ export async function criarAcionamento(u: UsuarioSessao, dados: DadosNovoAcionam
     if (assinanteId) {
       const assinante = await tx.assinante.findFirst({
         where: { id: assinanteId, status: 'ativo', excluidoEm: null },
-        select: { id: true },
+        select: {
+          id: true,
+          cep: true,
+          logradouro: true,
+          numero: true,
+          complemento: true,
+          bairro: true,
+        },
       })
       if (!assinante) throw new ErroDominio('assinante_invalido', 'Escolha um assinante ativo')
+      // A posição conferida no endereço do próprio assinante fica no cadastro dele: o mapa do
+      // próximo acionamento já abre nela. Em outro endereço, fica só no acionamento.
+      if (localizacao && ehEnderecoDoAssinante({ cep, endereco: d.endereco }, assinante)) {
+        await tx.assinante.update({ where: { id: assinante.id }, data: localizacao })
+      }
     }
     const tipos = await tx.tipoDemanda.findMany({
       where: { id: { in: d.tipoIds }, excluidoEm: null },
@@ -166,6 +180,8 @@ export async function criarAcionamento(u: UsuarioSessao, dados: DadosNovoAcionam
         endereco: d.endereco,
         assinanteId,
         cep,
+        latitude: localizacao?.latitude ?? null,
+        longitude: localizacao?.longitude ?? null,
         data: new Date(`${d.data}T00:00:00Z`),
         inicio: d.inicio,
         fim: d.fim,

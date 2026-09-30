@@ -33,6 +33,8 @@ const resumo = (id: string, extra: Partial<ResumoAcionamento> = {}): ResumoAcion
   tipos: [{ nome: 'Vazamento', cor: '#0069BD' }],
   etapas: { feitas: 0, total: 9 },
   ultimoEnvioEm: null,
+  latitude: null,
+  longitude: null,
   ...extra,
 })
 const inicio = (extra: Partial<InicioPrestador> = {}): InicioPrestador => ({
@@ -149,6 +151,36 @@ describe('PaginaInicio', () => {
     await wrapper.findAll('.atalho')[0]!.trigger('click')
     expect(abrir).toHaveBeenCalledWith(
       urlRota(['Rua Bela Cintra, 1200 · Consolação', 'Av. Paulista, 900 · Bela Vista']),
+      '_blank',
+    )
+  })
+
+  it('"Rota" e "Rota do dia" usam a localização conferida no mapa quando o acionamento tem', async () => {
+    const posicao = { latitude: -23.556789, longitude: -46.690123 }
+    const conferido = resumo('1063', posicao)
+    api.GET.mockResolvedValue(
+      ok(
+        inicio({
+          proximo: conferido,
+          hoje: [
+            resumo('1062', { status: 'aguardando', latitude: -23.5, longitude: -46.6 }),
+            conferido,
+            resumo('1064', { endereco: 'Av. Paulista, 900 · Bela Vista', inicio: '14:00' }),
+          ],
+        }),
+      ),
+    )
+    const abrir = vi.spyOn(window, 'open').mockReturnValue(null)
+    const { wrapper } = await montar(PaginaInicio)
+    expect(wrapper.find('.proximo a.rota').attributes('href')).toBe(
+      urlMapa('Rua Bela Cintra, 1200 · Consolação', posicao),
+    )
+    await wrapper.findAll('.atalho')[0]!.trigger('click')
+    expect(abrir).toHaveBeenCalledWith(
+      urlRota([
+        { endereco: 'Rua Bela Cintra, 1200 · Consolação', ...posicao },
+        'Av. Paulista, 900 · Bela Vista',
+      ]),
       '_blank',
     )
   })

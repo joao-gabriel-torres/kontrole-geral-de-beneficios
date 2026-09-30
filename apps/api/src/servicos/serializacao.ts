@@ -76,6 +76,8 @@ function camposBase(
     tipos: demandas.map((d) => ({ nome: d.tipoNome, cor: d.cor })),
     etapas: { feitas: etapas.filter((e) => e.feita).length, total: etapas.length },
     ultimoEnvioEm: ultimoEnvio?.toISOString() ?? null,
+    latitude: a.latitude,
+    longitude: a.longitude,
   }
 }
 

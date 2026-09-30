@@ -34,6 +34,14 @@ export const ResumoAcionamentoSchema = z
     tipos: z.array(z.object({ nome: z.string(), cor: z.string() })),
     etapas: z.object({ feitas: z.number().int(), total: z.number().int() }),
     ultimoEnvioEm: z.string().nullable(),
+    latitude: z
+      .number()
+      .nullable()
+      .openapi({ description: 'Posição conferida no mapa (graus decimais); null quando não há' }),
+    longitude: z
+      .number()
+      .nullable()
+      .openapi({ description: 'Posição conferida no mapa (graus decimais); null quando não há' }),
   })
   .openapi('ResumoAcionamento')
 
@@ -123,6 +131,14 @@ export const NovoAcionamentoSchema = z
       .max(20)
       .optional()
       .openapi({ description: 'CEP do atendimento: 8 dígitos, com ou sem hífen' }),
+    latitude: z.number().nullish().openapi({
+      description:
+        'Posição conferida no mapa, com a longitude (as duas ou nenhuma), no Brasil. No endereço do próprio assinante, também vai para o cadastro dele',
+    }),
+    longitude: z
+      .number()
+      .nullish()
+      .openapi({ description: 'Posição conferida no mapa, com a latitude' }),
     data: z.iso.date(),
     inicio: z.string().regex(HORARIO),
     fim: z.string().regex(HORARIO),

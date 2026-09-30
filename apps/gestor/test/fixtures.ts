@@ -27,6 +27,8 @@ export function resumo(dados: Partial<ResumoAcionamento> = {}): ResumoAcionament
     ],
     etapas: { feitas: 7, total: 10 },
     ultimoEnvioEm: '2026-09-27T13:30:00.000Z',
+    latitude: null,
+    longitude: null,
     ...dados,
   }
 }
@@ -155,6 +157,8 @@ const assinante = (
   bairro,
   cidade: 'São Paulo',
   endereco: `${logradouro}, ${numero} · ${bairro}`,
+  latitude: null,
+  longitude: null,
 })
 
 /** Assinantes ativos, na ordem da busca da API (por nome). */

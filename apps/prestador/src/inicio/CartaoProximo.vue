@@ -27,7 +27,7 @@ const quando = computed(() =>
       <div class="local">{{ a.cliente }} · {{ a.endereco }}</div>
     </div>
     <div class="botoes">
-      <a class="rota" :href="urlMapa(a.endereco)" target="_blank" rel="noopener">
+      <a class="rota" :href="urlMapa(a.endereco, a)" target="_blank" rel="noopener">
         <RussoIcone nome="pin" :tamanho="18" />Rota
       </a>
       <button type="button" class="abrir" @click="$emit('abrir')">Abrir checklist</button>
