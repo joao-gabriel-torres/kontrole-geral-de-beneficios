@@ -351,3 +351,18 @@ perfect; no comparador, os casos do modal mascaram a coluna de campos (`ocultarN
 
 - TDD nos módulos novos; o comparador roda só nos casos afetados durante o desenvolvimento
   (a rodada completa fica para o fechamento, junto com o `pnpm e2e` atualizado para o fluxo novo).
+
+## Decisões do usuário (30/09, depois do PR #3)
+
+1. **E-mail em produção:** a definir. Nada muda no código (o envio real depende só de `SMTP_URL`).
+2. **Hospedagem:** os dois apps web (gestor e prestador) vão para o **Cloudflare Pages**.
+   - Cada app ganha `public/_redirects` (SPA: `/* /index.html 200`) e `public/_headers` (cache longo para `/assets/*`, `no-cache` para o `index.html`, e cabeçalhos básicos de segurança).
+   - A URL da API entra por `VITE_API_URL` no ambiente do Pages.
+   - O README ganha a seção de deploy (projetos, comando de build, pasta de saída, variáveis e ajustes da API: `CORS_ORIGINS`, `URL_APP_PRESTADOR`, `BETTER_AUTH_URL` e cookies entre subdomínios do gestor).
+   - A API (Node + Postgres + arquivos) fica num host Node à parte, a escolher. As fotos em R2 são o próximo passo natural, com a interface `Armazenamento` já pronta.
+3. **Localização conferida no mapa:** a ordem dos prestadores continua pelo CEP. No Novo acionamento, "Ver no mapa" passa a abrir um mapa interativo dentro do sistema (Leaflet + OpenStreetMap).
+   - **Posição inicial:** vem de `GET /api/geocodificacao?endereco=…` (só gestor), que consulta o Nominatim do OpenStreetMap atrás da interface `Geocodificador`: `User-Agent` próprio, tempo limite curto, respeitando a política de uso e com implementação falsa nos testes. Sem resultado, 404 `localizacao_nao_encontrada`; o mapa abre então no centro de São Paulo e pede para posicionar o pino.
+   - **Ajuste:** o pino é arrastável, e "Confirmar localização" grava latitude e longitude no formulário. O modal mostra "Localização conferida" e deixa trocar.
+   - **Onde grava:** `Acionamento.latitude` e `Acionamento.longitude`, opcionais. Quando o endereço é o do próprio assinante, a posição confirmada também vai para `Assinante.latitude` e `Assinante.longitude`, e a próxima vez já abre nela.
+   - **App do prestador:** o botão "Rota" (e a rota do dia) usa as coordenadas quando existem, com `urlMapa`/`urlRota` aceitando coordenadas.
+4. **Importação da planilha:** não envia convite em massa (confirmado).
