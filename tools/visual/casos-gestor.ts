@@ -14,6 +14,12 @@ function abrirPeloTitulo(filtro: string, titulo: string): Passo[] {
   ]
 }
 
+/**
+ * A coluna de campos do Novo acionamento diverge do protótipo a pedido do usuário (30/09): buscas
+ * de tipos, cliente e prestador, CEP e "Ver no mapa". Cabeçalho, prévia e botões seguem comparados.
+ */
+const CAMPOS_NOVO_ACIONAMENTO = ['[aria-labelledby="novo-titulo"] .campos']
+
 const DETALHES = [
   { caso: 'aguardando', filtro: 'Aguardando', titulo: 'Revisão elétrica e troca de disjuntor' },
   { caso: 'reprovado', filtro: 'Reprovados', titulo: 'Revisão elétrica anual' },
@@ -59,6 +65,7 @@ export const CASOS_GESTOR: Caso[] = [
     rota: '/acionamentos',
     passos: [{ clicar: 'Novo acionamento' }],
     regioes: [telaWeb],
+    ocultarNoApp: CAMPOS_NOVO_ACIONAMENTO,
   },
   {
     nome: 'gestor-web-novo-acionamento-tipos',
@@ -68,10 +75,16 @@ export const CASOS_GESTOR: Caso[] = [
     rota: '/acionamentos',
     passos: [
       { clicar: 'Novo acionamento' },
+      // No app, o rótulo abre a busca de tipos; no protótipo, o clique não faz nada.
+      { clicar: 'Tipos de demanda', papel: 'text' },
+      // Os tipos são botões nos dois: os chips do protótipo e os itens da lista suspensa do app.
       { clicar: 'Vazamento' },
       { clicar: 'Reparo em gesso' },
+      // Clicar fora fecha a lista suspensa do app; no protótipo, não faz nada.
+      { clicar: 'Checklist gerado', papel: 'text' },
     ],
     regioes: [telaWeb],
+    ocultarNoApp: CAMPOS_NOVO_ACIONAMENTO,
   },
   {
     nome: 'gestor-web-aprovacoes',

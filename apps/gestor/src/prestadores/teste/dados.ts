@@ -6,22 +6,23 @@ type PreviaPlanilha = components['schemas']['PreviaPlanilha']
 
 /** Dados de teste da tela de Prestadores (o seed do dia, no formato da API). */
 
-const tipo = (id: string, nome: string, cor: string): TipoDemanda => ({
+const tipo = (id: string, nome: string, cor: string, categoria: string): TipoDemanda => ({
   id,
   nome,
   cor,
+  categoria,
   checklist: [],
 })
 
 export const TIPOS_SEED: TipoDemanda[] = [
-  tipo('t1', 'Vazamento', '#0069BD'),
-  tipo('t2', 'Revisão elétrica', '#FC7608'),
-  tipo('t3', 'Ponto de luz', '#5D627D'),
-  tipo('t4', 'Troca de disjuntor', '#F47B50'),
-  tipo('t5', 'Pintura', '#004E8F'),
-  tipo('t6', 'Reparo em gesso', '#E0A100'),
-  tipo('t7', 'Limpeza de ar-condicionado', '#8FB8DE'),
-  tipo('t8', 'Chaveiro', '#A6A6A6'),
+  tipo('t1', 'Vazamento', '#0069BD', 'Hidráulica'),
+  tipo('t2', 'Revisão elétrica', '#FC7608', 'Elétrica'),
+  tipo('t3', 'Ponto de luz', '#5D627D', 'Elétrica'),
+  tipo('t4', 'Troca de disjuntor', '#F47B50', 'Elétrica'),
+  tipo('t5', 'Pintura', '#004E8F', 'Acabamento'),
+  tipo('t6', 'Reparo em gesso', '#E0A100', 'Acabamento'),
+  tipo('t7', 'Limpeza de ar-condicionado', '#8FB8DE', 'Climatização'),
+  tipo('t8', 'Chaveiro', '#A6A6A6', 'Segurança'),
 ]
 
 const especialidades = (...ids: string[]) =>
@@ -38,6 +39,7 @@ export function prestador(dados: Partial<PrestadorCadastro> = {}): PrestadorCada
     telefone: '11987342210',
     email: 'carlos.mendes@email.com',
     regiao: 'Zona Oeste',
+    cep: '05422001',
     status: 'ativo',
     cor: '#0069BD',
     credenciadoDesde: '2024-03-12',
@@ -58,6 +60,7 @@ export const SEED_PRESTADORES: PrestadorCadastro[] = [
     telefone: '11971205588',
     email: 'ana@ribeiroreparos.com.br',
     regiao: 'Zona Sul',
+    cep: '04010000',
     cor: '#FC7608',
     credenciadoDesde: '2024-06-03',
     especialidades: especialidades('t5', 't6', 't7'),
@@ -72,6 +75,7 @@ export const SEED_PRESTADORES: PrestadorCadastro[] = [
     telefone: '11994021876',
     email: 'joao.pires@email.com',
     regiao: 'Centro',
+    cep: '01001000',
     cor: '#5D627D',
     credenciadoDesde: '2024-09-20',
     especialidades: especialidades('t1', 't2', 't4', 't8'),
@@ -85,6 +89,7 @@ export const SEED_PRESTADORES: PrestadorCadastro[] = [
     telefone: '11955127780',
     email: 'luciana.prado@email.com',
     regiao: 'Zona Leste',
+    cep: '03071000',
     cor: '#E0A100',
     credenciadoDesde: '2026-08-27',
     especialidades: especialidades('t6', 't5'),
@@ -98,6 +103,7 @@ export const SEED_PRESTADORES: PrestadorCadastro[] = [
     telefone: '11988513302',
     email: 'contato@marinacosta.com.br',
     regiao: 'Zona Oeste',
+    cep: '05018000',
     cor: '#F47B50',
     credenciadoDesde: '2025-01-15',
     especialidades: especialidades('t2', 't3', 't7'),
@@ -111,6 +117,7 @@ export const SEED_PRESTADORES: PrestadorCadastro[] = [
     telefone: '11966770914',
     email: 'roberto.alves@email.com',
     regiao: 'Zona Norte',
+    cep: '02011000',
     status: 'inativo',
     cor: '#004E8F',
     credenciadoDesde: '2024-05-08',

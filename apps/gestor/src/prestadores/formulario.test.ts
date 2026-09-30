@@ -7,6 +7,7 @@ import {
   formularioDe,
   formularioVazio,
   mostrarErro,
+  rotuloDoConvite,
   textoExclusao,
   tituloExclusao,
   type FormularioPrestador,
@@ -30,6 +31,7 @@ describe('formulário', () => {
       telefone: '',
       email: '',
       regiao: '',
+      cep: '',
       especialidades: [],
     })
   })
@@ -42,11 +44,13 @@ describe('formulário', () => {
       telefone: '(11) 98734-2210',
       email: 'carlos.mendes@email.com',
       regiao: 'Zona Oeste',
+      cep: '05422-001',
       especialidades: ['t1', 't2', 't3', 't4'],
     })
-    expect(formularioDe(prestador({ email: null, regiao: null }))).toMatchObject({
+    expect(formularioDe(prestador({ email: null, regiao: null, cep: null }))).toMatchObject({
       email: '',
       regiao: '',
+      cep: '',
     })
   })
 
@@ -57,13 +61,16 @@ describe('formulário', () => {
 
   it('o corpo vai como digitado (a API normaliza)', () => {
     expect(
-      corpoDoFormulario(valido({ id: 'p9', email: ' a@b.c ', especialidades: ['t2'] })),
+      corpoDoFormulario(
+        valido({ id: 'p9', email: ' a@b.c ', cep: ' 05422-001 ', especialidades: ['t2'] }),
+      ),
     ).toEqual({
       nome: 'Pedro Lima',
       documento: '529.982.247-25',
       telefone: '(11) 91234-5678',
       email: ' a@b.c ',
       regiao: '',
+      cep: ' 05422-001 ',
       especialidades: ['t2'],
     })
   })
@@ -85,6 +92,13 @@ describe('erroDoFormulario (ordem do protótipo)', () => {
     expect(erro({ telefone: '91234-5678' })).toBe('Informe o telefone com DDD'))
   it('telefone com mais de 11 dígitos', () =>
     expect(erro({ telefone: '+55 11 91234-5678' })).toBe('Informe o telefone com DDD'))
+  it('CEP opcional, mas com 8 dígitos (com ou sem hífen) quando informado', () => {
+    expect(erro({ cep: '  ' })).toBe('')
+    expect(erro({ cep: '05422-001' })).toBe('')
+    expect(erro({ cep: ' 05422001 ' })).toBe('')
+    expect(erro({ cep: '05422-00' })).toBe('Informe um CEP com 8 dígitos')
+    expect(erro({ cep: '05.422-001' })).toBe('Informe um CEP com 8 dígitos')
+  })
   it('um prestador do seed abre sem erro no Editar', () => {
     for (const p of SEED_PRESTADORES)
       expect(erroDoFormulario(formularioDe(p), SEED_PRESTADORES)).toBe('')
@@ -103,7 +117,12 @@ describe('mostrarErro', () => {
 })
 
 it('os erros de validação da API vão para a linha de erro do formulário', () => {
-  for (const codigo of ['documento_duplicado', 'documento_invalido', 'telefone_invalido'])
+  for (const codigo of [
+    'documento_duplicado',
+    'documento_invalido',
+    'telefone_invalido',
+    'cep_invalido',
+  ])
     expect(ERROS_DO_FORMULARIO.has(codigo)).toBe(true)
   expect(ERROS_DO_FORMULARIO.has('nao_encontrado')).toBe(false)
 })
@@ -122,5 +141,16 @@ describe('exclusão', () => {
     expect(textoExclusao('Roberto Alves', 0)).toBe(
       'O histórico de acionamentos é mantido nos relatórios. Essa ação não pode ser desfeita.',
     )
+  })
+})
+
+describe('rotuloDoConvite', () => {
+  it('pendente envia, convidado reenvia e quem tem senha redefine; sem e-mail, nada', () => {
+    expect(rotuloDoConvite('pendente')).toBe('Enviar convite de acesso')
+    expect(rotuloDoConvite('convidado')).toBe('Reenviar convite')
+    // A API aceita o convite como redefinição: um e-mail trocado tem conserto pelo gestor.
+    expect(rotuloDoConvite('ativo')).toBe('Redefinir acesso')
+    expect(rotuloDoConvite('sem_email')).toBeNull()
+    expect(rotuloDoConvite(undefined)).toBeNull()
   })
 })

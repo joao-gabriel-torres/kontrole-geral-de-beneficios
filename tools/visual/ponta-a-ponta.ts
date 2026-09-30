@@ -82,12 +82,31 @@ async function criarAcionamento(g: Page, titulo: string) {
   await g.getByRole('button', { name: 'Novo acionamento' }).click()
   const modal = g.getByRole('dialog', { name: 'Novo acionamento' })
   await modal.getByLabel('Título do acionamento').fill(titulo)
+  // Tipos: busca com lista suspensa agrupada por categoria; o escolhido vira chip.
+  await modal.getByRole('combobox', { name: 'Tipos de demanda' }).fill('vaza')
   await modal.getByRole('button', { name: 'Vazamento', exact: true }).click()
+  await modal.getByRole('button', { name: 'Remover Vazamento' }).waitFor()
   await esperarTexto(modal, /itens? no checklist/)
-  await modal.getByLabel('Cliente').fill('Cliente do roteiro')
-  await modal.getByLabel('Endereço').fill('Rua do Roteiro, 100 · Centro')
-  const prestador = await modal.getByLabel('Prestador').locator('option:checked').innerText()
-  if (!prestador.includes('Carlos')) throw new Error(`Prestador padrão inesperado: ${prestador}`)
+  // Cliente: um assinante do seed; a escolha preenche o endereço (só leitura).
+  await modal.getByRole('combobox', { name: 'Cliente' }).fill('aurora')
+  const assinante = modal.getByRole('option', { name: /Edifício Aurora/ })
+  const enderecoDoAssinante = await assinante.locator('.detalhe').innerText()
+  await assinante.click()
+  const endereco = await modal.getByLabel('Endereço', { exact: true }).inputValue()
+  if (!endereco || endereco !== enderecoDoAssinante) {
+    throw new Error(
+      `Endereço não veio do assinante: "${endereco}" (esperado "${enderecoDoAssinante}")`,
+    )
+  }
+  // Prestador: a lista vem pela proximidade do CEP; o roteiro usa o Carlos (login do app).
+  const prestador = modal.getByRole('combobox', { name: 'Prestador' })
+  await prestador.click()
+  await prestador.fill('carlos')
+  await modal.getByRole('option', { name: /Carlos Mendes/ }).click()
+  const escolhido = await prestador.inputValue()
+  if (!escolhido.startsWith('Carlos Mendes')) {
+    throw new Error(`Prestador inesperado: ${escolhido}`)
+  }
   await modal.getByRole('button', { name: 'Enviar ao prestador' }).click()
   await esperarTexto(g, 'Acionamento enviado para Carlos Mendes')
   await modal.waitFor({ state: 'detached' })

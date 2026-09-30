@@ -1,6 +1,13 @@
 /** Os mesmos limites da API (depois do trim): o campo não deixa passar do que ela aceita. */
 export const LIMITE_NOME = 60
 export const LIMITE_ETAPA = 200
+export const LIMITE_CATEGORIA = 60
+
+/** As categorias em uso (sugestões do campo "Categoria"): sem repetir, em ordem alfabética. */
+export function categoriasExistentes(tipos: readonly { categoria: string | null }[]): string[] {
+  const nomes = new Set(tipos.map((t) => t.categoria?.trim() ?? '').filter(Boolean))
+  return [...nomes].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+}
 
 /** "N itens", com o singular corrigido (o protótipo escreve "1 itens"). */
 export function rotuloItens(n: number): string {

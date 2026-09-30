@@ -1,4 +1,5 @@
 import type {
+  components,
   ContagemAcionamentos,
   DetalheAcionamento,
   Foto,
@@ -92,6 +93,7 @@ export const TIPOS: TipoDemanda[] = [
     id: 't1',
     nome: 'Vazamento',
     cor: '#0069BD',
+    categoria: 'Hidráulica',
     checklist: [
       'Localizar ponto do vazamento',
       'Fechar registro e isolar a área',
@@ -104,12 +106,14 @@ export const TIPOS: TipoDemanda[] = [
     id: 't2',
     nome: 'Revisão elétrica',
     cor: '#FC7608',
+    categoria: 'Elétrica',
     checklist: ['Inspecionar quadro de distribuição', 'Medir tensão das tomadas'],
   },
   {
     id: 't6',
     nome: 'Reparo em gesso',
     cor: '#E0A100',
+    categoria: 'Acabamento',
     checklist: [
       'Remover parte danificada',
       'Aplicar placa ou massa nova',
@@ -117,11 +121,45 @@ export const TIPOS: TipoDemanda[] = [
       'Retocar pintura',
     ],
   },
-  { id: 't9', nome: 'Vistoria', cor: '#5D627D', checklist: ['Fotografar a fachada'] },
+  {
+    id: 't9',
+    nome: 'Vistoria',
+    cor: '#5D627D',
+    categoria: null,
+    checklist: ['Fotografar a fachada'],
+  },
 ]
 
 export const PRESTADORES: PrestadorOpcao[] = [
-  { id: 'p2', nome: 'Ana Ribeiro', regiao: 'Zona Sul', cor: '#FC7608' },
-  { id: 'p1', nome: 'Carlos Mendes', regiao: 'Zona Oeste', cor: '#0069BD' },
-  { id: 'p7', nome: 'Pedro Lima', regiao: null, cor: '#5D627D' },
+  { id: 'p2', nome: 'Ana Ribeiro', regiao: 'Zona Sul', cep: '04010000', cor: '#FC7608' },
+  { id: 'p1', nome: 'Carlos Mendes', regiao: 'Zona Oeste', cep: '05422001', cor: '#0069BD' },
+  { id: 'p7', nome: 'Pedro Lima', regiao: null, cep: null, cor: '#5D627D' },
+]
+
+type Assinante = components['schemas']['Assinante']
+
+const assinante = (
+  id: string,
+  nome: string,
+  cep: string,
+  logradouro: string,
+  numero: string,
+  bairro: string,
+): Assinante => ({
+  id,
+  nome,
+  cep,
+  logradouro,
+  numero,
+  complemento: null,
+  bairro,
+  cidade: 'São Paulo',
+  endereco: `${logradouro}, ${numero} · ${bairro}`,
+})
+
+/** Assinantes ativos, na ordem da busca da API (por nome). */
+export const ASSINANTES: Assinante[] = [
+  assinante('a2', 'Clínica Vida', '01310200', 'Av. Paulista', '1578', 'Bela Vista'),
+  assinante('a1', 'Edifício Aurora', '05433000', 'Rua Harmonia', '410', 'Vila Madalena'),
+  assinante('a3', 'Hotel Ipê', '01307001', 'Rua Frei Caneca', '569', 'Consolação'),
 ]

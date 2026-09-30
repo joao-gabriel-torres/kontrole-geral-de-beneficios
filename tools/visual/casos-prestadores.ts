@@ -25,6 +25,16 @@ function prestadores(nome: string, modo: Modo, passos: Passo[] = []): Caso {
 }
 
 /**
+ * Modal Novo/Editar prestador. A linha de e-mail e região ganhou o CEP e o botão de convite (no
+ * rótulo do e-mail) a pedido do usuário (30/09): com o CEP, as larguras da linha mudam, então ela
+ * toda fica fora da comparação. O resto do modal segue comparado.
+ */
+const comModal = (caso: Caso): Caso => ({
+  ...caso,
+  ocultarNoApp: ['[aria-labelledby="prestador-titulo"] .contato'],
+})
+
+/**
  * Prestadores (cadastro e conferência da planilha). Só estados que não gravam no banco: salvar, o
  * switch, excluir e importar mudariam os dados dos casos seguintes (anexar só pede a prévia).
  */
@@ -34,14 +44,21 @@ export const CASOS_PRESTADORES: Caso[] = [
   prestadores('inativos', 'gw', [chip('Inativos')]),
   prestadores('busca', 'gw', [{ preencher: BUSCA, com: 'zona oeste' }]),
   prestadores('busca-vazia', 'gw', [{ preencher: BUSCA, com: 'xyz' }]),
-  prestadores('novo', 'gw', [{ clicar: 'Novo prestador' }]),
-  prestadores('novo-especialidades', 'gw', [
-    { clicar: 'Novo prestador' },
-    { clicar: 'Vazamento' },
-    { clicar: 'Pintura' },
-  ]),
-  prestadores('novo-erro', 'gw', [{ clicar: 'Novo prestador' }, { preencher: 'Nome', com: 'Ana' }]),
-  prestadores('editar', 'gw', [{ clicar: 'Carlos Mendes', papel: 'text' }]),
+  comModal(prestadores('novo', 'gw', [{ clicar: 'Novo prestador' }])),
+  comModal(
+    prestadores('novo-especialidades', 'gw', [
+      { clicar: 'Novo prestador' },
+      { clicar: 'Vazamento' },
+      { clicar: 'Pintura' },
+    ]),
+  ),
+  comModal(
+    prestadores('novo-erro', 'gw', [
+      { clicar: 'Novo prestador' },
+      { preencher: 'Nome', com: 'Ana' },
+    ]),
+  ),
+  comModal(prestadores('editar', 'gw', [{ clicar: 'Carlos Mendes', papel: 'text' }])),
   prestadores('excluir-bloqueado', 'gw', [{ clicar: 'Excluir' }]),
   prestadores('excluir-livre', 'gw', [chip('Inativos'), { clicar: 'Excluir' }]),
   prestadores('importar', 'gw', conferir('credenciados.csv')),
@@ -53,7 +70,7 @@ export const CASOS_PRESTADORES: Caso[] = [
   prestadores('importar-com-erros', 'gw', conferir('credenciados-com-erros.csv')),
   prestadores('', 'gm'),
   prestadores('inativos', 'gm', [chip('Inativos')]),
-  prestadores('novo', 'gm', [{ clicar: 'Novo prestador' }]),
+  comModal(prestadores('novo', 'gm', [{ clicar: 'Novo prestador' }])),
   prestadores('excluir-bloqueado', 'gm', [{ clicar: 'Excluir' }]),
   prestadores('importar', 'gm', conferir('credenciados.csv')),
 ]

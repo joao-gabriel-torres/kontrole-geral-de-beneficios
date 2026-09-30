@@ -1,4 +1,5 @@
-import { readonly, ref } from 'vue'
+import { readonly, ref, watch } from 'vue'
+import { sessao } from '../../sessao'
 
 const aberto = ref(false)
 
@@ -12,3 +13,10 @@ export const novoAcionamento = {
     aberto.value = false
   },
 }
+
+// O formulário tem cliente e endereço: nada dele sobrevive à troca de conta (saída OU sessão
+// recusada). Fechar desmonta o modal e descarta o que estava preenchido.
+watch(
+  () => sessao.usuario,
+  () => novoAcionamento.fechar(),
+)

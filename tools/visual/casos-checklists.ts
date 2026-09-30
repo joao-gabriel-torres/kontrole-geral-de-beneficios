@@ -20,8 +20,9 @@ const web = (nome: string, passos: Caso['passos'], regioes: Regiao[]): Caso => (
   passos,
   regioes,
   // As linhas das etapas divergem do protótipo a pedido do usuário (29/09): alça de arrastar,
-  // "Subir" e "Descer", e o texto com cara de campo. O resto da tela continua comparado.
-  ocultarNoApp: ['.etapas'],
+  // "Subir" e "Descer", e o texto com cara de campo. O campo "Categoria" (30/09) não existe no
+  // protótipo. O resto da tela continua comparado.
+  ocultarNoApp: ['.etapas', '.editor .categoria'],
 })
 const mobile = (nome: string, passos: Caso['passos'], regioes: Regiao[]): Caso => ({
   ...web(nome, passos, regioes),

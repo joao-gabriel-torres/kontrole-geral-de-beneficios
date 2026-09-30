@@ -10,6 +10,7 @@ import { usarCriarTipo, usarExcluirTipo, usarSalvarTipo, usarTiposDemanda } from
 import { usarEdicaoTipos } from './edicao'
 import {
   acrescentarEtapa,
+  categoriasExistentes,
   editarEtapa,
   escolherSelecionado,
   removerEtapa,
@@ -25,6 +26,7 @@ const criar = usarCriarTipo()
 const excluir = usarExcluirTipo()
 
 const exibidos = computed(() => (tipos.value ?? []).map(edicao.exibir))
+const categorias = computed(() => categoriasExistentes(tipos.value ?? []))
 const selecionado = computed(() => escolherSelecionado(exibidos.value, tipoSelecionado.value))
 const novoTipo = ref('')
 const novaEtapa = ref('')
@@ -101,8 +103,11 @@ function adicionarEtapa() {
         v-if="selecionado"
         v-model:nova-etapa="novaEtapa"
         :tipo="selecionado"
+        :categorias="categorias"
         @renomear="(nome) => edicao.renomear(selecionado!.id, nome)"
         @soltar-nome="edicao.soltarNome(selecionado!.id)"
+        @categorizar="(categoria) => edicao.categorizar(selecionado!.id, categoria)"
+        @soltar-categoria="edicao.soltarCategoria(selecionado!.id)"
         @editar="(i, texto) => alterarChecklist((lista) => editarEtapa(lista, i, texto))"
         @mover="(de, para) => alterarChecklist((lista) => moverEtapa(lista, de, para))"
         @remover="(i) => alterarChecklist((lista) => removerEtapa(lista, i))"

@@ -3,13 +3,15 @@ import type { TipoDemanda } from '@kgb/api-client'
 import { RussoIcone } from '@kgb/ui'
 import Sortable from 'sortablejs'
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { LIMITE_ETAPA, LIMITE_NOME, rotuloItens } from './regras'
+import { LIMITE_CATEGORIA, LIMITE_ETAPA, LIMITE_NOME, rotuloItens } from './regras'
 
-const props = defineProps<{ tipo: TipoDemanda }>()
+const props = defineProps<{ tipo: TipoDemanda; categorias: readonly string[] }>()
 const novaEtapa = defineModel<string>('novaEtapa', { required: true })
 const emit = defineEmits<{
   renomear: [nome: string]
   soltarNome: []
+  categorizar: [categoria: string]
+  soltarCategoria: []
   editar: [indice: number, texto: string]
   mover: [de: number, para: number]
   remover: [indice: number]
@@ -71,7 +73,26 @@ onBeforeUnmount(() => arrastar?.destroy())
       />
       <button type="button" class="excluir" @click="emit('excluir')">Excluir tipo</button>
     </div>
-    <div class="rotulo">Checklist · {{ rotuloItens(tipo.checklist.length) }}</div>
+    <div class="subtitulo">
+      <div class="rotulo">Checklist · {{ rotuloItens(tipo.checklist.length) }}</div>
+      <!-- Fora do protótipo (pedido do usuário, 30/09): agrupa os tipos no Novo acionamento. -->
+      <label class="categoria" title="Categoria">
+        <span class="rotulo">Categoria</span>
+        <input
+          class="campo-categoria"
+          :value="tipo.categoria ?? ''"
+          list="categorias-tipos"
+          aria-label="Categoria"
+          placeholder="Outros"
+          :maxlength="LIMITE_CATEGORIA"
+          @input="emit('categorizar', valor($event))"
+          @blur="emit('soltarCategoria')"
+        />
+        <datalist id="categorias-tipos">
+          <option v-for="c in categorias" :key="c" :value="c" />
+        </datalist>
+      </label>
+    </div>
     <div ref="lista" class="etapas">
       <!-- A chave é a posição, como no protótipo: depois de mover, o foco fica na mesma linha. -->
       <div v-for="(texto, i) in tipo.checklist" :key="i" class="etapa">
@@ -170,6 +191,54 @@ onBeforeUnmount(() => arrastar?.destroy())
   font-size: 13px;
   font-weight: 600;
   color: var(--kgb-perigo-texto);
+}
+/*
+ * A linha do rótulo leva o campo "Categoria" à direita. O campo (28px) tem margens negativas: a
+ * linha fica com a altura do rótulo e nada abaixo dela se desloca.
+ */
+.subtitulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+/* O rótulo não encolhe nem quebra (como no protótipo): quem cede espaço é o campo. */
+.subtitulo > .rotulo {
+  flex: none;
+  white-space: nowrap;
+}
+.categoria {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: -7px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.campo-categoria {
+  flex: 0 1 160px;
+  width: 160px;
+  min-width: 80px;
+  height: 28px;
+  border: 1px solid var(--kgb-divisor);
+  border-radius: 10px;
+  background: var(--kgb-branco);
+  outline: 0;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.campo-categoria:hover {
+  border-color: var(--kgb-terciario);
+}
+.campo-categoria:focus {
+  border-color: var(--kgb-primaria);
+}
+/* No telefone só cabe o campo; o nome acessível vem do aria-label. */
+@media (max-width: 599px) {
+  .categoria .rotulo {
+    display: none;
+  }
 }
 .rotulo {
   font-size: 12px;

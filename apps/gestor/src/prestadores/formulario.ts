@@ -14,6 +14,8 @@ export interface FormularioPrestador {
   telefone: string
   email: string
   regiao: string
+  /** Opcional: ordena os prestadores por proximidade no Novo acionamento. */
+  cep: string
   especialidades: string[]
 }
 
@@ -24,10 +26,15 @@ export const formularioVazio = (): FormularioPrestador => ({
   telefone: '',
   email: '',
   regiao: '',
+  cep: '',
   especialidades: [],
 })
 
-/** O Editar abre com documento e telefone formatados (o banco guarda só os dígitos). */
+/** "05422001" → "05422-001" (o banco guarda só os dígitos). */
+const formatarCep = (cep: string | null): string =>
+  cep?.length === 8 ? `${cep.slice(0, 5)}-${cep.slice(5)}` : (cep ?? '')
+
+/** O Editar abre com documento, telefone e CEP formatados (o banco guarda só os dígitos). */
 export const formularioDe = (p: PrestadorCadastro): FormularioPrestador => ({
   id: p.id,
   nome: p.nome,
@@ -35,11 +42,14 @@ export const formularioDe = (p: PrestadorCadastro): FormularioPrestador => ({
   telefone: formatarTelefone(p.telefone),
   email: p.email ?? '',
   regiao: p.regiao ?? '',
+  cep: formatarCep(p.cep),
   especialidades: p.especialidades.map((e) => e.id),
 })
 
 const digitos = (texto: string) => texto.replace(/\D/g, '')
 const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/
+/** O mesmo formato que a API aceita: 8 dígitos, com ou sem hífen. */
+const CEP = /^\d{5}-?\d{3}$/
 
 /**
  * O primeiro erro, na ordem do protótipo. Os dígitos verificadores ficam com a API (só para
@@ -59,6 +69,8 @@ export function erroDoFormulario(
   // O e-mail vira o login do convite; a API confere de novo com o critério do Better Auth.
   const email = f.email.trim()
   if (email && !EMAIL.test(email)) return 'Informe um e-mail válido'
+  const cep = f.cep.trim()
+  if (cep && !CEP.test(cep)) return 'Informe um CEP com 8 dígitos'
   return ''
 }
 
@@ -75,6 +87,7 @@ export const corpoDoFormulario = (f: FormularioPrestador): DadosPrestador => ({
   telefone: f.telefone,
   email: f.email,
   regiao: f.regiao,
+  cep: f.cep,
   especialidades: [...f.especialidades],
 })
 
@@ -85,6 +98,7 @@ export const ERROS_DO_FORMULARIO: ReadonlySet<string> = new Set([
   'documento_duplicado',
   'telefone_invalido',
   'email_invalido',
+  'cep_invalido',
   'tipo_invalido',
   'validacao',
 ])
@@ -110,9 +124,13 @@ export function avisoAoCredenciar(convite?: ConviteAoCredenciar): string {
   return 'Prestador credenciado'
 }
 
-/** O botão de convite do Editar: só para quem tem e-mail e ainda não criou a senha. */
+/**
+ * O botão de convite do Editar, para quem tem e-mail. Quem já criou a senha também recebe o
+ * convite, que a API trata como redefinição: assim um e-mail trocado tem conserto pelo gestor.
+ */
 export function rotuloDoConvite(acesso?: AcessoPrestador): string | null {
   if (acesso === 'pendente') return 'Enviar convite de acesso'
   if (acesso === 'convidado') return 'Reenviar convite'
+  if (acesso === 'ativo') return 'Redefinir acesso'
   return null
 }
