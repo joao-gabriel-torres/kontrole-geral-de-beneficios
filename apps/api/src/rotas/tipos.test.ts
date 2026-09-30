@@ -149,7 +149,9 @@ describe('PATCH /api/tipos/:id', () => {
   it('recusa categoria com mais de 60 caracteres (422)', async () => {
     const r = await pedir('PATCH', '/api/tipos/t8', gestora, { categoria: 'a'.repeat(61) })
     expect(r.status).toBe(422)
-    expect(await r.json()).toMatchObject(erro('texto_longo', 'A categoria pode ter até 60 caracteres'))
+    expect(await r.json()).toMatchObject(
+      erro('texto_longo', 'A categoria pode ter até 60 caracteres'),
+    )
   })
 
   it('o próprio nome em outra grafia não conta como duplicado', async () => {

@@ -26,7 +26,8 @@ const rotaPrestadores = createRoute({
   method: 'get',
   path: '/api/prestadores',
   tags: ['Catálogo'],
-  summary: 'Prestadores ativos (seletor do Novo acionamento); com ?cep=, do mais próximo ao mais distante',
+  summary:
+    'Prestadores ativos (seletor do Novo acionamento); com ?cep=, do mais próximo ao mais distante',
   security: [{ Bearer: [] }],
   middleware: [exigePapel('gestor')] as const,
   request: {

@@ -372,6 +372,146 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/assinantes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Assinantes ativos por nome (a busca do Novo acionamento; no máximo 8) */
+        get: {
+            parameters: {
+                query?: {
+                    busca?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Assinantes */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Assinante"][];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cep/{cep}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Endereço de um CEP (ViaCEP), para atendimento em outro endereço */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description 8 dígitos, com ou sem hífen */
+                    cep: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Endereço */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EnderecoCep"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description CEP não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description CEP malformado */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description O ViaCEP não respondeu */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tipos": {
         parameters: {
             query?: never;
@@ -484,11 +624,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Prestadores ativos (seletor do Novo acionamento) */
+        /** Prestadores ativos (seletor do Novo acionamento); com ?cep=, do mais próximo ao mais distante */
         get: {
             parameters: {
                 query?: {
                     status?: "ativo";
+                    /** @description CEP de referência (8 dígitos, com ou sem hífen) */
+                    cep?: string;
                 };
                 header?: never;
                 path?: never;
@@ -516,6 +658,15 @@ export interface paths {
                 };
                 /** @description Só para a gestão */
                 403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description CEP malformado */
+                422: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2276,6 +2427,10 @@ export interface components {
             titulo: string;
             cliente: string;
             endereco: string;
+            /** @description Assinante escolhido na busca (cliente e endereço são snapshots) */
+            assinanteId?: string;
+            /** @description CEP do atendimento: 8 dígitos, com ou sem hífen */
+            cep?: string;
             /** Format: date */
             data: string;
             inicio: string;
@@ -2288,16 +2443,41 @@ export interface components {
             decisao: "aprovado" | "reprovado";
             motivo?: string;
         };
+        Assinante: {
+            id: string;
+            nome: string;
+            /** @description Só os 8 dígitos */
+            cep: string;
+            logradouro: string;
+            numero: string;
+            complemento: string | null;
+            bairro: string;
+            cidade: string;
+            /** @description Pronto para exibir: "Logradouro, número · bairro" */
+            endereco: string;
+        };
+        EnderecoCep: {
+            /** @description Só os 8 dígitos */
+            cep: string;
+            /** @description Vazio nos CEPs gerais de cidade */
+            logradouro: string;
+            bairro: string;
+            cidade: string;
+        };
         TipoDemanda: {
             id: string;
             nome: string;
             cor: string;
+            /** @description Grupo maior; null vira "Outros" */
+            categoria: string | null;
             checklist: string[];
         };
         PrestadorOpcao: {
             id: string;
             nome: string;
             regiao: string | null;
+            /** @description Só os 8 dígitos */
+            cep: string | null;
             cor: string;
         };
         AtualizacaoEtapa: {
@@ -2377,6 +2557,8 @@ export interface components {
         };
         AtualizacaoTipo: {
             nome?: string;
+            /** @description Grupo maior da tela; null ou vazio limpa (vira "Outros") */
+            categoria?: string | null;
             /** @description O checklist inteiro, na ordem (etapas vazias são descartadas) */
             checklist?: string[];
         };
@@ -2424,6 +2606,8 @@ export interface components {
             telefone: string;
             email: string | null;
             regiao: string | null;
+            /** @description Só os 8 dígitos */
+            cep: string | null;
             /** @enum {string} */
             status: "ativo" | "inativo";
             cor: string;
@@ -2459,6 +2643,8 @@ export interface components {
             telefone: string;
             email?: string | null;
             regiao?: string | null;
+            /** @description 8 dígitos, com ou sem hífen */
+            cep?: string | null;
             /** @description Ids dos tipos, na ordem escolhida */
             especialidades: string[];
         };

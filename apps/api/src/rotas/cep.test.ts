@@ -25,8 +25,7 @@ beforeAll(async () => {
 
 afterEach(() => trocarBuscaCep(null))
 
-const consultar = (cep: string, headers = gestora) =>
-  app.request(`/api/cep/${cep}`, { headers })
+const consultar = (cep: string, headers = gestora) => app.request(`/api/cep/${cep}`, { headers })
 
 describe('GET /api/cep/{cep}', () => {
   it('exige sessão de gestor', async () => {
@@ -73,7 +72,10 @@ describe('GET /api/cep/{cep}', () => {
     const r = await consultar('01310200')
     expect(r.status).toBe(502)
     expect(await r.json()).toEqual({
-      erro: { codigo: 'cep_indisponivel', mensagem: 'O serviço de CEP não respondeu, tente de novo' },
+      erro: {
+        codigo: 'cep_indisponivel',
+        mensagem: 'O serviço de CEP não respondeu, tente de novo',
+      },
     })
   })
 })
@@ -120,7 +122,10 @@ describe('criarBuscaViaCep', () => {
   })
 
   it.each([
-    ['fetch que rejeita (timeout/abort)', criarBuscaViaCep(async () => Promise.reject(new Error('abort')))],
+    [
+      'fetch que rejeita (timeout/abort)',
+      criarBuscaViaCep(async () => Promise.reject(new Error('abort'))),
+    ],
     ['status fora do 2xx', criarBuscaViaCep(async () => resposta({}, 500))],
     [
       'corpo que não é JSON',

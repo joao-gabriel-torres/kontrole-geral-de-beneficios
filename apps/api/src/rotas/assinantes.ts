@@ -14,7 +14,9 @@ export const AssinanteSchema = z
     complemento: z.string().nullable(),
     bairro: z.string(),
     cidade: z.string(),
-    endereco: z.string().openapi({ description: 'Pronto para exibir: "Logradouro, número · bairro"' }),
+    endereco: z
+      .string()
+      .openapi({ description: 'Pronto para exibir: "Logradouro, número · bairro"' }),
   })
   .openapi('Assinante')
 

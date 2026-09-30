@@ -24,7 +24,10 @@ const rotaConsultar = createRoute({
     params: z.object({
       cep: z
         .string()
-        .openapi({ param: { name: 'cep', in: 'path' }, description: '8 dígitos, com ou sem hífen' }),
+        .openapi({
+          param: { name: 'cep', in: 'path' },
+          description: '8 dígitos, com ou sem hífen',
+        }),
     }),
   },
   responses: {

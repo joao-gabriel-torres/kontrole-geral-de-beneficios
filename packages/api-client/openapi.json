@@ -508,6 +508,16 @@
             "type": "string",
             "maxLength": 300
           },
+          "assinanteId": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "Assinante escolhido na busca (cliente e endereço são snapshots)"
+          },
+          "cep": {
+            "type": "string",
+            "maxLength": 20,
+            "description": "CEP do atendimento: 8 dígitos, com ou sem hífen"
+          },
           "data": {
             "type": "string",
             "format": "date"
@@ -561,6 +571,79 @@
           "decisao"
         ]
       },
+      "Assinante": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "cep": {
+            "type": "string",
+            "description": "Só os 8 dígitos"
+          },
+          "logradouro": {
+            "type": "string"
+          },
+          "numero": {
+            "type": "string"
+          },
+          "complemento": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bairro": {
+            "type": "string"
+          },
+          "cidade": {
+            "type": "string"
+          },
+          "endereco": {
+            "type": "string",
+            "description": "Pronto para exibir: \"Logradouro, número · bairro\""
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "cep",
+          "logradouro",
+          "numero",
+          "complemento",
+          "bairro",
+          "cidade",
+          "endereco"
+        ]
+      },
+      "EnderecoCep": {
+        "type": "object",
+        "properties": {
+          "cep": {
+            "type": "string",
+            "description": "Só os 8 dígitos"
+          },
+          "logradouro": {
+            "type": "string",
+            "description": "Vazio nos CEPs gerais de cidade"
+          },
+          "bairro": {
+            "type": "string"
+          },
+          "cidade": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cep",
+          "logradouro",
+          "bairro",
+          "cidade"
+        ]
+      },
       "TipoDemanda": {
         "type": "object",
         "properties": {
@@ -573,6 +656,13 @@
           "cor": {
             "type": "string"
           },
+          "categoria": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Grupo maior; null vira \"Outros\""
+          },
           "checklist": {
             "type": "array",
             "items": {
@@ -584,6 +674,7 @@
           "id",
           "nome",
           "cor",
+          "categoria",
           "checklist"
         ]
       },
@@ -602,6 +693,13 @@
               "null"
             ]
           },
+          "cep": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Só os 8 dígitos"
+          },
           "cor": {
             "type": "string"
           }
@@ -610,6 +708,7 @@
           "id",
           "nome",
           "regiao",
+          "cep",
           "cor"
         ]
       },
@@ -918,6 +1017,14 @@
             "type": "string",
             "maxLength": 500
           },
+          "categoria": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500,
+            "description": "Grupo maior da tela; null ou vazio limpa (vira \"Outros\")"
+          },
           "checklist": {
             "type": "array",
             "items": {
@@ -1092,6 +1199,13 @@
               "null"
             ]
           },
+          "cep": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Só os 8 dígitos"
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -1150,6 +1264,7 @@
           "telefone",
           "email",
           "regiao",
+          "cep",
           "status",
           "cor",
           "credenciadoDesde",
@@ -1234,6 +1349,14 @@
               "null"
             ],
             "maxLength": 120
+          },
+          "cep": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 20,
+            "description": "8 dígitos, com ou sem hífen"
           },
           "especialidades": {
             "type": "array",
@@ -1638,6 +1761,152 @@
         }
       }
     },
+    "/api/assinantes": {
+      "get": {
+        "tags": [
+          "Assinantes"
+        ],
+        "summary": "Assinantes ativos por nome (a busca do Novo acionamento; no máximo 8)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "busca",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assinantes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Assinante"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cep/{cep}": {
+      "get": {
+        "tags": [
+          "Assinantes"
+        ],
+        "summary": "Endereço de um CEP (ViaCEP), para atendimento em outro endereço",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "8 dígitos, com ou sem hífen"
+            },
+            "required": true,
+            "description": "8 dígitos, com ou sem hífen",
+            "name": "cep",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Endereço",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnderecoCep"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CEP não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "CEP malformado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "O ViaCEP não respondeu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tipos": {
       "get": {
         "tags": [
@@ -1754,7 +2023,7 @@
         "tags": [
           "Catálogo"
         ],
-        "summary": "Prestadores ativos (seletor do Novo acionamento)",
+        "summary": "Prestadores ativos (seletor do Novo acionamento); com ?cep=, do mais próximo ao mais distante",
         "security": [
           {
             "Bearer": []
@@ -1770,6 +2039,16 @@
             },
             "required": false,
             "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "CEP de referência (8 dígitos, com ou sem hífen)"
+            },
+            "required": false,
+            "description": "CEP de referência (8 dígitos, com ou sem hífen)",
+            "name": "cep",
             "in": "query"
           }
         ],
@@ -1799,6 +2078,16 @@
           },
           "403": {
             "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "CEP malformado",
             "content": {
               "application/json": {
                 "schema": {

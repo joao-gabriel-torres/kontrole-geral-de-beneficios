@@ -18,10 +18,6 @@ export function normalizarCepOpcional(texto?: string | null): string | null {
 }
 
 /** Endereço de exibição no formato do protótipo: "Rua Harmonia, 410 · Vila Madalena". */
-export function montarEndereco(p: {
-  logradouro: string
-  numero: string
-  bairro: string
-}): string {
+export function montarEndereco(p: { logradouro: string; numero: string; bairro: string }): string {
   return `${p.logradouro}, ${p.numero} · ${p.bairro}`
 }
