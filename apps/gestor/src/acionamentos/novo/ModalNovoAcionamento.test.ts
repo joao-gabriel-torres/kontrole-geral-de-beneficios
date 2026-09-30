@@ -1,3 +1,4 @@
+import { ErroTempoEsgotado } from '@kgb/api-client'
 import { dataISO, urlMapa } from '@kgb/ui'
 import type { VueWrapper } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -46,6 +47,12 @@ const ENDERECOS_CEP: Record<string, unknown> = {
     logradouro: 'Avenida Paulista',
     bairro: 'Bela Vista',
     cidade: 'São Paulo',
+  },
+  '06010000': {
+    cep: '06010000',
+    logradouro: 'Rua Antônio Agú',
+    bairro: 'Centro',
+    cidade: 'Osasco',
   },
 }
 function consultarCep(o: OpcoesChamada): RespostaFalsa {
@@ -249,6 +256,23 @@ describe('ModalNovoAcionamento', () => {
       await entrada.trigger('keydown', tecla('Escape'))
       expect(tela.emitted('fechar')).toHaveLength(1)
     })
+
+    it('Enter no campo prefere quem casa pelo nome a quem casa só pela categoria', async () => {
+      const pontoDeLuz = { ...TIPOS[1]!, id: 't3', nome: 'Ponto de luz' }
+      simulada = simularApi(api, { ...rotas(), 'GET /api/tipos': [...TIPOS, pontoDeLuz] })
+      const { tela } = await abrir(true)
+      const entrada = campoTipos(tela)
+      entrada.element.focus()
+      await entrada.trigger('click')
+      await entrada.setValue('eletr')
+      expect(opcoesTipos(tela).map((b) => b.text())).toEqual(['Ponto de luz', 'Revisão elétrica'])
+      await entrada.trigger('keydown', tecla('Enter'))
+      expect(chips(tela)).toEqual(['Revisão elétrica'])
+      // Sem ninguém pelo nome, vale o primeiro da categoria.
+      await entrada.setValue('hidraul')
+      await entrada.trigger('keydown', tecla('Enter'))
+      expect(chips(tela)).toEqual(['Revisão elétrica', 'Vazamento'])
+    })
   })
 
   describe('cliente', () => {
@@ -275,6 +299,43 @@ describe('ModalNovoAcionamento', () => {
       await esperarBusca()
       expect(opcoes(tela, 'novo-cliente')).toHaveLength(0)
       expect(tela.get('.busca .vazio').text()).toBe('Nenhum assinante encontrado')
+    })
+
+    it('Enter não escolhe enquanto a lista não é a do texto digitado', async () => {
+      let liberar!: () => void
+      const espera = new Promise<void>((ok) => (liberar = ok))
+      simulada = simularApi(api, {
+        ...rotas(),
+        'GET /api/assinantes': async (o: OpcoesChamada) => {
+          if (o.params?.query?.busca) await espera
+          return buscarAssinantes(o)
+        },
+      })
+      const { tela } = await abrir(true)
+      const entrada = campo(tela, 'novo-cliente')
+      const endereco = () => tela.get<HTMLInputElement>('#novo-endereco').element.value
+      entrada.element.focus()
+      // Na espera de 250 ms, a lista em destaque ainda é a de antes (todos os assinantes).
+      await entrada.setValue('hotel')
+      expect(titulos(tela, 'novo-cliente')[0]).toBe('Clínica Vida')
+      await entrada.trigger('keydown', tecla('Enter'))
+      expect(entrada.attributes('aria-expanded')).toBe('true')
+      expect(entrada.element.value).toBe('hotel')
+      expect(endereco()).toBe('')
+      // A busca saiu, mas a resposta não chegou: a lista mostrada continua a anterior.
+      await esperarBusca()
+      expect(simulada.chamadas('GET', '/api/assinantes').at(-1)!.params?.query?.busca).toBe('hotel')
+      expect(titulos(tela, 'novo-cliente')[0]).toBe('Clínica Vida')
+      await entrada.trigger('keydown', tecla('Enter'))
+      expect(entrada.attributes('aria-expanded')).toBe('true')
+      expect(endereco()).toBe('')
+      // Com a lista do termo digitado, o Enter escolhe.
+      liberar()
+      await aguardar()
+      expect(titulos(tela, 'novo-cliente')).toEqual(['Hotel Ipê'])
+      await entrada.trigger('keydown', tecla('Enter'))
+      expect(entrada.element.value).toBe('Hotel Ipê')
+      expect(endereco()).toBe('Rua Frei Caneca, 569 · Consolação')
     })
 
     it('escolher pelo teclado preenche o endereço, o mapa e o prestador mais próximo', async () => {
@@ -317,6 +378,52 @@ describe('ModalNovoAcionamento', () => {
       expect(opcoes(tela, 'novo-prestador')[0]!.get('.detalhe').text()).toBe(
         'Zona Sul · mais próximo',
       )
+    })
+
+    it('assinante de outra cidade: o endereço mostrado e gravado leva a cidade', async () => {
+      const deOsasco = {
+        ...ASSINANTES[1]!,
+        id: 'a9',
+        nome: 'Condomínio Osasco',
+        cep: '06010000',
+        cidade: 'Osasco',
+        endereco: 'Rua Antônio Agú, 12 · Centro',
+      }
+      simulada = simularApi(api, { ...rotas(), 'GET /api/assinantes': [deOsasco] })
+      const { tela } = await abrir()
+      await escolherCliente(tela, 'Condomínio Osasco')
+      expect(tela.get<HTMLInputElement>('#novo-endereco').element.value).toBe(
+        'Rua Antônio Agú, 12 · Centro · Osasco - SP',
+      )
+      expect(tela.get('a.mapa').attributes('href')).toBe(
+        urlMapa('Rua Antônio Agú, 12 · Centro · Osasco - SP'),
+      )
+      await tela.get('input[placeholder="Ex.: Vazamento no banheiro social"]').setValue('Vazamento')
+      await escolherTipo(tela, 'Vazamento')
+      await tela.get('button.enviar').trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('POST', '/api/acionamentos')[0]!.body).toMatchObject({
+        endereco: 'Rua Antônio Agú, 12 · Centro · Osasco - SP',
+        cep: '06010000',
+      })
+    })
+
+    it('sem nenhum prestador com CEP, a lista fica por nome: nada é trocado nem rotulado', async () => {
+      // Como a API: sem CEP, todos vão ao fim, por nome.
+      const semCep = PRESTADORES.map((p) => ({ ...p, cep: null })).sort((a, b) =>
+        a.nome.localeCompare(b.nome, 'pt-BR'),
+      )
+      simulada = simularApi(api, { ...rotas(), 'GET /api/prestadores': semCep })
+      const { tela } = await abrir()
+      await escolherCliente(tela, 'Clínica Vida')
+      expect(simulada.chamadas('GET', '/api/prestadores').at(-1)!.params?.query).toEqual({
+        status: 'ativo',
+        cep: '01310200',
+      })
+      expect(campo(tela, 'novo-prestador').element.value).toBe('Carlos Mendes · Zona Oeste')
+      await campo(tela, 'novo-prestador').trigger('click')
+      expect(opcoes(tela, 'novo-prestador')[0]!.get('.detalhe').text()).toBe('Zona Sul')
+      expect(tela.text()).not.toContain('mais próximo')
     })
 
     it('a escolha da gestora vale até o CEP mudar', async () => {
@@ -419,9 +526,33 @@ describe('ModalNovoAcionamento', () => {
       })
     })
 
-    it('CEP incompleto pede os 8 dígitos; CEP não encontrado deixa digitar rua e bairro', async () => {
+    it('CEP de outra cidade: o endereço gravado e o mapa terminam com "Cidade - UF"', async () => {
       const { tela } = await abrir()
+      await preencher(tela)
       await outroEndereco(tela)
+      await tela.get('#novo-cep').setValue('06010000')
+      await aguardar()
+      expect(tela.get<HTMLInputElement>('.cidade input').element.value).toBe('Osasco')
+      await tela.get('.casa input').setValue('12')
+      expect(tela.get('a.mapa').attributes('href')).toBe(
+        urlMapa('Rua Antônio Agú, 12 · Centro · Osasco - SP'),
+      )
+      await tela.get('button.enviar').trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('POST', '/api/acionamentos')[0]!.body).toMatchObject({
+        endereco: 'Rua Antônio Agú, 12 · Centro · Osasco - SP',
+        cep: '06010000',
+      })
+    })
+
+    it('CEP incompleto pede os 8 dígitos; CEP não encontrado bloqueia o envio', async () => {
+      const { tela } = await abrir()
+      await preencher(tela)
+      await outroEndereco(tela)
+      const rua = tela.get<HTMLInputElement>('.rua input')
+      const bairro = tela.get<HTMLInputElement>('.bairro input')
+      // Sem CEP, rua e bairro esperam a consulta.
+      expect([rua.element.readOnly, bairro.element.readOnly]).toEqual([true, true])
       const cep = tela.get('#novo-cep')
       await cep.setValue('0131')
       expect(tela.find('.outro .falha').exists()).toBe(false)
@@ -433,12 +564,49 @@ describe('ModalNovoAcionamento', () => {
       await cep.setValue('99999-999')
       await aguardar()
       expect(tela.get('.outro .falha').text()).toBe('CEP não encontrado')
-      const rua = tela.get<HTMLInputElement>('.rua input')
-      expect(rua.element.readOnly).toBe(false)
-      expect(tela.get<HTMLInputElement>('.bairro input').element.readOnly).toBe(false)
-      await rua.setValue('Rua Nova')
+      expect([rua.element.readOnly, bairro.element.readOnly]).toEqual([true, true])
       await tela.get('.casa input').setValue('10')
-      expect(tela.get('a.mapa').attributes('href')).toBe(urlMapa('Rua Nova, 10'))
+      const enviar = tela.get('button.enviar')
+      expect(enviar.attributes('aria-disabled')).toBe('true')
+      await enviar.trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('POST', '/api/acionamentos')).toHaveLength(0)
+    })
+
+    it.each([
+      [
+        'o ViaCEP fora do ar (502)',
+        () => erroApi(502, 'cep_indisponivel', 'O serviço de CEP não respondeu, tente de novo'),
+      ],
+      [
+        'o tempo esgotado',
+        (): RespostaFalsa => {
+          throw new ErroTempoEsgotado()
+        },
+      ],
+    ])('com %s, rua e bairro são digitados e o envio segue', async (_, falha) => {
+      simulada = simularApi(api, { ...rotas(), 'GET /api/cep/{cep}': falha })
+      const { tela } = await abrir()
+      await preencher(tela)
+      await outroEndereco(tela)
+      await tela.get('#novo-cep').setValue('01310200')
+      await aguardar()
+      expect(tela.find('.outro .falha').exists()).toBe(true)
+      const rua = tela.get<HTMLInputElement>('.rua input')
+      const bairro = tela.get<HTMLInputElement>('.bairro input')
+      expect([rua.element.readOnly, bairro.element.readOnly]).toEqual([false, false])
+      await rua.setValue('Rua Nova')
+      await bairro.setValue('Bela Vista')
+      await tela.get('.casa input').setValue('10')
+      expect(tela.get('a.mapa').attributes('href')).toBe(urlMapa('Rua Nova, 10 · Bela Vista'))
+      const enviar = tela.get('button.enviar')
+      expect(enviar.attributes('aria-disabled')).toBe('false')
+      await enviar.trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('POST', '/api/acionamentos')[0]!.body).toMatchObject({
+        endereco: 'Rua Nova, 10 · Bela Vista',
+        cep: '01310200',
+      })
     })
 
     it('desmarcar volta ao endereço do assinante', async () => {

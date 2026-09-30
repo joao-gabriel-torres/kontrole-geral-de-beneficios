@@ -58,8 +58,14 @@ export function progresso(etapas: { feitas: number; total: number }): {
   }
 }
 
-const destino = (endereco: string) =>
-  encodeURIComponent(`${endereco.replace(' · ', ', ')}, São Paulo`)
+/**
+ * O endereço como busca do Google Maps: " · " vira ", ". Os endereços da capital não levam a
+ * cidade e ganham ", São Paulo"; os de outra cidade já terminam com ela ("… · Osasco - SP").
+ */
+function destino(endereco: string): string {
+  const texto = endereco.replace(/ · /g, ', ')
+  return encodeURIComponent(/ - [A-Z]{2}$/.test(texto) ? texto : `${texto}, São Paulo`)
+}
 
 export function urlMapa(endereco: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${destino(endereco)}`

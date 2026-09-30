@@ -2,7 +2,7 @@
 import type { TipoDemanda } from '@kgb/api-client'
 import { RussoIcone } from '@kgb/ui'
 import { computed, nextTick, ref } from 'vue'
-import { alternarTipo, gruposDeTipos } from './formulario'
+import { alternarTipo, gruposDeTipos, tipoDoEnter } from './formulario'
 
 /**
  * Busca de tipos de demanda, de escolha múltipla: o campo é um combobox cuja lista suspensa
@@ -59,11 +59,12 @@ function teclarCampo(evento: KeyboardEvent) {
     evento.preventDefault()
     void focarOpcao(evento.key === 'ArrowDown' ? 0 : Number.MAX_SAFE_INTEGER)
   } else if (evento.key === 'Enter') {
-    // Com a busca digitada, Enter liga o primeiro tipo encontrado.
-    const primeiro = grupos.value[0]?.tipos[0]
-    if (aberto.value && termo.value.trim() && primeiro) {
+    // Com a busca digitada, Enter liga o primeiro tipo encontrado pelo nome (ou, sem nenhum, pela
+    // categoria).
+    const tipo = tipoDoEnter(grupos.value, termo.value)
+    if (aberto.value && termo.value.trim() && tipo) {
       evento.preventDefault()
-      alternar(primeiro.id)
+      alternar(tipo.id)
       termo.value = ''
     }
   } else if (evento.key === 'Escape' && aberto.value) {

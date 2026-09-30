@@ -2,7 +2,7 @@
 import { dataISO, RussoIcone, urlMapa } from '@kgb/ui'
 import { computed, onBeforeUnmount, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { mensagemDeErro } from '../../erros'
+import { ErroApi, mensagemDeErro } from '../../erros'
 import { toastGestor } from '../../toast'
 import { usarCriarAcionamento, usarTipos } from '../dados'
 import { reiniciarLista } from '../estadoLista'
@@ -13,12 +13,14 @@ import {
   cepDeReferencia,
   corpoDoFormulario,
   digitosCep,
+  enderecoDoFormulario,
   enderecoDoMapa,
   erroDoCep,
   filtrarPrestadores,
   formatarCep,
   formularioInicial,
   formularioValido,
+  prestadorMaisProximo,
   prestadorPadrao,
   type OpcaoBusca,
   previaChecklist,
@@ -43,7 +45,22 @@ watch(buscaCliente, (texto) => {
   else esperaCliente = setTimeout(() => (termoCliente.value = texto), 250)
 })
 onBeforeUnmount(() => clearTimeout(esperaCliente))
-const { data: assinantes, isFetching: buscandoClientes } = usarAssinantes(termoCliente)
+const {
+  data: assinantes,
+  isPending: semClientes,
+  isPlaceholderData: clientesDeOutraBusca,
+} = usarAssinantes(termoCliente)
+/**
+ * A lista ainda não é a do texto digitado: a espera de 250 ms não acabou, ou a busca saiu e a
+ * lista mostrada é a da busca anterior. Nesse estado, o Enter não escolhe ("Martins" + Enter não
+ * pode levar o primeiro da lista de antes).
+ */
+const buscandoClientes = computed(
+  () =>
+    buscaCliente.value.trim() !== termoCliente.value.trim() ||
+    clientesDeOutraBusca.value ||
+    semClientes.value,
+)
 const opcoesClientes = computed<OpcaoBusca[]>(() =>
   (assinantes.value ?? []).map((a) => ({ id: a.id, titulo: a.nome, detalhe: a.endereco })),
 )
@@ -60,17 +77,35 @@ const {
   error: falhaCep,
   isFetching: consultandoCep,
 } = usarEnderecoDoCep(cepConsultado)
-/** Rua e bairro vindos do CEP ficam só para leitura; num CEP geral de cidade, são digitados. */
-const fixos = reactive({ logradouro: false, bairro: false })
+const enderecoDoCep = computed(() =>
+  cepConsultado.value.length === 8 ? enderecoCep.value : undefined,
+)
 function preencherPeloCep() {
-  const e = cepConsultado.value.length === 8 ? enderecoCep.value : undefined
+  const e = enderecoDoCep.value
   form.logradouro = e?.logradouro ?? ''
   form.bairro = e?.bairro ?? ''
   form.cidade = e?.cidade ?? ''
-  fixos.logradouro = !!e?.logradouro
-  fixos.bairro = !!e?.bairro
 }
 watch([cepConsultado, enderecoCep], preencherPeloCep)
+// O CEP que não existe (404) bloqueia o envio; o ViaCEP que não responde (502, tempo esgotado ou
+// falha de rede) deixa a gestora digitar rua e bairro.
+watch(
+  falhaCep,
+  (erro) => {
+    form.cepInexistente = erro instanceof ErroApi && erro.codigo === 'cep_nao_encontrado'
+  },
+  { immediate: true },
+)
+const cepSemResposta = computed(() => !!falhaCep.value && !form.cepInexistente)
+/**
+ * Rua e bairro vêm do CEP, só para leitura. São digitados num CEP geral de cidade (que vem sem eles)
+ * e quando o ViaCEP não responde; sem CEP, na consulta e num CEP que não existe, não.
+ */
+const livres = computed(() => {
+  if (cepSemResposta.value) return { logradouro: true, bairro: true }
+  const e = enderecoDoCep.value
+  return { logradouro: !!e && !e.logradouro, bairro: !!e && !e.bairro }
+})
 function digitarCep(evento: Event) {
   const campo = evento.target as HTMLInputElement
   form.cep = formatarCep(campo.value)
@@ -84,7 +119,8 @@ const erroCep = computed(() => {
 const mapa = computed(() => enderecoDoMapa(form))
 
 // Prestador: a lista vem do mais próximo ao mais distante do CEP em uso, e o mais próximo já vem
-// escolhido (uma vez por CEP: a escolha da gestora vale até o CEP mudar).
+// escolhido (uma vez por CEP: a escolha da gestora vale até o CEP mudar). Sem nenhum prestador com
+// CEP, a lista vem por nome: nada é trocado nem rotulado.
 const cepPrestadores = computed(() => cepDeReferencia(form))
 const {
   data: prestadores,
@@ -98,8 +134,9 @@ watch(
   (resposta) => {
     if (!resposta) return
     const { cep, lista } = resposta
-    if (cep && cep !== cepDaEscolha && lista[0]) {
-      form.prestadorId = lista[0].id
+    const proximo = prestadorMaisProximo(cep, lista)
+    if (proximo && cep !== cepDaEscolha) {
+      form.prestadorId = proximo
       cepDaEscolha = cep
     } else if (!lista.some((p) => p.id === form.prestadorId)) {
       form.prestadorId = prestadorPadrao(lista)
@@ -114,7 +151,12 @@ const semPrestadores = computed(() => erroPrestadores.value && !prestadores.valu
 const buscaPrestador = ref('')
 const listaPrestadores = computed(() => prestadores.value?.lista ?? [])
 const opcoesPrestadores = computed<OpcaoBusca[]>(() => {
-  const proximo = cepPrestadores.value ? listaPrestadores.value[0]?.id : undefined
+  // Só com a lista do CEP em uso (não a do CEP anterior, enquanto a nova não chega).
+  const resposta = prestadores.value
+  const proximo =
+    resposta?.cep === cepPrestadores.value
+      ? prestadorMaisProximo(resposta.cep, resposta.lista)
+      : undefined
   return filtrarPrestadores(listaPrestadores.value, buscaPrestador.value).map((p) => ({
     id: p.id,
     titulo: p.nome,
@@ -247,7 +289,7 @@ onUnmounted(() => focoAnterior?.focus())
               id="novo-endereco"
               class="entrada"
               readonly
-              :value="form.assinante?.endereco ?? ''"
+              :value="enderecoDoFormulario(form)"
               placeholder="Escolha o cliente para preencher o endereço"
             />
             <label class="outro-endereco">
@@ -275,7 +317,7 @@ onUnmounted(() => focoAnterior?.focus())
                   <input
                     v-model="form.logradouro"
                     class="entrada"
-                    :readonly="fixos.logradouro"
+                    :readonly="!livres.logradouro"
                     :placeholder="consultandoCep ? 'Buscando o CEP…' : 'Preenchida pelo CEP'"
                   />
                 </label>
@@ -293,7 +335,7 @@ onUnmounted(() => focoAnterior?.focus())
               <div class="linha">
                 <label class="campo bairro"
                   >Bairro
-                  <input v-model="form.bairro" class="entrada" :readonly="fixos.bairro" />
+                  <input v-model="form.bairro" class="entrada" :readonly="!livres.bairro" />
                 </label>
                 <label class="campo cidade"
                   >Cidade
