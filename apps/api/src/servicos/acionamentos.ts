@@ -138,10 +138,13 @@ export async function criarAcionamento(u: UsuarioSessao, dados: DadosNovoAcionam
   const cep = normalizarCepOpcional(d.cep)
   const assinanteId = d.assinanteId?.trim() || null
   const id = await prisma.$transaction(async (tx) => {
-    const prestador = await tx.prestador.findFirst({
-      where: { id: d.prestadorId, status: 'ativo', excluidoEm: null },
-      select: { id: true },
-    })
+    // FOR SHARE segura o prestador até o INSERT: uma exclusão ou desativação em andamento termina
+    // antes, e a condição é conferida de novo na linha já gravada (o excluído não recebe nada).
+    // Uma exclusão que chega depois espera esta transação e já conta o acionamento novo.
+    const [prestador] = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM prestador
+      WHERE id = ${d.prestadorId} AND status = 'ativo' AND "excluidoEm" IS NULL
+      FOR SHARE`
     if (!prestador) throw new ErroDominio('prestador_inativo', 'Escolha um prestador ativo')
     if (assinanteId) {
       const assinante = await tx.assinante.findFirst({

@@ -260,8 +260,8 @@ export async function alterarStatus(
  */
 export async function excluirPrestador(id: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
-    // A trava põe em fila com um acionamento sendo criado para o mesmo prestador (a chave
-    // estrangeira do INSERT disputa esta linha).
+    // A trava põe em fila com um acionamento sendo criado para o mesmo prestador (a criação
+    // segura esta linha com FOR SHARE do começo ao INSERT).
     const [p] = await tx.$queryRaw<{ nome: string }[]>`
       SELECT nome FROM prestador WHERE id = ${id} AND "excluidoEm" IS NULL FOR UPDATE`
     if (!p) throw naoEncontrado('Prestador')
