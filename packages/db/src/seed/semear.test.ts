@@ -40,7 +40,7 @@ describe('semear', () => {
       include: { assinante: true },
     })
     expect(acionamento.assinante?.nome).toBe('Loja Casa Bela')
-    expect(acionamento.assinante?.cep).toBe('01304001')
+    expect(acionamento.assinante?.cep).toBe('01426002')
   })
 
   it('cria a conta do prestador de dev com a senha documentada', async () => {

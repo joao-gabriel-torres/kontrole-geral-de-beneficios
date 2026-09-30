@@ -53,13 +53,13 @@ describe('GET /api/assinantes', () => {
     expect(lista).toHaveLength(1)
     expect(lista[0]).toMatchObject({
       nome: 'Clínica Vida',
-      cep: '01304001',
-      logradouro: 'Rua Augusta',
-      numero: '1492',
+      cep: '01310200',
+      logradouro: 'Av. Paulista',
+      numero: '1578',
       complemento: null,
-      bairro: 'Consolação',
+      bairro: 'Bela Vista',
       cidade: 'São Paulo',
-      endereco: 'Rua Augusta, 1492 · Consolação',
+      endereco: 'Av. Paulista, 1578 · Bela Vista',
     })
   })
 
