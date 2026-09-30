@@ -5,6 +5,8 @@ import {
   criarClienteConsultas,
   ErroApi,
   exigir,
+  MENSAGEM_FOTO_GRANDE,
+  MENSAGEM_FOTOS_GRANDES,
   MENSAGEM_SEM_CONEXAO,
   mensagemDeErro,
 } from './consultas'
@@ -32,9 +34,13 @@ describe('exigir', () => {
   })
 
   describe('resposta fora do formato da API (proxy, servidor fora do ar) não é falta de conexão', () => {
-    const falhar = (status: number, corpo: unknown = `<html>${status}</html>`) => {
+    const falhar = (
+      status: number,
+      corpo: unknown = `<html>${status}</html>`,
+      opcoes?: Parameters<typeof exigir>[1],
+    ) => {
       try {
-        exigir({ error: corpo, response: resposta(status) })
+        exigir({ error: corpo, response: resposta(status) }, opcoes)
       } catch (e) {
         return e as ErroApi
       }
@@ -54,12 +60,30 @@ describe('exigir', () => {
       }
     })
 
-    it('413 do proxy num envio de foto avisa o limite de 10 MB, como a API', () => {
-      expect(falhar(413)).toMatchObject({
+    it('413 do proxy usa o texto de limite da rota (o mesmo que a API manda para ela)', () => {
+      expect(falhar(413, '', { limite: MENSAGEM_FOTO_GRANDE })).toMatchObject({
         status: 413,
         codigo: 'arquivo_grande',
         message: 'A foto passa de 10 MB',
       })
+      expect(falhar(413, '', { limite: MENSAGEM_FOTOS_GRANDES })).toMatchObject({
+        status: 413,
+        codigo: 'arquivo_grande',
+        message: 'As fotos passam do limite',
+      })
+    })
+
+    it('413 de uma rota sem texto de limite não fala de foto: usa o texto neutro', () => {
+      const e = falhar(413)
+      expect(e).toMatchObject({ status: 413, codigo: 'desconhecido' })
+      expect(e.message).toBe('Não foi possível falar com o servidor. Tente de novo.')
+    })
+
+    it('413 com o corpo da API usa a mensagem da API, não o texto da rota', () => {
+      const corpo = { erro: { codigo: 'arquivo_grande', mensagem: 'As fotos passam do limite' } }
+      expect(falhar(413, corpo, { limite: MENSAGEM_FOTO_GRANDE }).message).toBe(
+        'As fotos passam do limite',
+      )
     })
 
     it('outro 4xx sem corpo da API usa o texto neutro', () => {

@@ -3,7 +3,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { computed, ref, type Ref } from 'vue'
 import { api } from '../api'
 import { avisar } from '../avisos'
-import { CHAVES, exigir, mensagemDeErro } from '../consultas'
+import {
+  CHAVES,
+  exigir,
+  MENSAGEM_FOTO_GRANDE,
+  MENSAGEM_FOTOS_GRANDES,
+  mensagemDeErro,
+} from '../consultas'
 import type { FotoCapturada } from './fotos'
 
 export type ContextoFoto = 'etapa' | 'conclusao'
@@ -145,6 +151,7 @@ export function usarDetalhe(id: Ref<string>) {
           body: {} as never,
           bodySerializer: () => formularioInviabilidade({ comentario, arquivos }),
         }),
+        { limite: MENSAGEM_FOTOS_GRANDES },
       ),
     'Inviabilidade enviada ao gestor',
   )
@@ -165,6 +172,7 @@ export function usarDetalhe(id: Ref<string>) {
           bodySerializer: () =>
             formularioFoto({ arquivo: foto.arquivo, contexto, etapaId, tiradaEm: foto.tiradaEm }),
         }),
+        { limite: MENSAGEM_FOTO_GRANDE },
       ),
   )
   const removerFoto = acaoFoto(async (fotoId: string) =>

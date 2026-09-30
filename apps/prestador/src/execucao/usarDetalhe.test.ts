@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
 import { comEtapas, detalheExemplo, fotoExemplo } from '../../test/detalhe'
 import { montar } from '../../test/montar'
+import { avisos } from '../avisos'
 import { CHAVES } from '../consultas'
 
 const { api } = vi.hoisted(() => ({
@@ -202,5 +203,29 @@ describe('usarDetalhe: ordem das respostas no cache', () => {
     a.resolver(erro(409, 'Não pode agora.'))
     await flushPromises()
     expect(estado()).toMatchObject({ e2: false, e3: true })
+  })
+})
+
+describe('usarDetalhe: 413 sem o corpo da API (o proxy barrou o envio)', () => {
+  const barrado = (): Resposta => ({ error: '', response: new Response(null, { status: 413 }) })
+
+  beforeEach(() => {
+    Object.values(api).forEach((f) => f.mockReset())
+    avisos.mensagem.value = null
+    api.GET.mockImplementation(async () => ok(retrato()))
+  })
+
+  it('no envio de uma foto, avisa o limite de 10 MB da foto', async () => {
+    const { acoes } = await montarDetalhe()
+    api.POST.mockResolvedValueOnce(barrado())
+    await acoes.adicionarFoto('etapa', foto, 'e2')
+    expect(avisos.mensagem.value).toBe('A foto passa de 10 MB')
+  })
+
+  it('na inviabilidade (até 5 fotos juntas), avisa o limite das fotos, não o de uma foto', async () => {
+    const { acoes } = await montarDetalhe()
+    api.POST.mockResolvedValueOnce(barrado())
+    expect(await acoes.marcarInviavel('Sem acesso', [foto.arquivo])).toBe(false)
+    expect(avisos.mensagem.value).toBe('As fotos passam do limite')
   })
 })
