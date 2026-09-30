@@ -447,7 +447,7 @@ onUnmounted(() => focoAnterior?.focus())
  */
 @media (min-width: 656px) {
   .campos {
-    min-height: 572px;
+    min-height: 568px;
   }
 }
 .campo {

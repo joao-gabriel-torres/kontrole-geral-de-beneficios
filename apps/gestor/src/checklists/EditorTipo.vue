@@ -202,6 +202,11 @@ onBeforeUnmount(() => arrastar?.destroy())
   justify-content: space-between;
   gap: 12px;
 }
+/* O rótulo não encolhe nem quebra (como no protótipo): quem cede espaço é o campo. */
+.subtitulo > .rotulo {
+  flex: none;
+  white-space: nowrap;
+}
 .categoria {
   flex: 0 1 auto;
   min-width: 0;
