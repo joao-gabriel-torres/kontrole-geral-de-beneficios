@@ -138,10 +138,18 @@ const linhaVazia = (): LinhaLida => ({
   credenciadoDesde: '',
 })
 
+/** As colunas de uma linha que são cabeçalhos reconhecidos, com o campo de cada uma. */
+const colunasDoCabecalho = (linha: readonly Celula[]): [number, Campo][] =>
+  linha.flatMap((c, i): [number, Campo][] => {
+    const campo = CAMPOS[normalizarTexto(textoDaCelula(c))]
+    return campo ? [[i, campo]] : []
+  })
+
 /**
- * Converte a primeira aba em linhas. O cabeçalho é a primeira linha não vazia; colunas que caem
- * no mesmo campo ficam com o primeiro valor não vazio; linhas sem nenhum campo reconhecido
- * preenchido são puladas.
+ * Converte a primeira aba em linhas. O cabeçalho é a primeira linha com pelo menos dois campos
+ * reconhecidos (o que vem antes, como uma linha de título, é descartado) ou, sem nenhuma assim, a
+ * primeira linha não vazia; colunas que caem no mesmo campo ficam com o primeiro valor não vazio;
+ * linhas sem nenhum campo reconhecido preenchido são puladas.
  */
 export function mapearTabela(
   tabela: readonly (readonly Celula[] | null | undefined)[],
@@ -157,14 +165,15 @@ export function mapearTabelaComColunas(tabela: readonly (readonly Celula[] | nul
   const preenchidas = tabela.filter(
     (l): l is readonly Celula[] => !!l && l.some((c) => textoDaCelula(c) !== ''),
   )
-  const [cabecalho = [], ...resto] = preenchidas
-  const colunas: [number, Campo][] = []
-  cabecalho.forEach((c, i) => {
-    const campo = CAMPOS[normalizarTexto(textoDaCelula(c))]
-    if (campo) colunas.push([i, campo])
-  })
+  const inicio = Math.max(
+    preenchidas.findIndex(
+      (l) => new Set(colunasDoCabecalho(l).map(([, campo]) => campo)).size >= 2,
+    ),
+    0,
+  )
+  const colunas = colunasDoCabecalho(preenchidas[inicio] ?? [])
   const linhas: LinhaLida[] = []
-  for (const celulas of resto) {
+  for (const celulas of preenchidas.slice(inicio + 1)) {
     const linha = linhaVazia()
     for (const [i, campo] of colunas) {
       if (linha[campo]) continue

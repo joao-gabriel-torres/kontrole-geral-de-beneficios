@@ -201,6 +201,23 @@ describe('mapearTabela', () => {
     ])
   })
 
+  it('linha de título acima: o cabeçalho é a primeira linha com dois cabeçalhos reconhecidos', () => {
+    const linhas = mapearTabela(
+      tabela(
+        ['Credenciados Russo — setembro de 2026'],
+        ['Status', 'atualizado em 29/09'],
+        ['Nome', 'CPF/CNPJ', 'Obs'],
+        ['Ana', '52998224725', 'x'],
+      ),
+    )
+    expect(linhas).toEqual([lida({ nome: 'Ana', documento: '52998224725', telefone: '' })])
+  })
+
+  it('sem linha com dois cabeçalhos reconhecidos, vale a primeira linha preenchida', () => {
+    const linhas = mapearTabela(tabela(['Obs', 'Nome'], ['x', 'Ana'], ['Nome', 'Obs'], ['y', 'Bia']))
+    expect(linhas.map((l) => l.nome)).toEqual(['Ana', 'Obs', 'Bia'])
+  })
+
   it('linhas nulas antes do cabeçalho são ignoradas', () => {
     const linhas = mapearTabela(tabela(null, undefined, ['Nome'], ['Ana']))
     expect(linhas.map((l) => l.nome)).toEqual(['Ana'])
