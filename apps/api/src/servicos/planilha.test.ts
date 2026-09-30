@@ -56,6 +56,27 @@ describe('lerPlanilha', () => {
     })
   })
 
+  it('"Texto Unicode" do Excel: UTF-16 com BOM, separado por tabulação', () => {
+    const texto =
+      'Nome\tCPF\tRegião\tEspecialidades\r\nJoão Pires\t012.345.678-90\tCentro\tPintura, Chaveiro\r\n'
+    const utf16le = new Uint8Array(2 + texto.length * 2)
+    utf16le.set([0xff, 0xfe])
+    for (let i = 0; i < texto.length; i++) utf16le[2 + i * 2] = texto.charCodeAt(i)
+    expect(lerPlanilha(utf16le)).toEqual([
+      expect.objectContaining({
+        nome: 'João Pires',
+        documento: '012.345.678-90',
+        regiao: 'Centro',
+        especialidades: 'Pintura, Chaveiro',
+      }),
+    ])
+  })
+
+  it('TSV em UTF-8', () => {
+    const [linha] = lerPlanilha(utf8ComBom('Nome\tCPF\nJoão Pires\t01234567890\n'))
+    expect(linha).toMatchObject({ nome: 'João Pires', documento: '01234567890' })
+  })
+
   it('CSV é lido como texto: o CPF com zero à esquerda continua com 11 dígitos', () => {
     const linhas = lerPlanilha(
       utf8ComBom('Nome,CPF,Credenciado desde\nA,01234567890,12/03/2024\nB,012.345.678-90,\n'),

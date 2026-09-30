@@ -3230,7 +3230,7 @@
                   "arquivo": {
                     "type": "string",
                     "format": "binary",
-                    "description": ".xlsx, .xls ou .csv, até 5 MB"
+                    "description": ".xlsx, .xls, .csv ou .tsv (inclusive UTF-16), até 5 MB"
                   }
                 }
               }
@@ -3312,7 +3312,7 @@
                   "arquivo": {
                     "type": "string",
                     "format": "binary",
-                    "description": ".xlsx, .xls ou .csv, até 5 MB"
+                    "description": ".xlsx, .xls, .csv ou .tsv (inclusive UTF-16), até 5 MB"
                   },
                   "desativarAusentes": {
                     "type": "string",

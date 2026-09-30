@@ -51,12 +51,18 @@ export const normalizarTexto = (texto: string): string =>
     .replace(/[^a-z]/g, '')
 
 /**
- * Texto de um CSV: com BOM, UTF-8; UTF-8 válido, UTF-8; senão Windows-1252 (o CSV que o Excel em
- * pt-BR salva).
+ * Texto de um CSV ou TSV: com BOM, UTF-8 ou UTF-16 (o "Texto Unicode" do Excel); UTF-8 válido,
+ * UTF-8; senão Windows-1252 (o CSV que o Excel em pt-BR salva).
  */
 export function decodificarTexto(bytes: Uint8Array): string {
   if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
     return new TextDecoder('utf-8').decode(bytes.subarray(3))
+  }
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) {
+    return new TextDecoder('utf-16le').decode(bytes.subarray(2))
+  }
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) {
+    return new TextDecoder('utf-16be').decode(bytes.subarray(2))
   }
   try {
     return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
@@ -65,18 +71,24 @@ export function decodificarTexto(bytes: Uint8Array): string {
   }
 }
 
-/** `;` quando aparece mais que `,` na primeira linha (fora de aspas); senão `,`. */
-export function detectarSeparador(texto: string): ',' | ';' {
+/**
+ * Na primeira linha (fora de aspas): tabulação (TSV) quando aparece mais que `,` e `;`; `;` quando
+ * aparece mais que `,`; senão `,`.
+ */
+export function detectarSeparador(texto: string): ',' | ';' | '\t' {
   let entreAspas = false
   let virgulas = 0
   let pontosEVirgulas = 0
+  let tabulacoes = 0
   for (const c of texto) {
     if (c === '"') entreAspas = !entreAspas
     else if (entreAspas) continue
     else if (c === '\n' || c === '\r') break
     else if (c === ',') virgulas++
     else if (c === ';') pontosEVirgulas++
+    else if (c === '\t') tabulacoes++
   }
+  if (tabulacoes > virgulas && tabulacoes > pontosEVirgulas) return '\t'
   return pontosEVirgulas > virgulas ? ';' : ','
 }
 

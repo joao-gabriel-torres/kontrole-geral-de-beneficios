@@ -79,6 +79,12 @@ describe('decodificarTexto', () => {
   it('o resto é Windows-1252 (CSV do Excel em pt-BR)', () => {
     expect(decodificarTexto(new Uint8Array([0x4a, 0x6f, 0xe3, 0x6f, 0x20, 0x80]))).toBe('João €')
   })
+  it('UTF-16 com BOM ("Texto Unicode" do Excel), little e big endian, sem o BOM no texto', () => {
+    const le = [0xff, 0xfe, 0x4a, 0x00, 0x6f, 0x00, 0xe3, 0x00, 0x6f, 0x00, 0x09, 0x00]
+    const be = [0xfe, 0xff, 0x00, 0x4a, 0x00, 0x6f, 0x00, 0xe3, 0x00, 0x6f, 0x00, 0x09]
+    expect(decodificarTexto(new Uint8Array(le))).toBe('João\t')
+    expect(decodificarTexto(new Uint8Array(be))).toBe('João\t')
+  })
 })
 
 describe('detectarSeparador', () => {
@@ -91,6 +97,10 @@ describe('detectarSeparador', () => {
   })
   it('separadores dentro de aspas não contam', () => {
     expect(detectarSeparador('"a;b;c",d')).toBe(',')
+  })
+  it('tabulação (TSV) quando aparece mais que a vírgula e o ponto e vírgula', () => {
+    expect(detectarSeparador('Nome\tCPF/CNPJ\tEspecialidades\n"Ana, Bia";x')).toBe('\t')
+    expect(detectarSeparador('Nome\tCPF;Região;Status')).toBe(';')
   })
 })
 

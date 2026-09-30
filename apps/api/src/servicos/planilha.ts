@@ -24,7 +24,7 @@ import {
 } from '../dominio/planilha'
 import { ErroHttp } from '../erros'
 
-/** `.xlsx` (ZIP) ou `.xls` (OLE2) vão direto ao SheetJS; o resto é lido como CSV. */
+/** `.xlsx` (ZIP) ou `.xls` (OLE2) vão direto ao SheetJS; o resto é lido como CSV ou TSV. */
 const ehBinario = (b: Uint8Array) =>
   (b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04) ||
   (b[0] === 0xd0 && b[1] === 0xcf && b[2] === 0x11 && b[3] === 0xe0)
@@ -42,8 +42,8 @@ function valorDaCelula(c: XLSX.CellObject | undefined): Celula {
 }
 
 /**
- * Lê a primeira aba de um .xlsx, .xls ou .csv. O CSV é decodificado aqui (BOM, UTF-8 ou
- * Windows-1252), com o separador detectado, e lido só como texto.
+ * Lê a primeira aba de um .xlsx, .xls, .csv ou .tsv. O texto é decodificado aqui (BOM, UTF-8,
+ * UTF-16 ou Windows-1252), com o separador detectado (`,`, `;` ou tabulação), e lido só como texto.
  */
 export function lerPlanilha(bytes: Uint8Array): LinhaLida[] {
   return lerPlanilhaComColunas(bytes).linhas

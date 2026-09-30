@@ -1683,7 +1683,7 @@ export interface paths {
                     "multipart/form-data": {
                         /**
                          * Format: binary
-                         * @description .xlsx, .xls ou .csv, até 5 MB
+                         * @description .xlsx, .xls, .csv ou .tsv (inclusive UTF-16), até 5 MB
                          */
                         arquivo?: string;
                     };
@@ -1765,7 +1765,7 @@ export interface paths {
                     "multipart/form-data": {
                         /**
                          * Format: binary
-                         * @description .xlsx, .xls ou .csv, até 5 MB
+                         * @description .xlsx, .xls, .csv ou .tsv (inclusive UTF-16), até 5 MB
                          */
                         arquivo?: string;
                         /**

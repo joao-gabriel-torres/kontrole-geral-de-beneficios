@@ -61,7 +61,7 @@ const ArquivoPlanilhaSchema = z.object({
   arquivo: z
     .any()
     .optional()
-    .openapi({ type: 'string', format: 'binary', description: '.xlsx, .xls ou .csv, até 5 MB' }),
+    .openapi({ type: 'string', format: 'binary', description: '.xlsx, .xls, .csv ou .tsv (inclusive UTF-16), até 5 MB' }),
 })
 const ImportacaoFormSchema = ArquivoPlanilhaSchema.extend({
   desativarAusentes: z
