@@ -1,29 +1,47 @@
 import { formularioFoto, formularioInviabilidade, type DetalheAcionamento } from '@kgb/api-client'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/vue-query'
 import { computed, ref, type Ref } from 'vue'
 import { api } from '../api'
 import { avisar } from '../avisos'
-import { CHAVES, exigir, mensagemDeErro } from '../consultas'
+import {
+  CHAVES,
+  exigir,
+  MENSAGEM_FOTO_GRANDE,
+  MENSAGEM_FOTOS_GRANDES,
+  mensagemDeErro,
+} from '../consultas'
 import type { FotoCapturada } from './fotos'
 
 export type ContextoFoto = 'etapa' | 'conclusao'
 
 /** Mutação do Detalhe em andamento. */
 interface Pedido {
-  /** Outra mutação esteve em voo em algum momento da vida desta. */
+  /** Acionamento da mutação. */
+  id: string
+  /** Outra mutação do mesmo acionamento esteve em voo em algum momento da vida desta. */
   sobreposto: boolean
 }
+
+/** Mutações em voo de cada acionamento, por cliente de consultas (o dono do cache). */
+const emVooPorCliente = new WeakMap<QueryClient, Map<string, Set<Pedido>>>()
 
 /**
  * A API monta o Detalhe da resposta depois do commit e fora do lock: com duas mutações em voo, a
  * resposta da primeira pode trazer um retrato anterior ao commit da segunda e chegar por último.
  * Só a resposta de uma mutação que ficou sozinha do começo ao fim é certamente a mais nova.
+ *
+ * O registro é do cache, não da instância: ao sair do Detalhe e voltar, a tela nova é outra
+ * instância, e a mutação da anterior continua em voo (o `onSuccess` dela ainda grava no cache).
  */
-function criarPedidos() {
-  const emVoo = new Set<Pedido>()
+function pedidosDoCache(cliente: QueryClient) {
+  let porAcionamento = emVooPorCliente.get(cliente)
+  if (!porAcionamento) emVooPorCliente.set(cliente, (porAcionamento = new Map()))
+  const acionamentos = porAcionamento
   return {
-    abrir(): Pedido {
-      const pedido = { sobreposto: emVoo.size > 0 }
+    abrir(id: string): Pedido {
+      let emVoo = acionamentos.get(id)
+      if (!emVoo) acionamentos.set(id, (emVoo = new Set()))
+      const pedido = { id, sobreposto: emVoo.size > 0 }
       emVoo.forEach((outro) => (outro.sobreposto = true))
       emVoo.add(pedido)
       return pedido
@@ -31,7 +49,9 @@ function criarPedidos() {
     /** Encerra o pedido; `true` quando a resposta dele pode ir direto para o cache. */
     fechar(pedido: Pedido | undefined): boolean {
       if (!pedido) return false
-      emVoo.delete(pedido)
+      const emVoo = acionamentos.get(pedido.id)
+      emVoo?.delete(pedido)
+      if (emVoo?.size === 0) acionamentos.delete(pedido.id)
       return !pedido.sobreposto
     },
   }
@@ -60,7 +80,7 @@ export function usarDetalhe(id: Ref<string>) {
     void cliente.invalidateQueries({ queryKey: CHAVES.inicio })
   }
 
-  const pedidos = criarPedidos()
+  const pedidos = pedidosDoCache(cliente)
   /** Busca o Detalhe de novo; um GET que já estava em voo é cancelado (leu o banco antes). */
   const buscarDetalhe = () => cliente.invalidateQueries({ queryKey: CHAVES.detalhe(id.value) })
 
@@ -72,7 +92,7 @@ export function usarDetalhe(id: Ref<string>) {
   function acao<A>(executar: (args: A) => Promise<DetalheAcionamento>, sucesso?: string) {
     return useMutation({
       mutationFn: executar,
-      onMutate: () => pedidos.abrir(),
+      onMutate: () => pedidos.abrir(id.value),
       onSuccess: async (detalhe, _args, pedido) => {
         const chave = CHAVES.detalhe(id.value)
         const sozinho = pedidos.fechar(pedido)
@@ -101,7 +121,7 @@ export function usarDetalhe(id: Ref<string>) {
   function acaoFoto<A>(executar: (args: A) => Promise<unknown>) {
     return useMutation({
       mutationFn: executar,
-      onMutate: () => pedidos.abrir(),
+      onMutate: () => pedidos.abrir(id.value),
       // Espera o Detalhe novo chegar: o bloco "Carregando…" só some quando a foto aparece.
       onSuccess: async (_resposta, _args, pedido) => {
         pedidos.fechar(pedido)
@@ -145,6 +165,7 @@ export function usarDetalhe(id: Ref<string>) {
           body: {} as never,
           bodySerializer: () => formularioInviabilidade({ comentario, arquivos }),
         }),
+        { limite: MENSAGEM_FOTOS_GRANDES },
       ),
     'Inviabilidade enviada ao gestor',
   )
@@ -165,6 +186,7 @@ export function usarDetalhe(id: Ref<string>) {
           bodySerializer: () =>
             formularioFoto({ arquivo: foto.arquivo, contexto, etapaId, tiradaEm: foto.tiradaEm }),
         }),
+        { limite: MENSAGEM_FOTO_GRANDE },
       ),
   )
   const removerFoto = acaoFoto(async (fotoId: string) =>

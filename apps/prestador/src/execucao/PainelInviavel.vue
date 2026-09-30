@@ -53,6 +53,21 @@ watch(
 )
 onBeforeUnmount(limpar)
 
+function fecharComEsc(evento: KeyboardEvent) {
+  if (evento.key === 'Escape') emit('fechar')
+}
+// No document enquanto aberto: o Esc fecha com o foco em qualquer lugar (o foco pode ter ido para
+// o body, por exemplo depois de tocar na sobreposição). A limpeza roda ao fechar e ao desmontar.
+watch(
+  () => props.aberto,
+  (aberto, _anterior, aoLimpar) => {
+    if (!aberto) return
+    document.addEventListener('keydown', fecharComEsc)
+    aoLimpar(() => document.removeEventListener('keydown', fecharComEsc))
+  },
+  { immediate: true },
+)
+
 function adicionar(foto: FotoCapturada) {
   if (fotos.value.length >= MAXIMO_FOTOS_INVIAVEL) return
   fotos.value.push({
@@ -81,7 +96,7 @@ function enviar() {
 </script>
 
 <template>
-  <div v-if="aberto" class="sobreposicao" @keydown.esc="$emit('fechar')">
+  <div v-if="aberto" class="sobreposicao">
     <div
       ref="painel"
       class="painel"

@@ -17,6 +17,14 @@ const conviteInvalido = ref(token === '')
 const erro = ref<string | null>(conviteInvalido.value ? MENSAGENS_CONVITE.expirado : null)
 const preenchido = computed(() => senha.value !== '' && confirmacao.value !== '')
 
+/** A mensagem de erro descreve os dois campos; `aria-invalid` só no campo de que ela fala. */
+const ID_ERRO = 'convite-erro'
+const descricao = computed(() => (erro.value ? ID_ERRO : undefined))
+const senhaInvalida = computed(
+  () => erro.value === MENSAGENS_CONVITE.curta || erro.value === MENSAGENS_CONVITE.longa,
+)
+const confirmacaoInvalida = computed(() => erro.value === MENSAGENS_CONVITE.diferentes)
+
 async function enviar() {
   if (!preenchido.value || enviando.value || conviteInvalido.value) return
   erro.value = validarSenhas(senha.value, confirmacao.value)
@@ -48,6 +56,9 @@ async function enviar() {
         v-model="senha"
         type="password"
         autocomplete="new-password"
+        :disabled="conviteInvalido"
+        :aria-describedby="descricao"
+        :aria-invalid="senhaInvalida || undefined"
       />
     </div>
     <div class="campo">
@@ -57,9 +68,12 @@ async function enviar() {
         v-model="confirmacao"
         type="password"
         autocomplete="new-password"
+        :disabled="conviteInvalido"
+        :aria-describedby="descricao"
+        :aria-invalid="confirmacaoInvalida || undefined"
       />
     </div>
-    <p v-if="erro" class="erro" role="alert">{{ erro }}</p>
+    <p v-if="erro" :id="ID_ERRO" class="erro" role="alert">{{ erro }}</p>
     <v-btn
       type="submit"
       block

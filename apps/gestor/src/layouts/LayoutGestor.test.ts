@@ -134,11 +134,32 @@ describe('LayoutGestor', () => {
     expect(modaisAbertos.value).toBe(1)
     expect(tela.find('#modais-gestor [role="dialog"]').exists()).toBe(true)
     expect(tela.find('main.conteudo').attributes('inert')).toBeDefined()
+    // A navegação lateral também: o Tab não escapa do aria-modal para os links dela.
+    expect(tela.find('nav.lateral').attributes('inert')).toBeDefined()
     modal.unmount()
     await aguardar()
     expect(modaisAbertos.value).toBe(0)
     expect(tela.find('main.conteudo').attributes('inert')).toBeUndefined()
+    expect(tela.find('nav.lateral').attributes('inert')).toBeUndefined()
     tela.unmount()
+  })
+
+  it('com o Novo acionamento aberto, a NavLateral também fica inerte', async () => {
+    simularApi(api, {
+      'GET /api/acionamentos/contagem': contagem(),
+      'GET /api/tipos': [],
+      'GET /api/prestadores': [],
+    })
+    const { tela } = await montar(LayoutGestor, { rota: '/painel' })
+    const lateral = () => tela.find('nav.lateral')
+    expect(lateral().exists()).toBe(true)
+    expect(lateral().attributes('inert')).toBeUndefined()
+    novoAcionamento.abrir()
+    await aguardar()
+    expect(lateral().attributes('inert')).toBeDefined()
+    novoAcionamento.fechar()
+    await aguardar()
+    expect(lateral().attributes('inert')).toBeUndefined()
   })
 
   it('com o modal aberto, a tela por trás fica inerte (o Tab não chega nela)', async () => {

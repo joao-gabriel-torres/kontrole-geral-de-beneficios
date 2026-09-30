@@ -65,15 +65,17 @@ watch(
 
 <template>
   <div class="layout" :class="{ compacto: !mdAndUp }">
+    <!-- Com um modal aberto, a tela por trás dele (conteúdo e navegação) fica inerte: o Tab não
+         sai do aria-modal. -->
     <NavLateral
       v-if="mdAndUp"
       :itens="ITENS_NAVEGACAO"
       :aprovacoes="aprovacoes"
       :usuario="sessao.usuario?.nome ?? ''"
+      :inert="telaInerte || undefined"
       @sair="encerrarSessao"
     />
     <div class="coluna">
-      <!-- Com um modal aberto, a tela por trás dele fica inerte: o Tab não chega nela. -->
       <main ref="conteudo" class="conteudo" :inert="telaInerte || undefined"><RouterView /></main>
       <NavInferior
         v-if="!mdAndUp"
