@@ -16,6 +16,8 @@ const PASTA_FIXTURES = fileURLToPath(new URL('./fixtures/', import.meta.url))
 const LIMITE = Number(process.env.LIMITE_DIFERENCA ?? '0.002')
 /** Fração máxima de pixels diferentes em relação aos pixels de conteúdo (não-fundo) do protótipo. */
 const LIMITE_CONTEUDO = Number(process.env.LIMITE_CONTEUDO ?? '0.02')
+/** Sensibilidade por pixel do pixelmatch (0 a 1): menor detecta divergências mais sutis de cor. */
+const LIMIAR_PIXEL = Number(process.env.LIMIAR_PIXEL ?? '0.1')
 const URL_APP = {
   gestor: process.env.URL_GESTOR ?? 'http://localhost:5173',
   prestador: process.env.URL_PRESTADOR ?? 'http://localhost:5174',
@@ -235,7 +237,9 @@ interface Diferenca {
 
 function diferenca(a: PNG, b: PNG, arquivoDiff?: string): Diferenca {
   const diff = new PNG({ width: a.width, height: a.height })
-  const pixels = pixelmatch(a.data, b.data, diff.data, a.width, a.height, { threshold: 0.1 })
+  const pixels = pixelmatch(a.data, b.data, diff.data, a.width, a.height, {
+    threshold: LIMIAR_PIXEL,
+  })
   if (arquivoDiff) writeFileSync(arquivoDiff, PNG.sync.write(diff))
   return {
     regiao: pixels / (a.width * a.height),
