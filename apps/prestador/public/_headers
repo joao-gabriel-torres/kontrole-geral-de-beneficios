@@ -1,0 +1,19 @@
+# Cabeçalhos do Cloudflare Pages (https://developers.cloudflare.com/pages/configuration/headers/).
+# Quando duas regras casam com o mesmo endereço, os cabeçalhos somam; "! Nome" tira o da regra
+# anterior. O app nativo (Capacitor) não passa pelo Pages: estes cabeçalhos são só da versão web.
+
+# Tudo: o index.html (servido também nas rotas do SPA) revalida a cada acesso, para um deploy
+# novo chegar na hora. Referrer-Policy: nas chamadas à API vai só a origem, nunca o caminho e a
+# query (o link do convite leva o token na query). Câmera liberada só para o próprio app (fotos
+# das etapas).
+/*
+  Cache-Control: no-cache
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=()
+
+# Arquivos do build, com hash no nome: nunca mudam, cache de um ano.
+/assets/*
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
