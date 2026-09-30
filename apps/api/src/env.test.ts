@@ -126,6 +126,52 @@ describe('produção (NODE_ENV=production)', () => {
   })
 })
 
+describe('CORS_ORIGINS', () => {
+  const segredo = 'q8Hn3T0x2J1mYvRkP9sWcL4bZ7eA5dF6gU0iO2pK3rM='
+  const ler = (CORS_ORIGINS: string) =>
+    EsquemaEnv.safeParse({ ...base, BETTER_AUTH_SECRET: segredo, CORS_ORIGINS })
+
+  it('separa as origens por vírgula, sem espaços nem itens vazios', () => {
+    const r = ler(' https://gestor.russo.com.br , https://prestador.russo.com.br,,')
+    expect(r.data?.CORS_ORIGINS).toEqual([
+      'https://gestor.russo.com.br',
+      'https://prestador.russo.com.br',
+    ])
+  })
+
+  it('aceita as origens do dev e dos apps nativos', () => {
+    const exemplo = parse(readFileSync(join(import.meta.dirname, '../../../.env.example'), 'utf8'))
+    const r = ler(exemplo.CORS_ORIGINS ?? '')
+    expect(r.success).toBe(true)
+    expect(r.data?.CORS_ORIGINS).toContain('capacitor://localhost')
+  })
+
+  // O navegador manda a origem sem barra nem caminho, e o CORS e o Better Auth comparam o texto
+  // exato: com a barra copiada da barra de endereços, o gestor do Pages nem conseguiria entrar.
+  it('recusa endereço com barra ou caminho no fim e diz como escrever a origem', () => {
+    for (const [errada, certa] of [
+      ['https://gestor.russo.com.br/', 'https://gestor.russo.com.br'],
+      ['https://kgb-gestor.pages.dev/login', 'https://kgb-gestor.pages.dev'],
+      ['https://Gestor.Russo.com.br', 'https://gestor.russo.com.br'],
+      ['https://gestor.russo.com.br:443', 'https://gestor.russo.com.br'],
+    ] as const) {
+      const r = ler(`http://localhost:5173,${errada}`)
+      expect(r.success).toBe(false)
+      expect(r.error?.issues[0]?.path).toEqual(['CORS_ORIGINS', 1])
+      expect(r.error?.issues[0]?.message).toContain(`use "${certa}"`)
+    }
+  })
+
+  it('recusa o que não é endereço', () => {
+    // `localhost:5173` é uma URL válida para o `new URL` (esquema "localhost:"), mas não uma origem.
+    for (const errada of ['gestor.russo.com.br', 'localhost:5173']) {
+      const r = ler(errada)
+      expect(r.success).toBe(false)
+      expect(r.error?.issues[0]?.message).toContain('ex.: https://')
+    }
+  })
+})
+
 describe('lerEnv', () => {
   it('para a subida dizendo quais variáveis faltam e por quê', () => {
     const fonte = {
