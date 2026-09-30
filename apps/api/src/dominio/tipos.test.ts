@@ -31,6 +31,10 @@ describe('normalizarNomeTipo', () => {
     expect(normalizarNomeTipo('  Jardinagem  ')).toBe('Jardinagem')
   })
 
+  it('junta espaços internos repetidos: "Ponto  de luz" é o mesmo nome', () => {
+    expect(normalizarNomeTipo('Ponto  de \t luz')).toBe('Ponto de luz')
+  })
+
   it('recusa nome vazio (422)', () => {
     expect(erroDe(() => normalizarNomeTipo('   '))).toMatchObject({
       codigo: 'nome_obrigatorio',
@@ -77,6 +81,13 @@ describe('exigirNomeLivre', () => {
         status: 409,
       })
     }
+  })
+
+  it('espaços internos repetidos não disfarçam um nome já usado (409)', () => {
+    expect(chaveDoNome('Ponto  de   LUZ')).toBe('ponto de luz')
+    expect(
+      erroDe(() => exigirNomeLivre('Ponto  de luz', [{ id: 't9', nome: 'Ponto de luz' }])),
+    ).toMatchObject({ codigo: 'nome_duplicado', status: 409 })
   })
 
   it('o próprio tipo não conta (renomear para outra grafia)', () => {

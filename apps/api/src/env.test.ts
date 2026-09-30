@@ -56,6 +56,25 @@ describe('variáveis do convite por e-mail', () => {
     expect(ler({ URL_APP_PRESTADOR: 'localhost' }).success).toBe(false)
   })
 
+  it('SMTP_URL só aceita smtp:// ou smtps:// e ensina a codificar a senha', () => {
+    const remetente = { EMAIL_REMETENTE: 'Russo <nao-responda@exemplo.com>' }
+    expect(ler({ SMTP_URL: 'smtp://usuario:senha@localhost:1025', ...remetente }).success).toBe(
+      true,
+    )
+    for (const url of [
+      'localhost:1025',
+      'javascript:alert(1)',
+      'https://smtp.exemplo.com',
+      // Chave SendGrid/SES sem percent-encoding: '/' e '#' quebram a URL.
+      'smtps://apikey:SG.abc/def@smtp.sendgrid.net:465',
+      'smtps://usuario:senha#123@smtp.exemplo.com:465',
+    ]) {
+      const r = ler({ SMTP_URL: url, ...remetente })
+      expect(r.success).toBe(false)
+      expect(r.error?.issues[0]?.message).toContain('encodeURIComponent')
+    }
+  })
+
   it('o .env.example documenta as três', () => {
     const exemplo = readFileSync(join(import.meta.dirname, '../../../.env.example'), 'utf8')
     for (const nome of ['SMTP_URL', 'EMAIL_REMETENTE', 'URL_APP_PRESTADOR']) {

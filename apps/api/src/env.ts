@@ -46,7 +46,13 @@ export const EsquemaEnv = z
       .default('var/uploads')
       .transform((pasta) => resolve(RAIZ, pasta)),
     /** Servidor de e-mail. Sem ele (dev), os e-mails ficam em var/emails/ e o link aparece no log. */
-    SMTP_URL: opcional(z.url()),
+    SMTP_URL: opcional(
+      z.url({
+        protocol: /^smtps?$/,
+        error:
+          'SMTP_URL precisa ser smtp:// ou smtps://; senha ou chave com caracteres especiais (/, #, +…) entra codificada com encodeURIComponent',
+      }),
+    ),
     EMAIL_REMETENTE: opcional(z.string()),
     /** Endereço do app do prestador usado no link do convite (vazio no dev: localhost:5174). */
     URL_APP_PRESTADOR: opcional(z.url()),

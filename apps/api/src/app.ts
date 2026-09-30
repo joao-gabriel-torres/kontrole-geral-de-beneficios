@@ -1,4 +1,5 @@
 import { OpenAPIHono } from '@hono/zod-openapi'
+import { Prisma } from '@kgb/db'
 import { Scalar } from '@scalar/hono-api-reference'
 import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
@@ -20,6 +21,15 @@ import { rotasPainel } from './rotas/painel'
 import { rotasPlanilha } from './rotas/planilha'
 import { rotasSaude } from './rotas/saude'
 import { rotasTipos } from './rotas/tipos'
+
+/** SQLSTATE do Postgres dentro do erro do Prisma (P2010 traz o código no driver ou na mensagem). */
+function codigoPostgres(erro: Prisma.PrismaClientKnownRequestError): string | undefined {
+  const causa = (
+    erro.meta as { driverAdapterError?: { cause?: { code?: unknown } } } | undefined
+  )?.driverAdapterError?.cause
+  if (typeof causa?.code === 'string') return causa.code
+  return /Code: `(\w+)`/.exec(erro.message)?.[1]
+}
 
 export const INFO_OPENAPI = {
   openapi: '3.1.0',
@@ -83,6 +93,11 @@ export function criarApp() {
   app.onError((erro, c) => {
     if (erro instanceof ErroDominio || erro instanceof ErroHttp) {
       return c.json(corpoErro(erro.codigo, erro.message), erro.status)
+    }
+    // Id com byte nulo (%00) na URL: o Postgres recusa o texto (22021) antes de olhar o WHERE.
+    // Um id assim nunca existe no banco: é 404, não 500 com stack no log.
+    if (erro instanceof Prisma.PrismaClientKnownRequestError && codigoPostgres(erro) === '22021') {
+      return c.json(corpoErro('nao_encontrado', 'Registro não encontrado'), 404)
     }
     if (erro instanceof HTTPException) {
       const codigo =
