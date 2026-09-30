@@ -581,6 +581,25 @@ describe('PaginaPrestadores', () => {
       expect(modal(tela).find('.erro').text()).toBe('Informe o telefone com DDD')
     })
 
+    it('no corpo que rola, a lista aberta e o campo (com um chip novo acima dele) ficam à vista', async () => {
+      // O jsdom não tem scrollIntoView.
+      const rolar = vi.fn()
+      Element.prototype.scrollIntoView = rolar
+      try {
+        const { tela } = await abrirNovo()
+        await campoEspecialidades(tela).trigger('click')
+        await aguardar()
+        expect(rolar.mock.contexts).toContain(listaEspecialidades(tela).element)
+        expect(rolar).toHaveBeenLastCalledWith({ block: 'nearest' })
+        rolar.mockClear()
+        await clicarComMouse(opcao(tela, 'Pintura'))
+        await aguardar()
+        expect(rolar.mock.contexts).toEqual([campoEspecialidades(tela).element])
+      } finally {
+        delete (Element.prototype as Partial<Element>).scrollIntoView
+      }
+    })
+
     it('credencia, fecha e avisa', async () => {
       const { tela } = await abrirNovo()
       await campo(tela, 'Nome').setValue('Pedro Lima')

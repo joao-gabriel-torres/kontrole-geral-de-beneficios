@@ -11,8 +11,9 @@ import { alternarTipo, gruposDeTipos, tipoDoEnter } from './buscaTipos'
  * ordem da escolha (a mesma da prévia do checklist, no Novo acionamento, e a gravada, nas
  * especialidades do prestador).
  *
- * `paraCima` abre a lista acima do campo, para quando a busca fica no fim de uma área que rola (o
- * corpo do modal de prestador): a lista não fica cortada embaixo.
+ * `paraCima` abre a lista acima do campo e põe os chips acima dele, para quando a busca fica no fim
+ * de uma área que rola (o corpo do modal de prestador): a lista não fica cortada embaixo e os chips
+ * escolhidos continuam à vista quando ela fecha.
  */
 const props = withDefaults(
   defineProps<{ id: string; tipos: readonly TipoDemanda[]; paraCima?: boolean }>(),
@@ -32,12 +33,21 @@ const selecionados = computed(() =>
 )
 const escolhido = (id: string) => escolhidos.value.includes(id)
 
-// Para cima, a lista aberta rola para dentro da área visível (o campo pode estar no fim dela).
+// Para cima, a lista aberta rola para dentro da área visível (o campo pode estar no fim dela), e o
+// campo não sai de vista quando um chip novo entra acima dele.
 watch(aberto, async (valor) => {
   if (!valor || !props.paraCima) return
   await nextTick()
   suspensa.value?.scrollIntoView?.({ block: 'nearest' })
 })
+watch(
+  () => escolhidos.value.length,
+  async () => {
+    if (!props.paraCima) return
+    await nextTick()
+    entrada.value?.scrollIntoView?.({ block: 'nearest' })
+  },
+)
 
 function alternar(id: string) {
   escolhidos.value = alternarTipo(escolhidos.value, id)
@@ -242,6 +252,9 @@ function aoSairFoco(evento: FocusEvent) {
   border: 1px solid var(--kgb-divisor);
   border-radius: 16px;
   box-shadow: 0 12px 32px rgba(28, 18, 67, 0.12);
+}
+.para-cima {
+  flex-direction: column-reverse;
 }
 .para-cima .lista {
   top: auto;
