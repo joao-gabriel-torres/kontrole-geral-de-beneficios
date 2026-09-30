@@ -1,6 +1,7 @@
 import type { CodigoErroAssinantes } from './erros-assinantes'
 import type { CodigoErroCep } from './erros-cep'
 import type { CodigoErroConvites } from './erros-convites'
+import type { CodigoErroLocalizacao } from './erros-localizacao'
 import type { CodigoErroPlanilha } from './erros-planilha'
 import type { CodigoErroPrestadores } from './erros-prestadores'
 import type { CodigoErroTipos } from './erros-tipos'
@@ -20,6 +21,7 @@ export type CodigoErroDominio =
   | CodigoErroConvites
   | CodigoErroCep
   | CodigoErroAssinantes
+  | CodigoErroLocalizacao
   | 'transicao_invalida'
   | 'fotos_insuficientes'
   | 'etapas_pendentes'
