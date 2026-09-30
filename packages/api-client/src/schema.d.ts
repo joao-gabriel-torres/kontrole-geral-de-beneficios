@@ -596,6 +596,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/geocodificacao/reversa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Endereço de um ponto do mapa (Nominatim reverse), para o pino movido no Novo acionamento */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Latitude em graus decimais, com ponto ("-23.557") */
+                    latitude?: string;
+                    /** @description Longitude em graus decimais, com ponto ("-46.6905") */
+                    longitude?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description O endereço mais próximo do ponto; null no que o mapa não sabe */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EnderecoDoPonto"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Nenhum endereço no ponto (localizacao_nao_encontrada) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Ponto ausente, que não é número ou fora do Brasil (localizacao_invalida) */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description O serviço de mapas não respondeu (geocodificacao_indisponivel) */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tipos": {
         parameters: {
             query?: never;
@@ -2564,6 +2650,16 @@ export interface components {
             latitude: number;
             /** @description Graus decimais, 6 casas */
             longitude: number;
+        };
+        EnderecoDoPonto: {
+            /** @description Só os 8 dígitos; null quando não há */
+            cep: string | null;
+            logradouro: string | null;
+            numero: string | null;
+            bairro: string | null;
+            cidade: string | null;
+            /** @description Sigla ("SP") */
+            uf: string | null;
         };
         TipoDemanda: {
             id: string;

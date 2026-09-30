@@ -5,6 +5,8 @@ export type Assinante = components['schemas']['Assinante']
 export type EnderecoCep = components['schemas']['EnderecoCep']
 /** Uma posição no mapa, em graus decimais. */
 export type Localizacao = components['schemas']['Localizacao']
+/** O endereço de um ponto do mapa (consulta reversa), com null no que o mapa não sabe. */
+export type EnderecoDoPonto = components['schemas']['EnderecoDoPonto']
 
 export interface FormularioAcionamento {
   titulo: string
@@ -27,9 +29,16 @@ export interface FormularioAcionamento {
   prestadorId: string
   /**
    * A posição confirmada no mapa ("Localização conferida"). Vale para o cliente, o CEP e o endereço
-   * em uso quando foi confirmada: trocar qualquer um deles a descarta (`chaveDaLocalizacao`).
+   * em uso quando foi confirmada: trocar qualquer um deles a descarta (`chaveDaLocalizacao`), salvo
+   * a do pino movido (`pinoMovido`).
    */
   localizacao: Localizacao | null
+  /**
+   * A localização é a posição exata de um pino movido no mapa: o atendimento é em outro endereço,
+   * preenchido pelo ponto. O preenchimento automático não a descarta; só trocar de cliente, voltar
+   * ao endereço de cadastro ou editar à mão o CEP ou o número que vieram do ponto.
+   */
+  pinoMovido: boolean
 }
 
 /** Uma opção das buscas de cliente e de prestador (título e, abaixo, o detalhe). */
@@ -67,6 +76,7 @@ export function formularioInicial(
     fim: '11:00',
     prestadorId: prestadorPadrao(prestadores),
     localizacao: null,
+    pinoMovido: false,
   }
 }
 
@@ -214,6 +224,27 @@ export function localizacaoDoAssinante(f: FormularioAcionamento): Localizacao | 
 export function chaveDaLocalizacao(f: FormularioAcionamento): string {
   const cep = f.outroEndereco ? digitosCep(f.cep) : (f.assinante?.cep ?? '')
   return JSON.stringify([f.assinante?.id ?? '', f.outroEndereco, cep, enderecoDoMapa(f)])
+}
+
+/**
+ * O outro endereço preenchido pelo ponto do pino movido: o CEP (formatado), a rua, o número, o
+ * bairro e a cidade que o mapa conhece. O complemento era do endereço anterior e sai; o que faltar
+ * (ou tudo, sem a consulta) fica vazio para a gestora completar.
+ */
+export function camposDoPonto(
+  e: EnderecoDoPonto | null,
+): Pick<
+  FormularioAcionamento,
+  'cep' | 'logradouro' | 'numero' | 'complemento' | 'bairro' | 'cidade'
+> {
+  return {
+    cep: formatarCep(e?.cep ?? ''),
+    logradouro: e?.logradouro ?? '',
+    numero: e?.numero ?? '',
+    complemento: '',
+    bairro: e?.bairro ?? '',
+    cidade: e?.cidade ?? '',
+  }
 }
 
 /** O CEP em uso (8 dígitos) para ordenar os prestadores, ou vazio. */

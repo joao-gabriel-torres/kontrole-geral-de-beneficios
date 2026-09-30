@@ -18,8 +18,14 @@ import { usarCriarAcionamento, usarTipos } from '../dados'
 import { reiniciarLista } from '../estadoLista'
 import BuscaTipos from './BuscaTipos.vue'
 import CampoBusca from './CampoBusca.vue'
-import { usarAssinantes, usarEnderecoDoCep, usarPrestadoresProximos } from './dados'
 import {
+  usarAssinantes,
+  usarEnderecoDoCep,
+  usarEnderecoDoPonto,
+  usarPrestadoresProximos,
+} from './dados'
+import {
+  camposDoPonto,
   cepDeReferencia,
   chaveDaLocalizacao,
   localizacaoDoAssinante,
@@ -35,6 +41,7 @@ import {
   posicaoConhecida,
   prestadorMaisProximo,
   prestadorPadrao,
+  type EnderecoDoPonto,
   type Localizacao,
   type OpcaoBusca,
   previaChecklist,
@@ -83,6 +90,29 @@ function escolherAssinante(id: string) {
   if (escolhido) form.assinante = escolhido
 }
 
+// Pino movido = outro endereço (fora do protótipo, a pedido do usuário em 30/09): confirmar o mapa
+// com o pino fora da posição do endereço marca "Atender em outro endereço" e o preenche pelo ponto
+// (consulta reversa). A posição exata do pino vai só para o acionamento: como é outro endereço, o
+// cadastro do assinante não muda.
+const buscarEnderecoDoPonto = usarEnderecoDoPonto()
+const SEM_ENDERECO: EnderecoDoPonto = {
+  cep: null,
+  logradouro: null,
+  numero: null,
+  bairro: null,
+  cidade: null,
+  uf: null,
+}
+/** O endereço que a consulta achou para o pino movido; sem nada quando ela falhou. */
+const enderecoDoPino = ref<EnderecoDoPonto | null>(null)
+const consultandoPino = ref(false)
+/** A consulta do ponto falhou: os campos ficam vazios e editáveis, com um aviso. */
+const pinoSemEndereco = ref(false)
+/** Cada consulta do ponto ganha um número: a resposta de uma antiga (ou descartada) não preenche. */
+let consultaDoPino = 0
+/** O endereço do pino movido, enquanto a posição dele vale: completa o que o CEP não traz. */
+const doPino = computed(() => (form.pinoMovido ? enderecoDoPino.value : null))
+
 // Outro endereço: com os 8 dígitos, rua, bairro e cidade vêm da consulta do CEP.
 const cepTocado = ref(false)
 const cepConsultado = computed(() => (form.outroEndereco ? digitosCep(form.cep) : ''))
@@ -94,11 +124,13 @@ const {
 const enderecoDoCep = computed(() =>
   cepConsultado.value.length === 8 ? enderecoCep.value : undefined,
 )
+/** Rua, bairro e cidade do CEP; o que ele não traz (ou sem ele), do ponto do pino movido. */
 function preencherPeloCep() {
   const e = enderecoDoCep.value
-  form.logradouro = e?.logradouro ?? ''
-  form.bairro = e?.bairro ?? ''
-  form.cidade = e?.cidade ?? ''
+  const ponto = doPino.value
+  form.logradouro = e?.logradouro || ponto?.logradouro || ''
+  form.bairro = e?.bairro || ponto?.bairro || ''
+  form.cidade = e?.cidade || ponto?.cidade || ''
 }
 watch([cepConsultado, enderecoCep], preencherPeloCep)
 // O CEP que não existe (404) bloqueia o envio; o ViaCEP que não responde (502, tempo esgotado ou
@@ -110,13 +142,26 @@ watch(
   },
   { immediate: true },
 )
+// O CEP que veio do ponto e o ViaCEP não conhece sai: o endereço fica com os campos do ponto, para
+// a gestora completar o CEP sem perder a posição do pino.
+watch(
+  () => form.cepInexistente,
+  (inexistente) => {
+    const ponto = doPino.value
+    if (!inexistente || !ponto?.cep || digitosCep(form.cep) !== ponto.cep) return
+    enderecoDoPino.value = { ...ponto, cep: null }
+    form.cep = ''
+  },
+)
 const cepSemResposta = computed(() => !!falhaCep.value && !form.cepInexistente)
 /**
- * Rua e bairro vêm do CEP, só para leitura. São digitados num CEP geral de cidade (que vem sem eles)
- * e quando o ViaCEP não responde; sem CEP, na consulta e num CEP que não existe, não.
+ * Rua e bairro vêm do CEP, só para leitura. São digitados num CEP geral de cidade (que vem sem eles),
+ * quando o ViaCEP não responde e no ponto do pino movido sem CEP; sem CEP, na consulta e num CEP que
+ * não existe, não.
  */
 const livres = computed(() => {
   if (cepSemResposta.value) return { logradouro: true, bairro: true }
+  if (doPino.value && cepConsultado.value.length !== 8) return { logradouro: true, bairro: true }
   const e = enderecoDoCep.value
   return { logradouro: !!e && !e.logradouro, bairro: !!e && !e.bairro }
 })
@@ -124,7 +169,12 @@ function digitarCep(evento: Event) {
   const campo = evento.target as HTMLInputElement
   form.cep = formatarCep(campo.value)
   campo.value = form.cep
+  editarAMao('cep')
 }
+const placeholderRua = computed(() => {
+  if (consultandoPino.value) return 'Buscando o endereço do ponto…'
+  return consultandoCep.value ? 'Buscando o CEP…' : 'Preenchida pelo CEP'
+})
 const erroCep = computed(() => {
   if (!form.outroEndereco) return ''
   if (cepConsultado.value.length === 8) return falhaCep.value ? mensagemDeErro(falhaCep.value) : ''
@@ -135,13 +185,67 @@ const mapa = computed(() => enderecoDoMapa(form))
 // Localização conferida no mapa (fora do protótipo, a pedido do usuário em 30/09): "Ver no mapa"
 // abre o mapa com o pino no endereço em uso, e "Confirmar localização" grava a posição no
 // formulário. Ela vale para o cliente, o CEP e o endereço em uso: trocar qualquer um a descarta,
-// e no endereço do próprio assinante volta a última conferida para ele.
+// e no endereço do próprio assinante volta a última conferida para ele. A do pino movido não cai
+// com o preenchimento automático do endereço: só ao trocar de cliente, voltar ao endereço de
+// cadastro ou editar à mão o CEP ou o número que vieram do ponto.
 const mapaAberto = ref(false)
 const botaoMapa = ref<HTMLButtonElement>()
+/** A posição conferida deixa de valer (e a consulta do ponto pendente não preenche mais nada). */
+function descartarLocalizacao() {
+  consultaDoPino += 1
+  consultandoPino.value = false
+  pinoSemEndereco.value = false
+  enderecoDoPino.value = null
+  form.pinoMovido = false
+  form.localizacao = localizacaoDoAssinante(form)
+}
 watch(
-  () => chaveDaLocalizacao(form),
-  () => (form.localizacao = localizacaoDoAssinante(form)),
+  [() => form.assinante?.id, () => form.outroEndereco, () => chaveDaLocalizacao(form)],
+  ([cliente, outro], [clienteAntes]) => {
+    if (form.pinoMovido && outro && cliente === clienteAntes) return
+    descartarLocalizacao()
+  },
 )
+/**
+ * A gestora editou o CEP ou o número. Se vieram do ponto do pino movido, o endereço não é mais o do
+ * pino e a posição cai; se o ponto não os trouxe, ela só está completando o endereço. Durante a
+ * consulta do ponto, a resposta deixa de sobrescrever o que ela digita.
+ */
+function editarAMao(campo: 'cep' | 'numero') {
+  if (!form.pinoMovido) return
+  if (consultandoPino.value) {
+    consultaDoPino += 1
+    consultandoPino.value = false
+    enderecoDoPino.value = SEM_ENDERECO
+  } else if (enderecoDoPino.value?.[campo]) {
+    descartarLocalizacao()
+  }
+}
+/**
+ * O atendimento é no ponto do pino movido: marca o outro endereço na hora (o envio fica bloqueado
+ * até o endereço se completar) e o preenche pela consulta reversa. Se ela falhar, os campos ficam
+ * vazios e editáveis, com um aviso.
+ */
+async function preencherPeloPonto(posicao: Localizacao) {
+  const consulta = ++consultaDoPino
+  form.pinoMovido = true
+  form.outroEndereco = true
+  enderecoDoPino.value = null
+  pinoSemEndereco.value = false
+  consultandoPino.value = true
+  Object.assign(form, camposDoPonto(null))
+  let achado: EnderecoDoPonto | null = null
+  try {
+    achado = await buscarEnderecoDoPonto(posicao)
+  } catch {
+    achado = null
+  }
+  if (consulta !== consultaDoPino) return
+  consultandoPino.value = false
+  pinoSemEndereco.value = !achado
+  enderecoDoPino.value = achado ?? SEM_ENDERECO
+  Object.assign(form, camposDoPonto(achado))
+}
 /**
  * O mapa (com o Leaflet) só é baixado quando a gestora abre "Ver no mapa". Se o download falhar
  * (sem rede ou versão nova publicada), o mapa fecha com um aviso: o formulário não fica inerte.
@@ -164,9 +268,11 @@ async function fecharMapa() {
   await nextTick()
   botaoMapa.value?.focus()
 }
-function confirmarLocalizacao(posicao: Localizacao) {
+/** Sem mover o pino, confere o endereço em uso; com o pino movido, o atendimento é no ponto. */
+function confirmarLocalizacao(posicao: Localizacao, movido: boolean) {
   form.localizacao = posicao
   void fecharMapa()
+  if (movido) void preencherPeloPonto(posicao)
 }
 
 // Prestador: a lista vem do mais próximo ao mais distante do CEP em uso, e o mais próximo já vem
@@ -325,7 +431,8 @@ onUnmounted(() => focoAnterior?.focus())
           <div class="campo endereco">
             <div class="rotulo-linha">
               <label :for="form.outroEndereco ? 'novo-cep' : 'novo-endereco'">Endereço</label>
-              <div v-if="mapa" class="localizacao">
+              <!-- O pino movido fica conferido mesmo antes de o endereço do ponto se completar. -->
+              <div v-if="mapa || form.localizacao" class="localizacao">
                 <span v-if="form.localizacao" class="conferida">
                   <RussoIcone nome="check" :tamanho="16" />Localização conferida
                 </span>
@@ -354,6 +461,9 @@ onUnmounted(() => focoAnterior?.focus())
               Atender em outro endereço
             </label>
             <div v-if="form.outroEndereco" class="outro">
+              <div v-if="pinoSemEndereco" class="aviso" role="status">
+                Não achamos o endereço deste ponto: complete os campos
+              </div>
               <div class="linha">
                 <label class="campo cep"
                   >CEP
@@ -375,14 +485,19 @@ onUnmounted(() => focoAnterior?.focus())
                     v-model="form.logradouro"
                     class="entrada"
                     :readonly="!livres.logradouro"
-                    :placeholder="consultandoCep ? 'Buscando o CEP…' : 'Preenchida pelo CEP'"
+                    :placeholder="placeholderRua"
                   />
                 </label>
               </div>
               <div class="linha">
                 <label class="campo casa"
                   >Número
-                  <input v-model="form.numero" class="entrada" placeholder="Ex.: 410" />
+                  <input
+                    v-model="form.numero"
+                    class="entrada"
+                    placeholder="Ex.: 410"
+                    @input="editarAMao('numero')"
+                  />
                 </label>
                 <label class="campo complemento"
                   >Complemento
@@ -781,6 +896,15 @@ onUnmounted(() => focoAnterior?.focus())
 .enviar.inativo {
   background: var(--kgb-primaria-tint-forte);
   color: var(--kgb-primaria-escura);
+}
+/* Aviso do pino movido sem endereço (como o do mapa): não existe em repouso. */
+.aviso {
+  background: var(--kgb-laranja-claro);
+  color: var(--kgb-laranja-texto);
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-size: 13px;
+  font-weight: 500;
 }
 /* Falhas (tipos, prestadores, CEP): não existem em repouso. */
 .falha {

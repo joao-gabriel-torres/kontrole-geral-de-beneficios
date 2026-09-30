@@ -706,6 +706,57 @@
           "longitude"
         ]
       },
+      "EnderecoDoPonto": {
+        "type": "object",
+        "properties": {
+          "cep": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Só os 8 dígitos; null quando não há"
+          },
+          "logradouro": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "numero": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bairro": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cidade": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "uf": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Sigla (\"SP\")"
+          }
+        },
+        "required": [
+          "cep",
+          "logradouro",
+          "numero",
+          "bairro",
+          "cidade",
+          "uf"
+        ]
+      },
       "TipoDemanda": {
         "type": "object",
         "properties": {
@@ -2047,6 +2098,105 @@
           },
           "422": {
             "description": "Endereço vazio ou longo demais",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "O serviço de mapas não respondeu (geocodificacao_indisponivel)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/geocodificacao/reversa": {
+      "get": {
+        "tags": [
+          "Acionamentos"
+        ],
+        "summary": "Endereço de um ponto do mapa (Nominatim reverse), para o pino movido no Novo acionamento",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 40,
+              "description": "Latitude em graus decimais, com ponto (\"-23.557\")"
+            },
+            "required": false,
+            "description": "Latitude em graus decimais, com ponto (\"-23.557\")",
+            "name": "latitude",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 40,
+              "description": "Longitude em graus decimais, com ponto (\"-46.6905\")"
+            },
+            "required": false,
+            "description": "Longitude em graus decimais, com ponto (\"-46.6905\")",
+            "name": "longitude",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "O endereço mais próximo do ponto; null no que o mapa não sabe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnderecoDoPonto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nenhum endereço no ponto (localizacao_nao_encontrada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ponto ausente, que não é número ou fora do Brasil (localizacao_invalida)",
             "content": {
               "application/json": {
                 "schema": {
