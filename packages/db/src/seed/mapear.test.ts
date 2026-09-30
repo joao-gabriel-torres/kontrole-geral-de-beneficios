@@ -158,6 +158,27 @@ describe('mapearDadosPrototipo', () => {
     ])
   })
 
+  it('completa o endereço de cada prestador com a rua do CEP (conferidos no ViaCEP)', () => {
+    expect(
+      seed.prestadores.map(({ dados: p }) => [
+        p.cep,
+        p.logradouro,
+        p.numero,
+        p.complemento,
+        p.bairro,
+        p.cidade,
+        p.uf,
+      ]),
+    ).toEqual([
+      ['05422001', 'Rua dos Pinheiros', '812', null, 'Pinheiros', 'São Paulo', 'SP'],
+      ['04010000', 'Rua Domingos de Morais', '348', 'sala 12', 'Vila Mariana', 'São Paulo', 'SP'],
+      ['01001000', 'Praça da Sé', '111', 'conj. 1203', 'Sé', 'São Paulo', 'SP'],
+      ['05018000', 'Rua Cayowaá', '214', null, 'Perdizes', 'São Paulo', 'SP'],
+      ['02011000', 'Rua Voluntários da Pátria', '657', null, 'Santana', 'São Paulo', 'SP'],
+      ['03071000', 'Rua Cesário Galero', '430', 'casa 2', 'Tatuapé', 'São Paulo', 'SP'],
+    ])
+  })
+
   it('só a gestora e o prestador de dev recebem senha', () => {
     const comSenha = seed.usuarios
       .filter((u) => u.comSenha)

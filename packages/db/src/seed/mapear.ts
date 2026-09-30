@@ -61,6 +61,46 @@ const CEPS_PRESTADORES: Record<string, string> = {
   p6: '03071000', // Zona Leste — Rua Cesário Galero, Tatuapé
 }
 
+type EnderecoPrestador = Pick<
+  Prisma.PrestadorCreateManyInput,
+  'logradouro' | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf'
+>
+
+/**
+ * O endereço de cada prestador na rua do CEP dele, com um número dentro da faixa que o ViaCEP dá
+ * para aquele CEP (conferidos em 30/09/2026).
+ */
+const ENDERECOS_PRESTADORES: Record<string, EnderecoPrestador> = {
+  // 05422-001: de 536 a 1046, lado par
+  p1: { logradouro: 'Rua dos Pinheiros', numero: '812', complemento: null, bairro: 'Pinheiros' },
+  // 04010-000: até 512, lado par
+  p2: {
+    logradouro: 'Rua Domingos de Morais',
+    numero: '348',
+    complemento: 'sala 12',
+    bairro: 'Vila Mariana',
+  },
+  // 01001-000: lado ímpar
+  p3: { logradouro: 'Praça da Sé', numero: '111', complemento: 'conj. 1203', bairro: 'Sé' },
+  // 05018-000: até 699/700
+  p4: { logradouro: 'Rua Cayowaá', numero: '214', complemento: null, bairro: 'Perdizes' },
+  // 02011-000: até 891, lado ímpar
+  p5: {
+    logradouro: 'Rua Voluntários da Pátria',
+    numero: '657',
+    complemento: null,
+    bairro: 'Santana',
+  },
+  // 03071-000: a rua inteira
+  p6: { logradouro: 'Rua Cesário Galero', numero: '430', complemento: 'casa 2', bairro: 'Tatuapé' },
+}
+
+/** Endereço do prestador no seed, em São Paulo; quem não está no mapa fica sem endereço. */
+function enderecoDoPrestador(id: string): EnderecoPrestador {
+  const endereco = ENDERECOS_PRESTADORES[id]
+  return endereco ? { ...endereco, cidade: 'São Paulo', uf: 'SP' } : {}
+}
+
 /**
  * O endereço de cada cliente: o do primeiro acionamento dele entre os escritos à mão no protótipo
  * (`NAMED` em acionamentos-data.js). Os gerados ao acaso sorteiam cliente e endereço separados, e
@@ -155,6 +195,7 @@ export function mapearDadosPrototipo(p: DadosPrototipo): DadosSeed {
         email: x.email || null,
         regiao: x.region || null,
         cep: CEPS_PRESTADORES[x.id] ?? null,
+        ...enderecoDoPrestador(x.id),
         status: x.status,
         credenciadoDesde: dataPura(x.since),
         cor: x.color,
