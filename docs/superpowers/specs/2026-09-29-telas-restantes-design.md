@@ -377,3 +377,15 @@ perfect; no comparador, os casos do modal mascaram a coluna de campos (`ocultarN
   - **Sem CEP, ou com o ViaCEP fora:** os campos vêm da consulta reversa e ficam editáveis; o que faltar, a gestora completa.
   - A posição exata do pino fica gravada **só no acionamento**. O cadastro do assinante (endereço e posição salva) não muda.
   - Essa posição não é descartada pelo preenchimento automático. Ela só cai se a gestora trocar de cliente, voltar ao endereço de cadastro ou editar o CEP ou o número à mão.
+
+### Cadastro de prestadores com CEP e busca de especialidades (pedido do usuário, 30/09)
+
+- O prestador ganha endereço no cadastro, todo opcional: `logradouro`, `numero`, `complemento`, `bairro`, `cidade` e `uf`, além do `cep` que já existia. A "Região de atendimento" continua como texto livre.
+- **Modal Novo/Editar prestador:**
+  - O **CEP é o primeiro campo**. Com 8 dígitos, rua, bairro e cidade vêm de `GET /api/cep/{cep}` (só leitura) e o modal pede número e complemento.
+  - CEP inexistente mostra "CEP não encontrado" na linha de erro. Com o ViaCEP fora, rua e bairro ficam editáveis.
+  - Os demais campos seguem depois: nome, documento, telefone, e-mail e região.
+- **Especialidades:** usam a mesma busca inteligente do Novo acionamento (componente compartilhado), por nome ou categoria, com lista agrupada, chips removíveis, ↓/↑, Enter e Esc. A ordem de escolha é a ordem gravada.
+- **API:** POST e PATCH aceitam o endereço (CEP validado e normalizado em 8 dígitos; UF com 2 letras), e `GET /api/prestadores/cadastro` devolve o endereço.
+- **Planilha:** a importação e a exportação continuam sem as colunas de endereço, por enquanto.
+- **Comparador:** nos casos com o modal de prestador aberto, só o cabeçalho e os botões do modal seguem comparados. O corpo do formulário fica mascarado (`ocultarNoApp`).
