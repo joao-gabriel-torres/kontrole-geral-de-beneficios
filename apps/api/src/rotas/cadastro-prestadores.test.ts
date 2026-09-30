@@ -20,6 +20,12 @@ interface Cadastro {
   email: string | null
   regiao: string | null
   cep: string | null
+  logradouro: string | null
+  numero: string | null
+  complemento: string | null
+  bairro: string | null
+  cidade: string | null
+  uf: string | null
   status: 'ativo' | 'inativo'
   cor: string
   credenciadoDesde: string
@@ -121,6 +127,12 @@ describe('GET /api/prestadores/cadastro', () => {
       email: 'carlos.mendes@email.com',
       regiao: 'Zona Oeste',
       cep: '05422001',
+      logradouro: 'Rua dos Pinheiros',
+      numero: '812',
+      complemento: null,
+      bairro: 'Pinheiros',
+      cidade: 'São Paulo',
+      uf: 'SP',
       status: 'ativo',
       cor: '#0069BD',
       credenciadoDesde: '2024-03-12',
@@ -183,11 +195,50 @@ describe('POST /api/prestadores', () => {
     expect((await listar()).map((p) => p.nome)).toContain('Pedro Lima')
   })
 
-  it('sem cep no corpo, credencia com cep null', async () => {
+  it('sem cep no corpo, credencia com cep e endereço null', async () => {
     const criado = await corpo<Cadastro>(
       criar({ ...NOVO, nome: 'Sem Cep', documento: '987.654.321-00', email: '' }),
     )
-    expect(criado.cep).toBeNull()
+    expect(criado).toMatchObject({
+      cep: null,
+      logradouro: null,
+      numero: null,
+      complemento: null,
+      bairro: null,
+      cidade: null,
+      uf: null,
+    })
+  })
+
+  it('grava o endereço aparado, com a UF em maiúsculas, e devolve no cadastro', async () => {
+    const r = await criar({
+      ...NOVO,
+      nome: 'Com Endereço',
+      documento: '046.521.838-52',
+      email: '',
+      cep: '05422-001',
+      logradouro: ' Rua dos Pinheiros ',
+      numero: ' 812 ',
+      complemento: '  ',
+      bairro: 'Pinheiros',
+      cidade: 'São Paulo ',
+      uf: 'sp',
+    })
+    expect(r.status).toBe(201)
+    const criado = await corpo<Cadastro>(r)
+    expect(criado).toMatchObject({
+      cep: '05422001',
+      logradouro: 'Rua dos Pinheiros',
+      numero: '812',
+      complemento: null,
+      bairro: 'Pinheiros',
+      cidade: 'São Paulo',
+      uf: 'SP',
+    })
+    expect((await listar()).find((p) => p.id === criado.id)).toMatchObject({
+      logradouro: 'Rua dos Pinheiros',
+      uf: 'SP',
+    })
   })
 
   it('grava o cep só com os dígitos e devolve no cadastro', async () => {
@@ -200,6 +251,14 @@ describe('POST /api/prestadores', () => {
     })
     expect(r.status).toBe(201)
     expect((await corpo<Cadastro>(r)).cep).toBe('04538132')
+  })
+
+  it('recusa UF fora do formato (422 uf_invalida)', async () => {
+    const r = await criar({ ...NOVO, nome: 'UF Errada', documento: '390.533.447-05', uf: 'São' })
+    expect(r.status).toBe(422)
+    expect(await corpo<Erro>(r)).toEqual({
+      erro: { codigo: 'uf_invalida', mensagem: 'Informe a UF com 2 letras' },
+    })
   })
 
   it('recusa cep malformado (422 cep_invalido)', async () => {
@@ -354,6 +413,43 @@ describe('PATCH /api/prestadores/{id}', () => {
     expect(editado.cep).toBe('01310200')
     const limpo = await corpo<Cadastro>(editar('p1', DADOS_CARLOS))
     expect(limpo.cep).toBeNull()
+  })
+
+  it('troca o endereço na edição; sem ele no corpo, limpa', async () => {
+    const endereco = {
+      cep: '01310-200',
+      logradouro: 'Avenida Paulista',
+      numero: '1578',
+      complemento: 'sala 3',
+      bairro: 'Bela Vista',
+      cidade: 'São Paulo',
+      uf: 'SP',
+    }
+    const editado = await corpo<Cadastro>(editar('p1', { ...DADOS_CARLOS, ...endereco }))
+    expect(editado).toMatchObject({ ...endereco, cep: '01310200' })
+    const limpo = await corpo<Cadastro>(editar('p1', DADOS_CARLOS))
+    expect(limpo).toMatchObject({
+      cep: null,
+      logradouro: null,
+      numero: null,
+      complemento: null,
+      bairro: null,
+      cidade: null,
+      uf: null,
+    })
+  })
+
+  it('UF fora do formato na edição: 422 uf_invalida, sem gravar', async () => {
+    const r = await editar('p2', {
+      nome: 'Ana Ribeiro',
+      documento: '27415903000144',
+      telefone: '11971205588',
+      especialidades: ['t1'],
+      uf: 'S',
+    })
+    expect(r.status).toBe(422)
+    expect((await corpo<Erro>(r)).erro.codigo).toBe('uf_invalida')
+    expect((await prisma.prestador.findUniqueOrThrow({ where: { id: 'p2' } })).uf).toBe('SP')
   })
 
   it('a edição não muda o status de um inativo', async () => {

@@ -23,6 +23,12 @@ export const PrestadorCadastroSchema = z
     email: z.string().nullable(),
     regiao: z.string().nullable(),
     cep: z.string().nullable().openapi({ description: 'Só os 8 dígitos' }),
+    logradouro: z.string().nullable(),
+    numero: z.string().nullable(),
+    complemento: z.string().nullable(),
+    bairro: z.string().nullable(),
+    cidade: z.string().nullable(),
+    uf: z.string().nullable().openapi({ description: '2 letras maiúsculas' }),
     status: z.enum(STATUS_PRESTADOR),
     cor: z.string(),
     credenciadoDesde: z.string().openapi({ description: 'AAAA-MM-DD' }),
@@ -64,7 +70,18 @@ export const DadosPrestadorSchema = z
       .max(20)
       .nullable()
       .optional()
-      .openapi({ description: '8 dígitos, com ou sem hífen' }),
+      .openapi({ description: '8 dígitos, com ou sem hífen (422 cep_invalido)' }),
+    logradouro: z.string().max(200).nullable().optional(),
+    numero: z.string().max(20).nullable().optional(),
+    complemento: z.string().max(120).nullable().optional(),
+    bairro: z.string().max(120).nullable().optional(),
+    cidade: z.string().max(120).nullable().optional(),
+    uf: z
+      .string()
+      .max(20)
+      .nullable()
+      .optional()
+      .openapi({ description: '2 letras; gravada em maiúsculas (422 uf_invalida)' }),
     especialidades: z
       .array(z.string().max(64))
       .max(50)

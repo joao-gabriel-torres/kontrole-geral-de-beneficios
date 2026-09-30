@@ -8,8 +8,11 @@ import {
   tipoDeDocumento,
 } from './documentos'
 
+/** Campos do endereço do prestador além do CEP, todos opcionais. */
+type CampoEndereco = 'logradouro' | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf'
+
 /** O que o formulário do cadastro envia (criar e editar). */
-export interface DadosPrestador {
+export interface DadosPrestador extends Partial<Record<CampoEndereco, string | null>> {
   nome: string
   documento: string
   telefone: string
@@ -19,8 +22,11 @@ export interface DadosPrestador {
   especialidades: string[]
 }
 
-/** Como o cadastro é gravado: documento, telefone e CEP só com dígitos, opcionais vazios como null. */
-export interface PrestadorNormalizado {
+/**
+ * Como o cadastro é gravado: documento, telefone e CEP só com dígitos, UF em maiúsculas e
+ * opcionais vazios como null.
+ */
+export interface PrestadorNormalizado extends Record<CampoEndereco, string | null> {
   nome: string
   documento: string
   telefone: string
@@ -39,9 +45,17 @@ export function normalizarPrestador(d: DadosPrestador): PrestadorNormalizado {
     email: opcional(d.email),
     regiao: opcional(d.regiao),
     cep: normalizarCepOpcional(d.cep),
+    logradouro: opcional(d.logradouro),
+    numero: opcional(d.numero),
+    complemento: opcional(d.complemento),
+    bairro: opcional(d.bairro),
+    cidade: opcional(d.cidade),
+    uf: opcional(d.uf)?.toUpperCase() ?? null,
     especialidades: [...new Set(d.especialidades)],
   }
 }
+
+const UF_VALIDA = /^[A-Z]{2}$/
 
 export interface ContextoValidacao {
   /** Dígitos do documento já gravado (edição): o mesmo documento não passa pelo DV. */
@@ -51,7 +65,8 @@ export interface ContextoValidacao {
 }
 
 /**
- * Valida na ordem do protótipo e mostra só o primeiro erro: nome, tamanho do documento,
+ * Valida na ordem do modal e mostra só o primeiro erro: a UF, quando informada (o CEP, que vem
+ * antes, já é recusado ao normalizar), e depois a ordem do protótipo: nome, tamanho do documento,
  * duplicado, dígitos verificadores (só em documento novo ou alterado; os do seed não passam),
  * telefone com DDD e, quando informado, o e-mail.
  */
@@ -59,6 +74,9 @@ export function validarPrestador(
   p: PrestadorNormalizado,
   { documentoAtual, donoDoDocumento }: ContextoValidacao,
 ): void {
+  if (p.uf && !UF_VALIDA.test(p.uf)) {
+    throw new ErroDominio('uf_invalida', 'Informe a UF com 2 letras')
+  }
   if (!p.nome) throw new ErroDominio('nome_obrigatorio', 'Informe o nome')
   if (!tipoDeDocumento(p.documento)) {
     throw new ErroDominio('documento_invalido', 'CPF ou CNPJ inválido')

@@ -43,6 +43,12 @@ describe('normalizarPrestador', () => {
       email: null,
       regiao: 'Centro',
       cep: null,
+      logradouro: null,
+      numero: null,
+      complemento: null,
+      bairro: null,
+      cidade: null,
+      uf: null,
       especialidades: ['t2', 't1'],
     })
   })
@@ -61,6 +67,35 @@ describe('normalizarPrestador', () => {
       message: 'Informe um CEP com 8 dígitos',
       status: 422,
     })
+  })
+
+  it('endereço: apara, vazio vira null e a UF fica em maiúsculas', () => {
+    const p = normalizarPrestador({
+      ...VALIDO,
+      cep: '05422-001',
+      logradouro: ' Rua dos Pinheiros ',
+      numero: ' 812 ',
+      complemento: '   ',
+      bairro: 'Pinheiros',
+      cidade: ' São Paulo',
+      uf: ' sp ',
+    })
+    expect(p).toMatchObject({
+      cep: '05422001',
+      logradouro: 'Rua dos Pinheiros',
+      numero: '812',
+      complemento: null,
+      bairro: 'Pinheiros',
+      cidade: 'São Paulo',
+      uf: 'SP',
+    })
+    const semEndereco = normalizarPrestador({ ...VALIDO, logradouro: '', numero: null, uf: ' ' })
+    expect([
+      semEndereco.logradouro,
+      semEndereco.numero,
+      semEndereco.bairro,
+      semEndereco.uf,
+    ]).toEqual([null, null, null, null])
   })
 })
 
@@ -137,6 +172,25 @@ describe('validarPrestador (ordem do protótipo)', () => {
     }
     expect(() => validar({ email: ' Carlos.Mendes@Email.com ' })).not.toThrow()
     expect(() => validar({ email: '' })).not.toThrow()
+  })
+
+  it('UF, quando informada, precisa de 2 letras', () => {
+    for (const uf of ['S', 'SPA', 'S1', 'São Paulo', 'Ç P']) {
+      const e = erroDe(() => validar({ uf }))
+      expect([e.codigo, e.message, e.status]).toEqual([
+        'uf_invalida',
+        'Informe a UF com 2 letras',
+        422,
+      ])
+    }
+    expect(() => validar({ uf: 'RJ' })).not.toThrow()
+    expect(() => validar({ uf: '' })).not.toThrow()
+  })
+
+  it('o endereço vem antes do nome, como no modal: CEP, depois UF', () => {
+    const vazio = { nome: '', documento: '', telefone: '' }
+    expect(erroDe(() => validar({ ...vazio, cep: '123', uf: 'X' })).codigo).toBe('cep_invalido')
+    expect(erroDe(() => validar({ ...vazio, uf: 'X' })).codigo).toBe('uf_invalida')
   })
 
   it('aceita CNPJ válido e telefone fixo', () => {

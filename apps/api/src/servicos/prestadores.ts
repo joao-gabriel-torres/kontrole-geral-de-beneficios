@@ -51,6 +51,12 @@ function paraCadastro(
     email: p.email,
     regiao: p.regiao,
     cep: p.cep,
+    logradouro: p.logradouro,
+    numero: p.numero,
+    complemento: p.complemento,
+    bairro: p.bairro,
+    cidade: p.cidade,
+    uf: p.uf,
     status: p.status,
     cor: p.cor,
     credenciadoDesde: p.credenciadoDesde.toISOString().slice(0, 10),
@@ -162,20 +168,16 @@ export async function criarPrestador(
   const p = normalizarPrestador(dados)
   validarPrestador(p, { donoDoDocumento: await donoDoDocumento(p.documento) })
   await exigirTipos(prisma, p.especialidades)
+  const { especialidades, ...campos } = p
   const criado = await comDocumentoUnico(p, async () =>
     prisma.prestador.create({
       data: {
-        nome: p.nome,
-        documento: p.documento,
-        telefone: p.telefone,
-        email: p.email,
-        regiao: p.regiao,
-        cep: p.cep,
+        ...campos,
         status: 'ativo',
         // A cor segue a posição do cadastro, contando os excluídos (PCOL[d.pros.length % 8]).
         cor: corDoPrestador(await prisma.prestador.count()),
         credenciadoDesde: new Date(`${dataSP(new Date())}T00:00:00Z`),
-        especialidades: { create: vinculos(p.especialidades) },
+        especialidades: { create: vinculos(especialidades) },
       },
       select: { id: true },
     }),
@@ -208,27 +210,18 @@ export async function atualizarPrestador(
     documentoAtual: atual.documento,
     donoDoDocumento: await donoDoDocumento(p.documento, id),
   })
+  const { especialidades, ...campos } = p
   await comDocumentoUnico(p, () =>
     prisma.$transaction(async (tx) => {
       // A trava põe a edição em fila com a exclusão e com o convite, que também mexem no login.
       const [anterior] = await tx.$queryRaw<{ email: string | null }[]>`
         SELECT email FROM prestador WHERE id = ${id} AND "excluidoEm" IS NULL FOR UPDATE`
       if (!anterior) throw naoEncontrado('Prestador')
-      await exigirTipos(tx, p.especialidades)
-      await tx.prestador.update({
-        where: { id },
-        data: {
-          nome: p.nome,
-          documento: p.documento,
-          telefone: p.telefone,
-          email: p.email,
-          regiao: p.regiao,
-          cep: p.cep,
-        },
-      })
+      await exigirTipos(tx, especialidades)
+      await tx.prestador.update({ where: { id }, data: campos })
       await tx.prestadorEspecialidade.deleteMany({ where: { prestadorId: id } })
       await tx.prestadorEspecialidade.createMany({
-        data: vinculos(p.especialidades).map((v) => ({ ...v, prestadorId: id })),
+        data: vinculos(especialidades).map((v) => ({ ...v, prestadorId: id })),
       })
       await sincronizarLogin(tx, id, anterior.email, p.email)
     }),

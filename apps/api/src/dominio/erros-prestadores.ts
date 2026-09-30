@@ -6,3 +6,4 @@ export type CodigoErroPrestadores =
   | 'telefone_invalido'
   | 'prestador_com_acionamentos'
   | 'email_invalido'
+  | 'uf_invalida'
