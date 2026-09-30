@@ -143,7 +143,57 @@ describe('DialogoMapa', () => {
     expect(coordenadas(tela)).toBe('Latitude -23.570000 · Longitude -46.650000')
     leafletFalso.pino.arrastarPara(-23.5612345678, -46.6598765432)
     await confirmar(tela).trigger('click')
-    expect(tela.emitted('confirmar')).toEqual([[{ latitude: -23.561235, longitude: -46.659877 }]])
+    expect(tela.emitted('confirmar')).toEqual([
+      [{ latitude: -23.561235, longitude: -46.659877 }, true],
+    ])
+  })
+
+  describe('informa se o pino foi movido da posição em que abriu', () => {
+    it('confirmar sem mexer no pino: não movido', async () => {
+      const { tela } = await abrir()
+      await confirmar(tela).trigger('click')
+      expect(tela.emitted('confirmar')).toEqual([[ACHADA, false]])
+    })
+
+    it('arrastar e devolver ao mesmo ponto: não movido', async () => {
+      const { tela } = await abrir()
+      leafletFalso.pino.arrastarPara(-23.57, -46.65)
+      leafletFalso.pino.arrastarPara(ACHADA.latitude, ACHADA.longitude)
+      await aguardar()
+      await confirmar(tela).trigger('click')
+      expect(tela.emitted('confirmar')).toEqual([[ACHADA, false]])
+    })
+
+    it('na posição conhecida, clicar em outro ponto ou usar as setas: movido', async () => {
+      const conhecida = { latitude: -23.5571, longitude: -46.6912 }
+      const { tela } = await abrir(conhecida)
+      await confirmar(tela).trigger('click')
+      leafletFalso.mapa.clicar(-23.558, -46.691)
+      await aguardar()
+      await confirmar(tela).trigger('click')
+      leafletFalso.pino.arrastarPara(conhecida.latitude, conhecida.longitude)
+      leafletFalso.pino
+        .getElement()
+        .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', cancelable: true }))
+      await aguardar()
+      await confirmar(tela).trigger('click')
+      expect(tela.emitted('confirmar')).toEqual([
+        [conhecida, false],
+        [{ latitude: -23.558, longitude: -46.691 }, true],
+        [{ latitude: -23.5471, longitude: -46.6912 }, true],
+      ])
+    })
+
+    it('sem o endereço achado (centro de São Paulo), levar o pino ao local não é mover', async () => {
+      geocodificar = () => erroApi(404, 'localizacao_nao_encontrada', 'Não encontramos')
+      const { tela } = await abrir()
+      leafletFalso.pino.arrastarPara(-23.557, -46.6905)
+      await aguardar()
+      await confirmar(tela).trigger('click')
+      expect(tela.emitted('confirmar')).toEqual([
+        [{ latitude: -23.557, longitude: -46.6905 }, false],
+      ])
+    })
   })
 
   it('as setas movem o pino focado, sem mover o mapa', async () => {

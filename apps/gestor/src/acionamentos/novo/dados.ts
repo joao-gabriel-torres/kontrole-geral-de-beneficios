@@ -1,8 +1,9 @@
-import { keepPreviousData, useQuery } from '@tanstack/vue-query'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { computed, toValue, type MaybeRefOrGetter } from 'vue'
 import { api } from '../../api'
 import { CHAVES, comLimite } from '../../consultas'
 import { exigir } from '../../erros'
+import type { EnderecoDoPonto, Localizacao } from './formulario'
 
 /** Assinantes ativos cujo nome contém a busca (a API devolve no máximo 8, por nome). */
 export function usarAssinantes(busca: MaybeRefOrGetter<string>) {
@@ -93,4 +94,31 @@ export function usarGeocodificacao(
     retry: false,
     staleTime: Infinity,
   })
+}
+
+/**
+ * A consulta reversa do pino movido: o endereço do ponto (Nominatim pela API), para preencher o
+ * outro endereço. Uma tentativa só, guardada por ponto; a falha fica para o modal avisar.
+ */
+export function usarEnderecoDoPonto() {
+  const consultas = useQueryClient()
+  return (ponto: Localizacao): Promise<EnderecoDoPonto> =>
+    consultas.fetchQuery({
+      queryKey: ['geocodificacao-reversa', ponto.latitude, ponto.longitude] as const,
+      queryFn: ({ queryKey, signal }) =>
+        exigir(
+          comLimite(
+            (s) =>
+              api.GET('/api/geocodificacao/reversa', {
+                params: {
+                  query: { latitude: String(queryKey[1]), longitude: String(queryKey[2]) },
+                },
+                signal: s,
+              }),
+            signal,
+          ),
+        ),
+      retry: false,
+      staleTime: Infinity,
+    })
 }

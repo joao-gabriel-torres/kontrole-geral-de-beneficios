@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ASSINANTES, PRESTADORES, TIPOS } from '../../../test/fixtures'
 import {
   alternarTipo,
+  camposDoPonto,
   CENTRO_SAO_PAULO,
   cepDeReferencia,
   chaveDaLocalizacao,
@@ -69,6 +70,7 @@ describe('formulário do Novo acionamento', () => {
       fim: '11:00',
       prestadorId: 'p1',
       localizacao: null,
+      pinoMovido: false,
     })
   })
 
@@ -407,5 +409,38 @@ describe('localização conferida no mapa', () => {
     expect(chaveDaLocalizacao(valido({ assinante: ASSINANTES[2]! }))).not.toBe(
       chaveDaLocalizacao(valido()),
     )
+  })
+
+  it('o outro endereço preenchido pelo ponto do pino: CEP formatado, sem complemento', () => {
+    expect(
+      camposDoPonto({
+        cep: '05435000',
+        logradouro: 'Rua Harmonia',
+        numero: '412',
+        bairro: 'Vila Madalena',
+        cidade: 'São Paulo',
+        uf: 'SP',
+      }),
+    ).toEqual({
+      cep: '05435-000',
+      logradouro: 'Rua Harmonia',
+      numero: '412',
+      complemento: '',
+      bairro: 'Vila Madalena',
+      cidade: 'São Paulo',
+    })
+    // O que o mapa não sabe (ou a consulta que falhou) fica vazio, para a gestora completar.
+    const vazio = { cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '' }
+    expect(camposDoPonto(null)).toEqual(vazio)
+    expect(
+      camposDoPonto({
+        cep: null,
+        logradouro: null,
+        numero: null,
+        bairro: null,
+        cidade: null,
+        uf: null,
+      }),
+    ).toEqual(vazio)
   })
 })

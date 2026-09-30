@@ -18,6 +18,7 @@ import { CENTRO_SAO_PAULO, type Localizacao } from './formulario'
 /**
  * "Ver no mapa" do Novo acionamento (fora do protótipo, a pedido do usuário em 30/09): o mapa do
  * OpenStreetMap com o pino no endereço em uso, para a gestora conferir e ajustar o local exato.
+ * Confirmar informa se o pino foi movido: o modal trata o pino movido como outro endereço.
  */
 const props = defineProps<{
   /** O endereço em uso, no formato do sistema (sem o complemento). */
@@ -25,7 +26,11 @@ const props = defineProps<{
   /** A posição já conhecida (conferida neste acionamento ou a do assinante); null busca o endereço. */
   inicial: Localizacao | null
 }>()
-const emit = defineEmits<{ confirmar: [posicao: Localizacao]; cancelar: [] }>()
+const emit = defineEmits<{
+  /** `movido`: a gestora tirou o pino da posição do endereço em que o mapa abriu. */
+  confirmar: [posicao: Localizacao, movido: boolean]
+  cancelar: []
+}>()
 
 const ZOOM_ENDERECO = 17
 const ZOOM_CIDADE = 12
@@ -58,6 +63,23 @@ const aviso = computed(() =>
 /** A posição do pino, com 6 casas (uns 10 cm, como a API grava). */
 const posicao = ref<Localizacao | null>(null)
 const seisCasas = (grau: number) => Math.round(grau * 1e6) / 1e6
+const comSeisCasas = (p: Localizacao): Localizacao => ({
+  latitude: seisCasas(p.latitude),
+  longitude: seisCasas(p.longitude),
+})
+/**
+ * Onde o pino abriu, quando é a posição do endereço (a conhecida ou a achada). No centro de São
+ * Paulo (endereço não achado), null: levar o pino até o local é localizar o endereço, não mover.
+ */
+const inicio = ref<Localizacao | null>(null)
+/** O pino saiu da posição do endereço (arrastado, por um clique no mapa ou pelas setas). */
+const movido = computed(
+  () =>
+    !!inicio.value &&
+    !!posicao.value &&
+    (posicao.value.latitude !== inicio.value.latitude ||
+      posicao.value.longitude !== inicio.value.longitude),
+)
 const textoPosicao = computed(() =>
   posicao.value
     ? `Latitude ${posicao.value.latitude.toFixed(6)} · Longitude ${posicao.value.longitude.toFixed(6)}`
@@ -124,12 +146,13 @@ function criarMapaQuandoPronto() {
     moverPara(lat, lng)
   })
   mapa.on('click', (e: LeafletMouseEvent) => moverPara(e.latlng.lat, e.latlng.lng))
-  posicao.value = { ...a.posicao }
+  posicao.value = comSeisCasas(a.posicao)
+  inicio.value = a.zoom === ZOOM_ENDERECO ? comSeisCasas(a.posicao) : null
 }
 watch(abertura, criarMapaQuandoPronto, { flush: 'post' })
 
 function confirmar() {
-  if (posicao.value) emit('confirmar', { ...posicao.value })
+  if (posicao.value) emit('confirmar', { ...posicao.value }, movido.value)
 }
 
 const painel = ref<HTMLElement>()

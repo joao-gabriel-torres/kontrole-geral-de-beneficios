@@ -132,14 +132,26 @@ const esperarBusca = async () => {
   await aguardar()
 }
 
+/** O endereço que a consulta reversa acha para o pino movido (o nome do bairro é o do mapa). */
+const ENDERECO_DO_PONTO = {
+  cep: '01310200',
+  logradouro: 'Avenida Paulista',
+  numero: '1600',
+  bairro: 'Jardim Paulista',
+  cidade: 'São Paulo',
+  uf: 'SP',
+}
+
 describe('ModalNovoAcionamento', () => {
   let criar: () => RespostaFalsa | Promise<RespostaFalsa>
+  let reversa: (o: OpcoesChamada) => RespostaFalsa | Promise<RespostaFalsa>
   const rotas = () => ({
     'GET /api/tipos': TIPOS,
     'GET /api/prestadores': prestadoresPorCep,
     'GET /api/assinantes': buscarAssinantes,
     'GET /api/cep/{cep}': consultarCep,
     'GET /api/geocodificacao': ACHADA,
+    'GET /api/geocodificacao/reversa': (o: OpcoesChamada) => reversa(o),
     'GET /api/acionamentos': [],
     'GET /api/acionamentos/contagem': {},
     'POST /api/acionamentos': () => criar(),
@@ -153,6 +165,7 @@ describe('ModalNovoAcionamento', () => {
     criar = () => ({
       data: resumo({ id: 'a2000', prestador: { id: 'p1', nome: 'Carlos Mendes', cor: '#0069BD' } }),
     })
+    reversa = () => ({ data: ENDERECO_DO_PONTO })
     simulada = simularApi(api, rotas())
   })
   afterEach(() => destinoModais.remove())
@@ -657,15 +670,14 @@ describe('ModalNovoAcionamento', () => {
     const botaoMapa = (tela: Tela) => tela.get('button.mapa')
     const conferida = (tela: Tela) => tela.find('.conferida')
     const ARRASTADA = { latitude: -23.557, longitude: -46.6905 }
-    async function conferir(tela: Tela, posicao = ARRASTADA) {
+    /** Abre o mapa e confirma o pino onde ele abriu (sem mover: confere o endereço em uso). */
+    async function conferir(tela: Tela) {
       const mapa = await abrirMapa(tela)
-      leafletFalso.pino.arrastarPara(posicao.latitude, posicao.longitude)
-      await aguardar()
       await mapa.get('button.confirmar').trigger('click')
       await aguardar()
     }
 
-    it('"Ver no mapa" abre o mapa no endereço; confirmar mostra "Localização conferida" e o POST leva a posição', async () => {
+    it('"Ver no mapa" abre o mapa no endereço; confirmar sem mover mostra "Localização conferida" e o POST leva a posição', async () => {
       const { tela } = await abrir(true)
       await preencher(tela)
       const mapa = await abrirMapa(tela)
@@ -679,8 +691,6 @@ describe('ModalNovoAcionamento', () => {
       })
       // Com o mapa aberto, o formulário por trás fica inerte.
       expect(tela.get('.sobreposicao').attributes('inert')).toBeDefined()
-      leafletFalso.pino.arrastarPara(ARRASTADA.latitude, ARRASTADA.longitude)
-      await aguardar()
       await mapa.get('button.confirmar').trigger('click')
       await aguardar()
 
@@ -690,12 +700,42 @@ describe('ModalNovoAcionamento', () => {
       expect(botaoMapa(tela).text()).toBe('Trocar')
       expect(botaoMapa(tela).attributes('aria-label')).toBe('Trocar a localização no mapa')
       expect(document.activeElement).toBe(botaoMapa(tela).element)
+      // Sem mover o pino, o endereço continua o de cadastro: nada de consulta reversa.
+      expect(simulada.chamadas('GET', '/api/geocodificacao/reversa')).toHaveLength(0)
+      expect(tela.get<HTMLInputElement>('.outro-endereco input').element.checked).toBe(false)
+      await tela.get('button.enviar').trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('POST', '/api/acionamentos')[0]!.body).toMatchObject({
+        endereco: 'Rua Harmonia, 410 · Vila Madalena',
+        cep: '05433000',
+        latitude: ACHADA.latitude,
+        longitude: ACHADA.longitude,
+      })
+    })
+
+    it('sem o endereço achado no mapa, levar o pino ao local confere o endereço de cadastro', async () => {
+      simulada = simularApi(api, {
+        ...rotas(),
+        'GET /api/geocodificacao': () =>
+          erroApi(404, 'localizacao_nao_encontrada', 'Não encontramos este endereço no mapa'),
+      })
+      const { tela } = await abrir()
+      await preencher(tela)
+      const mapa = await abrirMapa(tela)
+      leafletFalso.pino.arrastarPara(ARRASTADA.latitude, ARRASTADA.longitude)
+      await aguardar()
+      await mapa.get('button.confirmar').trigger('click')
+      await aguardar()
+      expect(conferida(tela).exists()).toBe(true)
+      expect(simulada.chamadas('GET', '/api/geocodificacao/reversa')).toHaveLength(0)
+      expect(tela.get<HTMLInputElement>('#novo-endereco').element.value).toBe(
+        'Rua Harmonia, 410 · Vila Madalena',
+      )
       await tela.get('button.enviar').trigger('click')
       await aguardar()
       expect(simulada.chamadas('POST', '/api/acionamentos')[0]!.body).toMatchObject({
         endereco: 'Rua Harmonia, 410 · Vila Madalena',
         latitude: ARRASTADA.latitude,
-        longitude: ARRASTADA.longitude,
       })
     })
 
@@ -734,25 +774,15 @@ describe('ModalNovoAcionamento', () => {
       })
     })
 
-    it('reabrir abre na posição conferida, e dá para trocar', async () => {
+    it('reabrir abre na posição conferida, sem procurar o endereço de novo', async () => {
       const { tela } = await abrir()
       await preencher(tela)
       await conferir(tela)
-      const mapa = await abrirMapa(tela)
+      await abrirMapa(tela)
       expect(simulada.chamadas('GET', '/api/geocodificacao')).toHaveLength(1)
       expect(leafletFalso.pino.getLatLng()).toEqual({
-        lat: ARRASTADA.latitude,
-        lng: ARRASTADA.longitude,
-      })
-      leafletFalso.mapa.clicar(-23.558, -46.691)
-      await aguardar()
-      await mapa.get('button.confirmar').trigger('click')
-      await aguardar()
-      await tela.get('button.enviar').trigger('click')
-      await aguardar()
-      expect(simulada.chamadas('POST', '/api/acionamentos')[0]!.body).toMatchObject({
-        latitude: -23.558,
-        longitude: -46.691,
+        lat: ACHADA.latitude,
+        lng: ACHADA.longitude,
       })
     })
 
@@ -765,6 +795,9 @@ describe('ModalNovoAcionamento', () => {
       await aguardar()
       expect(dialogoMapa()).toBeNull()
       expect(conferida(tela).exists()).toBe(false)
+      // O pino movido e cancelado não muda o endereço.
+      expect(simulada.chamadas('GET', '/api/geocodificacao/reversa')).toHaveLength(0)
+      expect(tela.get<HTMLInputElement>('.outro-endereco input').element.checked).toBe(false)
       expect(document.activeElement).toBe(botaoMapa(tela).element)
 
       await abrirMapa(tela)
@@ -807,6 +840,275 @@ describe('ModalNovoAcionamento', () => {
       await conferir(tela)
       expect(conferida(tela).exists()).toBe(true)
       await tela.get('.outro-endereco input[type="checkbox"]').setValue(false)
+      expect(conferida(tela).exists()).toBe(false)
+    })
+  })
+
+  describe('pino movido: outro endereço preenchido pelo ponto', () => {
+    /** O Edifício Aurora arrastado uns quarteirões. */
+    const MOVIDA = { latitude: -23.5612, longitude: -46.6559 }
+    const AVISO_PONTO = 'Não achamos o endereço deste ponto: complete os campos'
+    const conferida = (tela: Tela) => tela.find('.conferida')
+    const marcado = (tela: Tela) =>
+      tela.get<HTMLInputElement>('.outro-endereco input').element.checked
+    const valor = (tela: Tela, seletor: string) => tela.get<HTMLInputElement>(seletor).element.value
+    const campos = (tela: Tela) => ({
+      cep: valor(tela, '#novo-cep'),
+      rua: valor(tela, '.rua input'),
+      numero: valor(tela, '.casa input'),
+      complemento: valor(tela, '.complemento input'),
+      bairro: valor(tela, '.bairro input'),
+      cidade: valor(tela, '.cidade input'),
+    })
+    const editaveis = (tela: Tela) =>
+      ['.rua input', '.bairro input'].map((s) => !tela.get<HTMLInputElement>(s).element.readOnly)
+    const post = () => simulada.chamadas('POST', '/api/acionamentos')[0]!.body
+    async function enviar(tela: Tela) {
+      await tela.get('button.enviar').trigger('click')
+      await aguardar()
+    }
+    /** Abre o mapa, leva o pino (arrastando) até a posição e confirma. */
+    async function moverPino(tela: Tela, posicao = MOVIDA) {
+      const mapa = await abrirMapa(tela)
+      leafletFalso.pino.arrastarPara(posicao.latitude, posicao.longitude)
+      await aguardar()
+      await mapa.get('button.confirmar').trigger('click')
+      await aguardar()
+    }
+
+    it('marca "Atender em outro endereço", consulta o ponto e o CEP completa rua, bairro e cidade', async () => {
+      const { tela } = await abrir()
+      await preencher(tela)
+      await moverPino(tela)
+      expect(simulada.chamadas('GET', '/api/geocodificacao/reversa')[0]!.params?.query).toEqual({
+        latitude: '-23.5612',
+        longitude: '-46.6559',
+      })
+      expect(marcado(tela)).toBe(true)
+      // O número vem do ponto; rua, bairro e cidade, do ViaCEP (o bairro do mapa perde).
+      expect(campos(tela)).toEqual({
+        cep: '01310-200',
+        rua: 'Avenida Paulista',
+        numero: '1600',
+        complemento: '',
+        bairro: 'Bela Vista',
+        cidade: 'São Paulo',
+      })
+      expect(editaveis(tela)).toEqual([false, false])
+      expect(conferida(tela).text()).toBe('Localização conferida')
+      expect(tela.find('.aviso').exists()).toBe(false)
+      // O prestador mais próximo acompanha o CEP do ponto.
+      expect(campo(tela, 'novo-prestador').element.value).toBe('Ana Ribeiro · Zona Sul')
+      await enviar(tela)
+      expect(post()).toMatchObject({
+        cliente: 'Edifício Aurora',
+        assinanteId: 'a1',
+        endereco: 'Avenida Paulista, 1600 · Bela Vista',
+        cep: '01310200',
+        latitude: MOVIDA.latitude,
+        longitude: MOVIDA.longitude,
+      })
+    })
+
+    it('sem CEP no ponto: rua e bairro do mapa, editáveis; completar o CEP e o número mantém a posição', async () => {
+      reversa = () => ({
+        data: {
+          cep: null,
+          logradouro: 'Rua Antônio Agú',
+          numero: null,
+          bairro: 'Centro',
+          cidade: 'Osasco',
+          uf: 'SP',
+        },
+      })
+      const { tela } = await abrir()
+      await preencher(tela)
+      await moverPino(tela)
+      expect(campos(tela)).toEqual({
+        cep: '',
+        rua: 'Rua Antônio Agú',
+        numero: '',
+        complemento: '',
+        bairro: 'Centro',
+        cidade: 'Osasco',
+      })
+      expect(editaveis(tela)).toEqual([true, true])
+      // Sem o número, o endereço ainda não vai ao mapa, mas a posição do pino está conferida.
+      expect(conferida(tela).exists()).toBe(true)
+      expect(tela.get('button.mapa').text()).toBe('Trocar')
+
+      await tela.get('.casa input').setValue('12')
+      await tela.get('#novo-cep').setValue('06010000')
+      await aguardar()
+      expect(conferida(tela).exists()).toBe(true)
+      await enviar(tela)
+      expect(post()).toMatchObject({
+        endereco: 'Rua Antônio Agú, 12 · Centro · Osasco - SP',
+        cep: '06010000',
+        latitude: MOVIDA.latitude,
+        longitude: MOVIDA.longitude,
+      })
+    })
+
+    it('com o ViaCEP fora, rua, bairro e cidade vêm do ponto, editáveis', async () => {
+      simulada = simularApi(api, {
+        ...rotas(),
+        'GET /api/cep/{cep}': () =>
+          erroApi(502, 'cep_indisponivel', 'O serviço de CEP não respondeu, tente de novo'),
+      })
+      const { tela } = await abrir()
+      await preencher(tela)
+      await moverPino(tela)
+      expect(campos(tela)).toMatchObject({
+        cep: '01310-200',
+        rua: 'Avenida Paulista',
+        numero: '1600',
+        bairro: 'Jardim Paulista',
+        cidade: 'São Paulo',
+      })
+      expect(editaveis(tela)).toEqual([true, true])
+      await tela.get('.bairro input').setValue('Bela Vista')
+      expect(conferida(tela).exists()).toBe(true)
+      await enviar(tela)
+      expect(post()).toMatchObject({
+        endereco: 'Avenida Paulista, 1600 · Bela Vista',
+        cep: '01310200',
+        latitude: MOVIDA.latitude,
+      })
+    })
+
+    it('CEP do ponto que o ViaCEP não conhece: fica sem CEP, com os campos do ponto editáveis', async () => {
+      reversa = () => ({ data: { ...ENDERECO_DO_PONTO, cep: '99999999' } })
+      const { tela } = await abrir()
+      await preencher(tela)
+      await moverPino(tela)
+      expect(campos(tela)).toMatchObject({
+        cep: '',
+        rua: 'Avenida Paulista',
+        numero: '1600',
+        bairro: 'Jardim Paulista',
+      })
+      expect(editaveis(tela)).toEqual([true, true])
+      expect(tela.find('.outro .falha').exists()).toBe(false)
+      expect(conferida(tela).exists()).toBe(true)
+    })
+
+    it.each([
+      [
+        'sem endereço no ponto (404)',
+        () =>
+          erroApi(
+            404,
+            'localizacao_nao_encontrada',
+            'Não encontramos um endereço neste ponto do mapa',
+          ),
+      ],
+      [
+        'com o serviço de mapas fora (502)',
+        () => erroApi(502, 'geocodificacao_indisponivel', 'O serviço de mapas não respondeu'),
+      ],
+      [
+        'com o tempo esgotado',
+        (): RespostaFalsa => {
+          throw new ErroTempoEsgotado()
+        },
+      ],
+    ])('%s, marca o outro endereço com a posição e os campos vazios, e avisa', async (_, falha) => {
+      reversa = falha
+      const { tela } = await abrir()
+      await preencher(tela)
+      await moverPino(tela)
+      expect(marcado(tela)).toBe(true)
+      expect(campos(tela)).toEqual({
+        cep: '',
+        rua: '',
+        numero: '',
+        complemento: '',
+        bairro: '',
+        cidade: '',
+      })
+      expect(editaveis(tela)).toEqual([true, true])
+      const aviso = tela.get('.outro .aviso')
+      expect(aviso.text()).toBe(AVISO_PONTO)
+      expect(aviso.attributes('role')).toBe('status')
+      expect(conferida(tela).exists()).toBe(true)
+
+      await tela.get('#novo-cep').setValue('01310200')
+      await aguardar()
+      await tela.get('.casa input').setValue('1578')
+      expect(conferida(tela).exists()).toBe(true)
+      await enviar(tela)
+      expect(post()).toMatchObject({
+        endereco: 'Avenida Paulista, 1578 · Bela Vista',
+        cep: '01310200',
+        latitude: MOVIDA.latitude,
+        longitude: MOVIDA.longitude,
+      })
+    })
+
+    it('editar à mão o número ou o CEP que vieram do ponto descarta a posição', async () => {
+      const { tela } = await abrir()
+      await preencher(tela)
+      await moverPino(tela)
+      await tela.get('.casa input').setValue('1602')
+      expect(conferida(tela).exists()).toBe(false)
+      await enviar(tela)
+      expect(post()).toMatchObject({ endereco: 'Avenida Paulista, 1602 · Bela Vista' })
+      expect(post()).not.toHaveProperty('latitude')
+
+      await moverPino(tela)
+      expect(conferida(tela).exists()).toBe(true)
+      expect(valor(tela, '.casa input')).toBe('1600')
+      await tela.get('#novo-cep').setValue('06010000')
+      await aguardar()
+      expect(conferida(tela).exists()).toBe(false)
+    })
+
+    it('voltar ao endereço de cadastro ou trocar de cliente descarta a posição', async () => {
+      const { tela } = await abrir()
+      await preencher(tela)
+      await moverPino(tela)
+      await tela.get('.outro-endereco input[type="checkbox"]').setValue(false)
+      expect(conferida(tela).exists()).toBe(false)
+      expect(valor(tela, '#novo-endereco')).toBe('Rua Harmonia, 410 · Vila Madalena')
+
+      await moverPino(tela)
+      expect(conferida(tela).exists()).toBe(true)
+      await escolherCliente(tela, 'Hotel Ipê')
+      expect(conferida(tela).exists()).toBe(false)
+      await enviar(tela)
+      expect(post()).not.toHaveProperty('latitude')
+    })
+
+    it('reabrir abre no pino; confirmar sem mover mantém o endereço do ponto', async () => {
+      const { tela } = await abrir()
+      await preencher(tela)
+      await moverPino(tela)
+      const mapa = await abrirMapa(tela)
+      expect(leafletFalso.pino.getLatLng()).toEqual({ lat: MOVIDA.latitude, lng: MOVIDA.longitude })
+      expect(mapa.get('.endereco').text()).toBe('Avenida Paulista, 1600 · Bela Vista')
+      await mapa.get('button.confirmar').trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('GET', '/api/geocodificacao/reversa')).toHaveLength(1)
+      expect(simulada.chamadas('GET', '/api/geocodificacao')).toHaveLength(1)
+      expect(campos(tela)).toMatchObject({ cep: '01310-200', numero: '1600' })
+      expect(conferida(tela).exists()).toBe(true)
+    })
+
+    it('a resposta do ponto que chega depois de trocar de cliente não preenche nada', async () => {
+      let responder!: (r: RespostaFalsa) => void
+      reversa = () => new Promise((ok) => (responder = ok))
+      const { tela } = await abrir()
+      await preencher(tela)
+      await moverPino(tela)
+      expect(marcado(tela)).toBe(true)
+      expect(tela.get<HTMLInputElement>('.rua input').element.placeholder).toBe(
+        'Buscando o endereço do ponto…',
+      )
+      await escolherCliente(tela, 'Hotel Ipê')
+      responder({ data: ENDERECO_DO_PONTO })
+      await aguardar()
+      expect(campos(tela)).toMatchObject({ cep: '', rua: '', numero: '' })
       expect(conferida(tela).exists()).toBe(false)
     })
   })
