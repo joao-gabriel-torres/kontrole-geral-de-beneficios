@@ -48,7 +48,10 @@ describe('LayoutPrestador', () => {
     expect(wrapper.find('[role="status"]').text()).toBe('Atendimento iniciado')
     vi.advanceTimersByTime(2600)
     await flushPromises()
-    expect(wrapper.find('[role="status"]').exists()).toBe(false)
+    // A região viva continua montada (é o que garante o anúncio); só o texto sai.
+    const regiao = wrapper.find('[role="status"]')
+    expect(regiao.exists()).toBe(true)
+    expect(regiao.text()).toBe('')
   })
 
   it('cada acionamento aberto monta a própria página de detalhe', async () => {

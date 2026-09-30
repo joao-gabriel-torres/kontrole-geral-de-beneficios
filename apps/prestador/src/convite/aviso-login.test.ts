@@ -29,6 +29,8 @@ describe('aviso de senha criada no login', () => {
     const { wrapper: tela } = await montar(PaginaLogin, {
       rotaInicial: '/login?motivo=senha-criada',
     })
+    // O texto entra na região viva depois de montar (senão o leitor de tela não anuncia).
+    await flushPromises()
     expect(tela.find('p[role="status"]').text()).toBe(AVISO)
     expect(tela.find('p[role="alert"]').exists()).toBe(false)
   })
@@ -42,12 +44,16 @@ describe('aviso de senha criada no login', () => {
     await tela.find('#login-senha').setValue('errada-123')
     await tela.find('form').trigger('submit')
     await flushPromises()
-    expect(tela.find('p[role="status"]').exists()).toBe(false)
+    // A região viva continua montada; só o texto do aviso sai.
+    expect(tela.find('p[role="status"]').text()).toBe('')
     expect(tela.find('p[role="alert"]').text()).toBe('E-mail ou senha incorretos')
   })
 
-  it('sem motivo, o login não mostra aviso', async () => {
+  it('sem motivo, o login mostra a região viva vazia', async () => {
     const { wrapper: tela } = await montar(PaginaLogin, { rotaInicial: '/login' })
-    expect(tela.find('p[role="status"]').exists()).toBe(false)
+    await flushPromises()
+    const regiao = tela.find('p[role="status"]')
+    expect(regiao.exists()).toBe(true)
+    expect(regiao.text()).toBe('')
   })
 })

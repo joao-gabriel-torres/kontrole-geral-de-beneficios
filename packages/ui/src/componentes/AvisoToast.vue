@@ -6,9 +6,11 @@ defineProps<{ mensagem: string | null; variante: 'gestor' | 'prestador' }>()
   <!--
     A região viva fica sempre montada: um role="status" que entra no DOM já com o texto (v-if) nem
     sempre é anunciado pelo VoiceOver e pelo NVDA. O anúncio vem do texto entrando nesta região.
+    O role="status" fica só no invólucro — role no .toast criaria regiões vivas aninhadas e
+    anúncio duplo no VoiceOver/NVDA.
   -->
-  <div class="regiao-aviso" aria-live="polite" aria-atomic="true">
-    <div v-if="mensagem" class="toast" :class="variante" role="status">
+  <div class="regiao-aviso" role="status" aria-live="polite" aria-atomic="true">
+    <div v-if="mensagem" class="toast" :class="variante">
       {{ mensagem }}
     </div>
   </div>

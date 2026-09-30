@@ -160,7 +160,7 @@ Decisão do usuário em 29/09: o acesso de prestadores novos é por **convite po
 **Regras** (API, só gestor):
 - **`POST /api/prestadores/{id}/convite`** envia ou reenvia o convite:
   - Cria ou atualiza o usuário do prestador (`User` com `role = 'prestador'`, `prestadorId`, nome e e-mail do cadastro). Não cria senha.
-  - Gera um token aleatório de uso único, válido por **7 dias**, no formato de redefinição do Better Auth: `reset-password:<token>` na tabela `verification`, criado com o `internalAdapter`.
+  - Gera um token aleatório de uso único, válido por **7 dias**, no formato de redefinição do Better Auth: `reset-password:<token>` na tabela `verification`, gravado na mesma transação (`tx.verification.create`), no formato do `internalAdapter`.
   - Invalida os convites anteriores do mesmo usuário e manda o e-mail.
 - **Recusas:**
   - prestador sem e-mail: 409 `prestador_sem_email`, "Cadastre um e-mail para enviar o convite";
