@@ -250,6 +250,17 @@ export function gruposDeTipos(tipos: readonly TipoDemanda[], busca: string): Gru
 }
 
 /**
+ * O tipo que o Enter liga na busca: o primeiro da lista (na ordem mostrada) cujo nome casa com a
+ * busca; sem nenhum pelo nome, o primeiro que casa só pela categoria ("eletr" liga "Revisão
+ * elétrica", não "Ponto de luz", que só é da categoria Elétrica).
+ */
+export function tipoDoEnter(grupos: readonly GrupoTipos[], busca: string): TipoDemanda | undefined {
+  const termo = normalizarBusca(busca)
+  const lista = grupos.flatMap((g) => g.tipos)
+  return lista.find((t) => normalizarBusca(t.nome).includes(termo)) ?? lista[0]
+}
+
+/**
  * O mais próximo do CEP da lista: o primeiro, que a API ordena pela distância. Só quando ele tem CEP:
  * sem nenhum prestador com CEP, a lista vem por nome e ninguém é o mais próximo.
  */

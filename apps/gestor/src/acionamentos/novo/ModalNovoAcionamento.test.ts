@@ -48,7 +48,12 @@ const ENDERECOS_CEP: Record<string, unknown> = {
     bairro: 'Bela Vista',
     cidade: 'São Paulo',
   },
-  '06010000': { cep: '06010000', logradouro: 'Rua Antônio Agú', bairro: 'Centro', cidade: 'Osasco' },
+  '06010000': {
+    cep: '06010000',
+    logradouro: 'Rua Antônio Agú',
+    bairro: 'Centro',
+    cidade: 'Osasco',
+  },
 }
 function consultarCep(o: OpcoesChamada): RespostaFalsa {
   const endereco = ENDERECOS_CEP[o.params?.path?.cep ?? '']
@@ -251,6 +256,23 @@ describe('ModalNovoAcionamento', () => {
       await entrada.trigger('keydown', tecla('Escape'))
       expect(tela.emitted('fechar')).toHaveLength(1)
     })
+
+    it('Enter no campo prefere quem casa pelo nome a quem casa só pela categoria', async () => {
+      const pontoDeLuz = { ...TIPOS[1]!, id: 't3', nome: 'Ponto de luz' }
+      simulada = simularApi(api, { ...rotas(), 'GET /api/tipos': [...TIPOS, pontoDeLuz] })
+      const { tela } = await abrir(true)
+      const entrada = campoTipos(tela)
+      entrada.element.focus()
+      await entrada.trigger('click')
+      await entrada.setValue('eletr')
+      expect(opcoesTipos(tela).map((b) => b.text())).toEqual(['Ponto de luz', 'Revisão elétrica'])
+      await entrada.trigger('keydown', tecla('Enter'))
+      expect(chips(tela)).toEqual(['Revisão elétrica'])
+      // Sem ninguém pelo nome, vale o primeiro da categoria.
+      await entrada.setValue('hidraul')
+      await entrada.trigger('keydown', tecla('Enter'))
+      expect(chips(tela)).toEqual(['Revisão elétrica', 'Vazamento'])
+    })
   })
 
   describe('cliente', () => {
@@ -302,9 +324,7 @@ describe('ModalNovoAcionamento', () => {
       expect(endereco()).toBe('')
       // A busca saiu, mas a resposta não chegou: a lista mostrada continua a anterior.
       await esperarBusca()
-      expect(simulada.chamadas('GET', '/api/assinantes').at(-1)!.params?.query?.busca).toBe(
-        'hotel',
-      )
+      expect(simulada.chamadas('GET', '/api/assinantes').at(-1)!.params?.query?.busca).toBe('hotel')
       expect(titulos(tela, 'novo-cliente')[0]).toBe('Clínica Vida')
       await entrada.trigger('keydown', tecla('Enter'))
       expect(entrada.attributes('aria-expanded')).toBe('true')
@@ -571,7 +591,7 @@ describe('ModalNovoAcionamento', () => {
       await outroEndereco(tela)
       await tela.get('#novo-cep').setValue('01310200')
       await aguardar()
-      expect(tela.get('.outro .falha').exists()).toBe(true)
+      expect(tela.find('.outro .falha').exists()).toBe(true)
       const rua = tela.get<HTMLInputElement>('.rua input')
       const bairro = tela.get<HTMLInputElement>('.bairro input')
       expect([rua.element.readOnly, bairro.element.readOnly]).toEqual([false, false])

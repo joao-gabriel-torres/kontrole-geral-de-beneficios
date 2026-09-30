@@ -20,6 +20,7 @@ import {
   previaChecklist,
   rotuloContagem,
   rotuloPrestador,
+  tipoDoEnter,
   ufDoCep,
   type FormularioAcionamento,
 } from './formulario'
@@ -157,6 +158,15 @@ describe('busca de tipos', () => {
 
   it('sem resultado, nenhum grupo', () => {
     expect(gruposDeTipos(TIPOS, 'jardinagem')).toEqual([])
+  })
+
+  it('o Enter liga o primeiro que casa pelo nome; sem nenhum, o primeiro pela categoria', () => {
+    const tipos = [...TIPOS, { ...TIPOS[1]!, id: 't3', nome: 'Ponto de luz' }]
+    const doEnter = (busca: string) => tipoDoEnter(gruposDeTipos(tipos, busca), busca)?.nome
+    expect(doEnter('eletr')).toBe('Revisão elétrica')
+    expect(doEnter('ELÉTRICA')).toBe('Revisão elétrica')
+    expect(doEnter('hidraul')).toBe('Vazamento')
+    expect(doEnter('jardim')).toBeUndefined()
   })
 
   it('ordena os tipos pelo nome dentro da categoria', () => {
