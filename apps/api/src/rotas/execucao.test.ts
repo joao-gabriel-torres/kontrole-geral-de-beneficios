@@ -282,7 +282,9 @@ describe('fotos', () => {
     const id = await novoIniciado()
     const original = new Error('disco cheio')
     vi.spyOn(armazenamento, 'salvar').mockRejectedValueOnce(original)
-    vi.spyOn(armazenamento, 'remover').mockRejectedValueOnce(new Error('armazenamento fora do ar'))
+    const remover = vi
+      .spyOn(armazenamento, 'remover')
+      .mockRejectedValueOnce(new Error('armazenamento fora do ar'))
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const r = await req(
       'POST',
@@ -291,6 +293,8 @@ describe('fotos', () => {
       formularioFoto({ contexto: 'conclusao' }),
     )
     expect(r.status).toBe(500)
+    // A limpeza tem de tentar remover a chave deste acionamento (no S3/R2, objeto parcial órfão).
+    expect(remover).toHaveBeenCalledWith(expect.stringMatching(new RegExp(`^${id}/`)))
     // o onError da app loga o erro que chegou até ele: tem de ser o original
     expect(log).toHaveBeenCalledWith(original)
     expect(await prisma.foto.count({ where: { acionamentoId: id } })).toBe(0)
@@ -380,5 +384,30 @@ describe('marcar como inviável', () => {
       formulario('Sem acesso', 1),
     )
     expect(r.status).toBe(404)
+  })
+
+  it('falha ao gravar a 2ª foto: a limpeza remove as duas chaves já salvas', async () => {
+    const id = await criarAcionamento(app, gestora)
+    const salvar = vi
+      .spyOn(armazenamento, 'salvar')
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('disco cheio'))
+    const remover = vi.spyOn(armazenamento, 'remover').mockResolvedValue(undefined)
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const r = await req(
+      'POST',
+      `/api/acionamentos/${id}/inviavel`,
+      carlos,
+      formulario('Portão trancado', 2),
+    )
+
+    expect(r.status).toBe(500)
+    expect(salvar).toHaveBeenCalledTimes(2)
+    // As duas chaves deste acionamento vão para a limpeza (no S3/R2, objeto parcial órfão).
+    const chavesSalvas = salvar.mock.calls.map(([chave]) => chave)
+    for (const chave of chavesSalvas) expect(chave).toMatch(new RegExp(`^${id}/`))
+    expect(remover.mock.calls.map(([chave]) => chave).sort()).toEqual([...chavesSalvas].sort())
+    expect(await prisma.foto.count({ where: { acionamentoId: id } })).toBe(0)
   })
 })
