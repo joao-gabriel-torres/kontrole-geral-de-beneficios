@@ -4,6 +4,7 @@ import { APIError } from 'better-auth/api'
 import { bearer } from 'better-auth/plugins'
 import { createMiddleware } from 'hono/factory'
 import { prisma } from './db'
+import { identificadorGravado, PREFIXO_CONVITE } from './dominio/convites'
 import { env } from './env'
 import { prestadorBloqueado } from './prestador-bloqueado'
 
@@ -14,6 +15,18 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
   // Criar a senha pelo convite também serve de redefinição: as sessões abertas com a senha antiga caem.
   emailAndPassword: { enabled: true, disableSignUp: true, revokeSessionsOnPasswordReset: true },
+  verification: {
+    // O convite (a redefinição de senha) fica gravado só como hash; ver identificadorGravado. Um
+    // convite antigo, em texto puro, ainda vale até vencer: o Better Auth procura os dois.
+    storeIdentifier: {
+      default: 'plain',
+      overrides: {
+        [PREFIXO_CONVITE]: {
+          hash: (identificador) => Promise.resolve(identificadorGravado(identificador)),
+        },
+      },
+    },
+  },
   user: {
     additionalFields: {
       role: { type: 'string', required: false, defaultValue: 'prestador', input: false },

@@ -1,10 +1,31 @@
+import { createHash } from 'node:crypto'
 import { z } from 'zod'
 import { ErroDominio } from './acionamento'
 
 export const VALIDADE_CONVITE_DIAS = 7
 
-/** O convite usa o formato de redefinição de senha do Better Auth (tabela `verification`). */
+/**
+ * O convite usa a redefinição de senha do Better Auth: o identificador dele é `reset-password:`
+ * seguido do token do link.
+ */
 export const PREFIXO_CONVITE = 'reset-password:'
+
+/**
+ * Prefixo do convite como fica na tabela `verification`: só o hash do identificador, para quem lê
+ * o banco não conseguir usar o link. Tem de ser diferente de `PREFIXO_CONVITE`: depois de procurar
+ * o hash, o Better Auth ainda procura o identificador em texto puro (registros antigos), e um hash
+ * gravado com o mesmo prefixo viraria um token válido para quem o lesse.
+ */
+export const PREFIXO_CONVITE_GRAVADO = 'reset-password-sha256:'
+
+/**
+ * O que se grava para o identificador `reset-password:<token>` (o `storeIdentifier` de auth.ts
+ * chama esta mesma função). O token tem 256 bits aleatórios: SHA-256 sem sal basta.
+ */
+export function identificadorGravado(identificador: string): string {
+  const hash = createHash('sha256').update(identificador).digest('base64url')
+  return `${PREFIXO_CONVITE_GRAVADO}${hash}`
+}
 
 export const ASSUNTO_CONVITE = 'Seu acesso ao app da Russo Assistência'
 
@@ -12,6 +33,7 @@ export const MENSAGENS_CONVITE = {
   semEmail: 'Cadastre um e-mail para enviar o convite',
   emailInvalido: 'O e-mail do cadastro não é válido',
   emailEmUso: 'Este e-mail já é usado por outra conta',
+  envioFalhou: 'Não foi possível enviar o e-mail do convite. Tente de novo.',
 } as const
 
 /**
@@ -22,6 +44,15 @@ export const MENSAGENS_CONVITE = {
  * - `sem_email`: não tem e-mail no cadastro (nem senha).
  */
 export type AcessoPrestador = 'sem_email' | 'pendente' | 'convidado' | 'ativo'
+
+/**
+ * Login do usuário de um prestador excluído. O usuário fica (os eventos dos acionamentos apontam
+ * para ele), mas o e-mail volta a ficar livre para um novo credenciamento. O domínio `.local` é
+ * reservado: nenhum e-mail sai para esse endereço.
+ */
+export function emailDoExcluido(prestadorId: string): string {
+  return `excluido+${prestadorId}@invalido.local`
+}
 
 /** O login é o e-mail em minúsculas e sem espaços, como o Better Auth procura. */
 export function normalizarEmail(email: string | null | undefined): string | null {
@@ -37,6 +68,15 @@ export function emailValido(email: string): boolean {
 
 export function expiracaoDoConvite(agora: Date): Date {
   return new Date(agora.getTime() + VALIDADE_CONVITE_DIAS * 24 * 60 * 60 * 1000)
+}
+
+/**
+ * Momento gravado no convite novo: agora, ou 1 ms depois do último convite do usuário quando o
+ * relógio não andou. Os convites do mesmo usuário nascem em fila (trava do prestador), e a ordem
+ * estrita decide quem sobra: o envio que dá certo apaga só os anteriores a ele.
+ */
+export function momentoDoConvite(anterior: Date | null, agora: Date): Date {
+  return anterior && anterior >= agora ? new Date(anterior.getTime() + 1) : agora
 }
 
 export function linkDoConvite(urlApp: string, token: string): string {

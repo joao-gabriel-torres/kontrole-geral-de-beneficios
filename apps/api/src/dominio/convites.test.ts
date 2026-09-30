@@ -4,8 +4,12 @@ import {
   ASSUNTO_CONVITE,
   emailDoConvite,
   expiracaoDoConvite,
+  identificadorGravado,
   linkDoConvite,
+  momentoDoConvite,
   normalizarEmail,
+  PREFIXO_CONVITE,
+  PREFIXO_CONVITE_GRAVADO,
   situacaoDoAcesso,
   verificarConvite,
 } from './convites'
@@ -26,6 +30,42 @@ describe('expiracaoDoConvite', () => {
   it('vale por 7 dias a partir de agora', () => {
     expect(expiracaoDoConvite(new Date('2026-09-29T12:00:00Z')).toISOString()).toBe(
       '2026-10-06T12:00:00.000Z',
+    )
+  })
+})
+
+describe('identificadorGravado', () => {
+  const token = 'dGVzdGUtZGUtdG9rZW4tYWxlYXRvcmlvLWRlLTMyLWJ5dGVz'
+
+  it('guarda só o SHA-256 do identificador do Better Auth, em base64url', () => {
+    const gravado = identificadorGravado(`reset-password:${token}`)
+    expect(gravado).toMatch(/^reset-password-sha256:[\w-]{43}$/)
+    expect(gravado).not.toContain(token)
+    expect(identificadorGravado(`reset-password:${token}`)).toBe(gravado)
+    expect(identificadorGravado(`reset-password:${token}x`)).not.toBe(gravado)
+  })
+
+  it('o prefixo gravado não é o do Better Auth: a busca em texto puro nunca acha o hash', () => {
+    expect(PREFIXO_CONVITE_GRAVADO.startsWith(PREFIXO_CONVITE)).toBe(false)
+    const hash = identificadorGravado(`reset-password:${token}`).slice(
+      PREFIXO_CONVITE_GRAVADO.length,
+    )
+    expect(`${PREFIXO_CONVITE}${hash}`).not.toBe(identificadorGravado(`reset-password:${token}`))
+  })
+})
+
+describe('momentoDoConvite', () => {
+  const agora = new Date('2026-09-30T12:00:00.000Z')
+
+  it('é agora quando não há convite anterior ou o anterior é mais antigo', () => {
+    expect(momentoDoConvite(null, agora)).toEqual(agora)
+    expect(momentoDoConvite(new Date('2026-09-30T11:59:59.999Z'), agora)).toEqual(agora)
+  })
+
+  it('fica 1 ms depois do anterior no mesmo milissegundo ou à frente: a ordem nunca empata', () => {
+    expect(momentoDoConvite(agora, agora).toISOString()).toBe('2026-09-30T12:00:00.001Z')
+    expect(momentoDoConvite(new Date('2026-09-30T12:00:05.000Z'), agora).toISOString()).toBe(
+      '2026-09-30T12:00:05.001Z',
     )
   })
 })

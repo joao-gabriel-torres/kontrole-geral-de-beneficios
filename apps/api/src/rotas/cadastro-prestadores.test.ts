@@ -1,4 +1,4 @@
-import { EMAIL_PRESTADOR_DEV, GESTORA_DEV, semear } from '@kgb/db/seed'
+import { EMAIL_PRESTADOR_DEV, GESTORA_DEV, semear, SENHA_DEV } from '@kgb/db/seed'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { corpo, hojeSP, loginDePrestador } from '../../test/dados'
 import { entrar } from '../../test/sessao'
@@ -392,6 +392,109 @@ describe('PATCH /api/prestadores/{id}', () => {
   })
 })
 
+describe('PATCH /api/prestadores/{id}: e-mail e login', () => {
+  beforeEach(preparar)
+
+  /** O corpo do PATCH com os dados atuais do cadastro, trocando o que o teste pedir. */
+  async function comDados(id: string, troca: Record<string, unknown>) {
+    const p = await prisma.prestador.findUniqueOrThrow({
+      where: { id },
+      include: { especialidades: { orderBy: { ordem: 'asc' } } },
+    })
+    return {
+      nome: p.nome,
+      documento: p.documento,
+      telefone: p.telefone,
+      email: p.email,
+      regiao: p.regiao,
+      especialidades: p.especialidades.map((e) => e.tipoId),
+      ...troca,
+    }
+  }
+  const tentarEntrar = (email: string) =>
+    app.request('/api/auth/sign-in/email', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'http://localhost:5174' },
+      body: JSON.stringify({ email, password: SENHA_DEV }),
+    })
+
+  it('trocar o e-mail troca o login de quem já tem senha', async () => {
+    const r = await editar('p1', await comDados('p1', { email: ' Carlos.Novo@Email.com ' }))
+    expect(r.status).toBe(200)
+
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: 'u-p1' } })).toMatchObject({
+      email: 'carlos.novo@email.com',
+    })
+    expect((await tentarEntrar('carlos.novo@email.com')).status).toBe(200)
+    expect((await tentarEntrar(EMAIL_PRESTADOR_DEV)).status).toBe(401)
+  })
+
+  it('trocar o e-mail derruba o convite que foi para o endereço antigo', async () => {
+    const convite = await app.request('/api/prestadores/p2/convite', {
+      method: 'POST',
+      headers: gestora,
+    })
+    expect(convite.status).toBe(200)
+
+    const r = await editar('p2', await comDados('p2', { email: 'ana.nova@ribeiro.com.br' }))
+    expect(r.status).toBe(200)
+    expect(await corpo<Cadastro>(r)).toMatchObject({
+      email: 'ana.nova@ribeiro.com.br',
+      acesso: 'pendente',
+    })
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: 'u-p2' } })).toMatchObject({
+      email: 'ana.nova@ribeiro.com.br',
+    })
+    expect(await prisma.verification.count({ where: { value: 'u-p2' } })).toBe(0)
+  })
+
+  it('manter o e-mail não mexe no login nem no convite', async () => {
+    await app.request('/api/prestadores/p2/convite', { method: 'POST', headers: gestora })
+    // O Carlos do seed entra com um e-mail diferente do cadastro: editar sem trocar o e-mail não
+    // pode mudar o login dele.
+    for (const id of ['p1', 'p2']) {
+      const r = await editar(id, await comDados(id, { nome: 'Nome Editado' }))
+      expect(r.status).toBe(200)
+    }
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: 'u-p1' } })).email).toBe(
+      EMAIL_PRESTADOR_DEV,
+    )
+    expect((await listar()).find((p) => p.id === 'p2')?.acesso).toBe('convidado')
+  })
+
+  it('e-mail de outra conta: 409 email_em_uso, sem mudar nada', async () => {
+    for (const email of [GESTORA_DEV.email, 'CARLOS@russo.dev']) {
+      const r = await editar('p2', await comDados('p2', { email, nome: 'Ana Trocada' }))
+      expect(r.status).toBe(409)
+      expect(await corpo<Erro>(r)).toEqual({
+        erro: { codigo: 'email_em_uso', mensagem: 'Este e-mail já é usado por outra conta' },
+      })
+    }
+    expect(await prisma.prestador.findUniqueOrThrow({ where: { id: 'p2' } })).toMatchObject({
+      nome: 'Ana Ribeiro',
+      email: 'ana@ribeiroreparos.com.br',
+    })
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: 'u-p2' } })).email).toBe(
+      'ana@ribeiroreparos.com.br',
+    )
+  })
+
+  it('sem usuário vinculado ou sem e-mail no cadastro, o login fica como está', async () => {
+    const criado = await corpo<Cadastro>(
+      criar({ ...NOVO, nome: 'Sem Login', documento: '390.533.447-05', email: '' }),
+    )
+    const r = await editar(criado.id, await comDados(criado.id, { email: 'sem@login.com' }))
+    expect(r.status).toBe(200)
+    expect(await prisma.user.count({ where: { prestadorId: criado.id } })).toBe(0)
+
+    const semEmail = await editar('p2', await comDados('p2', { email: '' }))
+    expect(semEmail.status).toBe(200)
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: 'u-p2' } })).email).toBe(
+      'ana@ribeiroreparos.com.br',
+    )
+  })
+})
+
 describe('PATCH /api/prestadores/{id}/status', () => {
   beforeAll(preparar)
 
@@ -449,6 +552,43 @@ describe('DELETE /api/prestadores/{id}', () => {
     expect((await app.request('/api/me', { headers: luciana })).status).toBe(401)
     expect((await listar()).map((p) => p.id)).not.toContain('p6')
     expect((await excluir('p6')).status).toBe(404)
+  })
+
+  it('libera o e-mail e apaga o convite: recredenciar com o mesmo e-mail volta a convidar', async () => {
+    const dados = { ...NOVO, nome: 'Vera Lins', email: 'vera@lins.com' }
+    const antigo = await corpo<Criado>(criar(dados))
+    expect(antigo.convite.situacao).toBe('enviado')
+    const linkAntigo = /\/convite\?token=([\w%-]+)/.exec(caixa.enviados[0].texto)?.[1] ?? ''
+    const usuarioAntigo = await prisma.user.findUniqueOrThrow({
+      where: { prestadorId: antigo.id },
+    })
+
+    expect((await excluir(antigo.id)).status).toBe(200)
+
+    // O usuário fica (os eventos do acionamento apontam para ele), com o e-mail anonimizado.
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: usuarioAntigo.id } })).toMatchObject({
+      email: `excluido+${antigo.id}@invalido.local`,
+      prestadorId: antigo.id,
+    })
+    expect(await prisma.verification.count({ where: { value: usuarioAntigo.id } })).toBe(0)
+    const reuso = await app.request('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'http://localhost:5174' },
+      body: JSON.stringify({
+        newPassword: 'senha-da-vera-1',
+        token: decodeURIComponent(linkAntigo),
+      }),
+    })
+    expect(reuso.status).toBe(400)
+
+    const r = await criar(dados)
+    expect(r.status).toBe(201)
+    const novo = await corpo<Criado>(r)
+    expect(novo.convite).toEqual({ situacao: 'enviado', email: 'vera@lins.com', mensagem: null })
+    expect(novo.acesso).toBe('convidado')
+    expect(await prisma.user.findUniqueOrThrow({ where: { prestadorId: novo.id } })).toMatchObject({
+      email: 'vera@lins.com',
+    })
   })
 
   it('404 para prestador inexistente', async () => {
