@@ -17,7 +17,16 @@ export function normalizarCepOpcional(texto?: string | null): string | null {
   return aparado ? normalizarCep(aparado) : null
 }
 
-/** Endereço de exibição no formato do protótipo: "Rua Harmonia, 410 · Vila Madalena". */
-export function montarEndereco(p: { logradouro: string; numero: string; bairro: string }): string {
-  return `${p.logradouro}, ${p.numero} · ${p.bairro}`
+/**
+ * Endereço de exibição no formato do protótipo: "Rua Harmonia, 410 · Vila Madalena", com o
+ * complemento depois do número quando existe ("Rua Harmonia, 410, apto 52 · Vila Madalena").
+ */
+export function montarEndereco(p: {
+  logradouro: string
+  numero: string
+  complemento?: string | null
+  bairro: string
+}): string {
+  const complemento = p.complemento?.trim()
+  return `${p.logradouro}, ${p.numero}${complemento ? `, ${complemento}` : ''} · ${p.bairro}`
 }

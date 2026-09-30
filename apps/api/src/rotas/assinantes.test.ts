@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { corpo } from '../../test/dados'
 import { entrar } from '../../test/sessao'
 import { criarApp } from '../app'
+import { prisma } from '../db'
 
 interface Assinante {
   id: string
@@ -60,6 +61,20 @@ describe('GET /api/assinantes', () => {
       cidade: 'São Paulo',
       endereco: 'Rua Augusta, 1492 · Consolação',
     })
+  })
+
+  it('o endereço traz o complemento depois do número, quando o assinante tem', async () => {
+    const { id } = await prisma.assinante.findFirstOrThrow({ where: { nome: 'Clínica Vida' } })
+    await prisma.assinante.update({ where: { id }, data: { complemento: 'sala 52' } })
+    try {
+      const [clinica] = await buscar('clinica')
+      expect(clinica).toMatchObject({
+        complemento: 'sala 52',
+        endereco: `${clinica!.logradouro}, ${clinica!.numero}, sala 52 · ${clinica!.bairro}`,
+      })
+    } finally {
+      await prisma.assinante.update({ where: { id }, data: { complemento: null } })
+    }
   })
 
   it('sem resultado devolve lista vazia', async () => {
