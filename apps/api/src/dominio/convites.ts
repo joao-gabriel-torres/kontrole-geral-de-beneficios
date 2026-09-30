@@ -46,11 +46,11 @@ export const MENSAGENS_CONVITE = {
 export type AcessoPrestador = 'sem_email' | 'pendente' | 'convidado' | 'ativo'
 
 /**
- * Login do usuário de um prestador excluído. O usuário fica (os eventos dos acionamentos apontam
- * para ele), mas o e-mail volta a ficar livre para um novo credenciamento. O domínio `.local` é
- * reservado: nenhum e-mail sai para esse endereço.
+ * Login anônimo do usuário de um prestador excluído ou que ficou sem e-mail no cadastro. O usuário
+ * fica (os eventos dos acionamentos apontam para ele), mas o e-mail volta a ficar livre para um
+ * novo credenciamento. O domínio `.local` é reservado: nenhum e-mail sai para esse endereço.
  */
-export function emailDoExcluido(prestadorId: string): string {
+export function loginAnonimo(prestadorId: string): string {
   return `excluido+${prestadorId}@invalido.local`
 }
 

@@ -134,6 +134,27 @@ describe('POST /api/acionamentos', () => {
     expect(await r.json()).toMatchObject({ erro: { codigo: 'cep_invalido' } })
   })
 
+  it('texto com byte nulo no corpo: 422 de validação, não 404', async () => {
+    // O Postgres recusa \0 num texto (22021). Na URL isso é um id que não existe; no corpo, é
+    // entrada inválida.
+    const antes = await prisma.acionamento.count()
+    const r = await post('/api/acionamentos', gestora, {
+      titulo: 'Vazamento\u0000 no banheiro',
+      cliente: 'C',
+      endereco: 'Rua A, 1 · Centro',
+      data: '2026-10-01',
+      inicio: '09:00',
+      fim: '10:00',
+      tipoIds: ['t1'],
+      prestadorId: 'p1',
+    })
+    expect(r.status).toBe(422)
+    expect(await r.json()).toMatchObject({
+      erro: { codigo: 'validacao', mensagem: 'Dados inválidos' },
+    })
+    expect(await prisma.acionamento.count()).toBe(antes)
+  })
+
   it('editar o checklist do tipo depois não muda o acionamento já criado', async () => {
     const id = await criarAcionamento(app, gestora, { tipoIds: ['t8'] })
     const original = await prisma.tipoDemanda.findUniqueOrThrow({ where: { id: 't8' } })

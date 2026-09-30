@@ -16,11 +16,10 @@ import {
   type DadosPrestador,
   type PrestadorNormalizado,
 } from '../dominio/prestadores'
-import { emailDoExcluido } from '../dominio/convites'
 import { ErroHttp, naoEncontrado } from '../erros'
 import {
   acessosDosPrestadores,
-  convitesDoUsuario,
+  encerrarLogin,
   enviarConvite,
   sincronizarLogin,
   type AcessoPrestador,
@@ -196,7 +195,8 @@ async function exigirNaoExcluido(id: string) {
 
 /**
  * Edita os dados do cadastro. Status, cor e data de credenciamento ficam como estão. Trocar o
- * e-mail troca também o login do usuário vinculado (`sincronizarLogin`).
+ * e-mail troca também o login do usuário vinculado, e removê-lo encerra o login
+ * (`sincronizarLogin`).
  */
 export async function atualizarPrestador(
   id: string,
@@ -254,9 +254,7 @@ export async function alterarStatus(
 
 /**
  * Exclusão lógica. Recusa quem tem acionamentos em aberto; senão marca `excluidoEm`, desativa e
- * encerra o login vinculado: derruba as sessões, apaga os convites e troca o e-mail por um
- * anônimo. O usuário fica (os eventos dos acionamentos apontam para ele), e o e-mail volta a
- * valer para um novo credenciamento.
+ * encerra o login vinculado (`encerrarLogin`): o e-mail volta a valer para um novo credenciamento.
  */
 export async function excluirPrestador(id: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
@@ -276,9 +274,6 @@ export async function excluirPrestador(id: string): Promise<void> {
       data: { excluidoEm: new Date(), status: 'inativo' },
     })
     const usuario = await tx.user.findUnique({ where: { prestadorId: id }, select: { id: true } })
-    if (!usuario) return
-    await tx.session.deleteMany({ where: { userId: usuario.id } })
-    await tx.verification.deleteMany({ where: convitesDoUsuario(usuario.id) })
-    await tx.user.update({ where: { id: usuario.id }, data: { email: emailDoExcluido(id) } })
+    if (usuario) await encerrarLogin(tx, usuario.id, id)
   })
 }

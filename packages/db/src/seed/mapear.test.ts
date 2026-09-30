@@ -99,17 +99,46 @@ describe('mapearDadosPrototipo', () => {
     expect(seed.assinantes[0]).toEqual({
       id: 'a1',
       nome: 'Loja Casa Bela',
-      cep: '01304001',
-      logradouro: 'Rua Augusta',
-      numero: '1492',
+      cep: '01426002',
+      logradouro: 'Rua Oscar Freire',
+      numero: '900',
       complemento: null,
-      bairro: 'Consolação',
+      bairro: 'Jardins',
       cidade: 'São Paulo',
       status: 'ativo',
     })
     expect(new Set(seed.assinantes.map((a) => a.nome)).size).toBe(14)
     expect(seed.assinantes.every((a) => /^\d{8}$/.test(a.cep))).toBe(true)
     expect(seed.assinantes.every((a) => a.status === 'ativo')).toBe(true)
+  })
+
+  it('cada assinante fica no endereço dos acionamentos do próprio cliente, com o CEP do trecho', () => {
+    // Os acionamentos gerados ao acaso no protótipo sorteiam cliente e endereço separados: o
+    // endereço vem dos escritos à mão (o primeiro de cada cliente), e o CEP é o do trecho da rua.
+    const endereco = (a: DadosSeed['assinantes'][number]) =>
+      `${a.logradouro}, ${a.numero} · ${a.bairro}`
+    expect(seed.assinantes.map((a) => [a.nome, endereco(a), a.cep])).toEqual([
+      ['Loja Casa Bela', 'Rua Oscar Freire, 900 · Jardins', '01426002'],
+      ['Clínica Vida', 'Av. Paulista, 1578 · Bela Vista', '01310200'],
+      ['Residência Souza', 'Rua Tupi, 221 · Santa Cecília', '01233001'],
+      ['Hotel Ipê', 'Rua Frei Caneca, 569 · Consolação', '01307001'],
+      ['Mercado Bom Preço', 'Av. Sumaré, 1100 · Perdizes', '05016110'],
+      ['Padaria Pão Dourado', 'Rua Cardeal Arcoverde, 820 · Pinheiros', '05408001'],
+      ['Academia Forma', 'Rua Augusta, 1492 · Consolação', '01304001'],
+      ['Colégio Aprender', 'Rua Apinajés, 1500 · Perdizes', '05017000'],
+      ['Edifício Aurora', 'Rua Harmonia, 410 · Vila Madalena', '05435000'],
+      ['Escritório Nunes & Lima', 'Av. Faria Lima, 3144 · Itaim Bibi', '04538132'],
+      ['Residencial Monte Verde', 'Rua Vergueiro, 2045 · Vila Mariana', '04101000'],
+      ['Condomínio Parque das Flores', 'Av. Sumaré, 1100 · Perdizes', '05016110'],
+      ['Residência Martins', 'Rua Teodoro Sampaio, 1020 · Pinheiros', '05406050'],
+      ['Residência Alves', 'Rua Cayowaá, 740 · Perdizes', '05018001'],
+    ])
+    for (const a of seed.assinantes) {
+      expect(
+        prototipo.acs.some((ac) => ac.client === a.nome && ac.address === endereco(a)),
+        `${a.nome}: ${endereco(a)} não é de um acionamento do cliente`,
+      ).toBe(true)
+    }
   })
 
   it('liga cada acionamento ao assinante do cliente', () => {

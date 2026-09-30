@@ -43,4 +43,19 @@ describe('montarEndereco', () => {
       montarEndereco({ logradouro: 'Rua Harmonia', numero: '410', bairro: 'Vila Madalena' }),
     ).toBe('Rua Harmonia, 410 · Vila Madalena')
   })
+
+  it('põe o complemento depois do número, quando existe', () => {
+    const base = { logradouro: 'Rua Harmonia', numero: '410', bairro: 'Vila Madalena' }
+    expect(montarEndereco({ ...base, complemento: 'apto 52' })).toBe(
+      'Rua Harmonia, 410, apto 52 · Vila Madalena',
+    )
+    expect(montarEndereco({ ...base, complemento: '  apto 52 ' })).toBe(
+      'Rua Harmonia, 410, apto 52 · Vila Madalena',
+    )
+    for (const vazio of [null, '', '   ']) {
+      expect(montarEndereco({ ...base, complemento: vazio })).toBe(
+        'Rua Harmonia, 410 · Vila Madalena',
+      )
+    }
+  })
 })

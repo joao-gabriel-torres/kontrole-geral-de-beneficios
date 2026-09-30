@@ -97,10 +97,14 @@ export function criarApp() {
     if (erro instanceof ErroDominio || erro instanceof ErroHttp) {
       return c.json(corpoErro(erro.codigo, erro.message), erro.status)
     }
-    // Id com byte nulo (%00) na URL: o Postgres recusa o texto (22021) antes de olhar o WHERE.
-    // Um id assim nunca existe no banco: é 404, não 500 com stack no log.
+    // Texto com byte nulo: o Postgres o recusa (22021) antes de olhar o WHERE. Vindo de um
+    // parâmetro de rota (%00 no caminho), é um id que nunca existe: 404. Vindo do corpo ou da
+    // query, é entrada inválida: 422. Nunca 500 com stack no log.
     if (erro instanceof Prisma.PrismaClientKnownRequestError && codigoPostgres(erro) === '22021') {
-      return c.json(corpoErro('nao_encontrado', 'Registro não encontrado'), 404)
+      if (new URL(c.req.url).pathname.includes('%00')) {
+        return c.json(corpoErro('nao_encontrado', 'Registro não encontrado'), 404)
+      }
+      return c.json(corpoErro('validacao', 'Dados inválidos'), 422)
     }
     if (erro instanceof HTTPException) {
       const codigo =

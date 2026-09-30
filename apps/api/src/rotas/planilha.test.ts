@@ -1,4 +1,4 @@
-import { EMAIL_PRESTADOR_DEV, GESTORA_DEV, semear } from '@kgb/db/seed'
+import { EMAIL_PRESTADOR_DEV, GESTORA_DEV, semear, SENHA_DEV } from '@kgb/db/seed'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import * as XLSX from 'xlsx'
 import { corpo, hojeSP } from '../../test/dados'
@@ -285,6 +285,82 @@ describe('POST /api/prestadores/planilha/importacao', () => {
     expect(
       (await prestadorPorDocumento('52998224725')).especialidades.map((e) => e.tipoId),
     ).toEqual(['t1'])
+  })
+
+  describe('o login acompanha o e-mail, com a regra do Editar', () => {
+    const tentarEntrar = (email: string) =>
+      app.request('/api/auth/sign-in/email', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: 'http://localhost:5174' },
+        body: JSON.stringify({ email, password: SENHA_DEV }),
+      })
+    const login = async (prestadorId: string) =>
+      (await prisma.user.findUniqueOrThrow({ where: { prestadorId } })).email
+
+    it('Atualizar que troca o e-mail troca o login e derruba o convite pendente', async () => {
+      await prisma.verification.create({
+        data: {
+          id: 'v-convite-da-ana',
+          identifier: 'reset-password-sha256:convite-da-ana',
+          value: 'u-p2',
+          expiresAt: new Date(Date.now() + 86_400_000),
+        },
+      })
+      const csv = `${BOM}Nome,CPF/CNPJ,Telefone,E-mail
+Carlos Mendes,318.402.117-50,(11) 98734-2210, Carlos@Novo.com
+Ana Ribeiro,27.415.903/0001-44,(11) 97120-5588,ana.nova@ribeiro.com.br
+`
+      expect(await corpo(await importar(csv))).toEqual({
+        novos: 0,
+        atualizados: 2,
+        desativados: 0,
+      })
+      expect(await login('p1')).toBe('carlos@novo.com')
+      expect((await tentarEntrar('carlos@novo.com')).status).toBe(200)
+      expect((await tentarEntrar(EMAIL_PRESTADOR_DEV)).status).toBe(401)
+      expect(await login('p2')).toBe('ana.nova@ribeiro.com.br')
+      expect(await prisma.verification.count({ where: { value: 'u-p2' } })).toBe(0)
+    })
+
+    it('e-mail de outra conta: "E-mail em uso" na prévia, e a linha fica de fora', async () => {
+      const csv = `${BOM}Nome,CPF/CNPJ,Telefone,E-mail
+Ana Ribeiro,27.415.903/0001-44,(11) 97120-5588,renata@russo.dev
+João Pires,402.118.965-31,(11) 99402-1876,CARLOS@russo.dev
+Marina Costa,35.882.610/0001-07,(11) 98851-3302,mesma@email.com
+Roberto Alves,219.774.380-12,(11) 96677-0914,Mesma@Email.com
+`
+      const p = await corpo<Previa>(await previa(csv))
+      expect(p.linhas.map((l) => [l.nome, l.selo, l.acao])).toEqual([
+        ['Ana Ribeiro', 'E-mail em uso', 'erro'],
+        ['João Pires', 'E-mail em uso', 'erro'],
+        ['Marina Costa', 'Atualizar', 'atualizar'],
+        ['Roberto Alves', 'E-mail em uso', 'erro'],
+      ])
+      expect(p.resumo).toEqual({ novos: 0, atualizados: 1, erros: 3 })
+
+      expect(await corpo(await importar(csv))).toEqual({
+        novos: 0,
+        atualizados: 1,
+        desativados: 0,
+      })
+      expect((await prestadorPorDocumento('27415903000144')).email).toBe(
+        'ana@ribeiroreparos.com.br',
+      )
+      expect(await login('p2')).toBe('ana@ribeiroreparos.com.br')
+      expect(await login('p3')).toBe('joao.pires@email.com')
+      expect((await prestadorPorDocumento('35882610000107')).email).toBe('mesma@email.com')
+      expect(await login('p4')).toBe('mesma@email.com')
+      expect(await login('p5')).toBe('roberto.alves@email.com')
+    })
+
+    it('Atualizar que tira o e-mail encerra o login', async () => {
+      const csv = `${BOM}Nome,CPF/CNPJ,Telefone,E-mail\nCarlos Mendes,318.402.117-50,(11) 98734-2210,\n`
+      expect((await importar(csv)).status).toBe(200)
+      expect((await prestadorPorDocumento('31840211750')).email).toBeNull()
+      expect(await login('p1')).toBe('excluido+p1@invalido.local')
+      expect(await prisma.account.count({ where: { userId: 'u-p1' } })).toBe(0)
+      expect((await app.request('/api/me', { headers: carlos })).status).toBe(401)
+    })
   })
 
   it('só gestor', async () => {

@@ -1,5 +1,6 @@
 import { verifyPassword } from 'better-auth/crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { nomeDeBusca } from '../busca'
 import { criarPrisma } from '../index'
 import { prepararBancoDeTeste } from '../testes'
 import { EMAIL_PRESTADOR_DEV, SENHA_DEV, semear, verificarAmbienteSeed } from './index'
@@ -40,7 +41,32 @@ describe('semear', () => {
       include: { assinante: true },
     })
     expect(acionamento.assinante?.nome).toBe('Loja Casa Bela')
-    expect(acionamento.assinante?.cep).toBe('01304001')
+    expect(acionamento.assinante?.cep).toBe('01426002')
+  })
+
+  it('grava o nome de busca dos assinantes, e o banco o mantém ao criar e ao renomear', async () => {
+    await semear(prisma)
+    const assinantes = await prisma.assinante.findMany({ orderBy: { id: 'asc' } })
+    expect(assinantes.map((a) => a.nomeBusca)).toEqual(assinantes.map((a) => nomeDeBusca(a.nome)))
+    expect(assinantes.find((a) => a.nome === 'Clínica Vida')?.nomeBusca).toBe('clinica vida')
+
+    // A regra do banco é a mesma de nomeDeBusca, que a busca aplica ao termo.
+    const nome = 'ÁÀÂÃÄ ÉÈÊË ÍÌÎÏ ÓÒÔÕÖ ÚÙÛÜ Ç Ñ áàâãä éèêë íìîï óòôõö úùûü ç ñ & Cia. 1'
+    const endereco = {
+      cep: '01001000',
+      logradouro: 'Praça da Sé',
+      numero: '1',
+      bairro: 'Sé',
+      cidade: 'São Paulo',
+    }
+    const criado = await prisma.assinante.create({ data: { nome, ...endereco } })
+    expect(criado.nomeBusca).toBe(nomeDeBusca(nome))
+    const renomeado = await prisma.assinante.update({
+      where: { id: criado.id },
+      data: { nome: 'Pão de Açúcar'.normalize('NFD') },
+    })
+    expect(renomeado.nomeBusca).toBe('pao de acucar')
+    await prisma.assinante.delete({ where: { id: criado.id } })
   })
 
   it('cria a conta do prestador de dev com a senha documentada', async () => {

@@ -5,7 +5,7 @@ import {
   telefoneValido,
   tipoDeDocumento,
 } from './documentos'
-import { emailValido } from './convites'
+import { emailValido, normalizarEmail } from './convites'
 
 /**
  * Planilha de credenciados (importação e exportação), regras puras. O formato, os aliases e os
@@ -226,7 +226,17 @@ export interface PrestadorExistente {
   nome: string
   documento: string
   status: StatusPlanilha
+  /** O e-mail do cadastro: o login só acompanha a planilha quando ela o troca. */
+  email: string | null
+  /** Tem usuário vinculado (login), que a importação leva junto ao trocar o e-mail. */
+  comLogin: boolean
 }
+
+/**
+ * Os logins que já usam os e-mails da planilha, pelo e-mail normalizado, com o prestador de cada
+ * um (null: conta sem prestador, como a da gestão).
+ */
+export type ContasPorEmail = ReadonlyMap<string, string | null>
 
 export interface TipoAtivo {
   id: string
@@ -242,6 +252,7 @@ export type Selo =
   | 'Duplicado na planilha'
   | 'Telefone inválido'
   | 'E-mail inválido'
+  | 'E-mail em uso'
 
 /** O que a conferência mostra de cada linha: os textos como vieram e o selo. */
 export interface LinhaPrevia {
@@ -289,16 +300,23 @@ export interface Previa {
  * Selos na ordem do protótipo (sem nome, tamanho do documento, duplicado), mais o dígito
  * verificador nas linhas novas, o telefone com DDD e o e-mail. Só as linhas válidas contam como vistas:
  * a primeira linha válida de um documento vence.
+ *
+ * "E-mail em uso": a regra do Editar. Um "Atualizar" que troca o e-mail de quem tem login leva o
+ * login junto, e o e-mail novo não pode ser de outra conta (`contas`) nem de outro login que uma
+ * linha anterior já levou para ele.
  */
 export function montarPrevia(
   lidas: readonly LinhaLida[],
   existentes: readonly PrestadorExistente[],
   tipos: readonly TipoAtivo[],
   presentes: ReadonlySet<Campo> = new Set(Object.keys(linhaVazia()) as Campo[]),
+  contas: ContasPorEmail = new Map(),
 ): Previa {
   const porDocumento = new Map(existentes.map((p) => [p.documento, p]))
   const tipoPorNome = new Map(tipos.map((t) => [normalizarTexto(t.nome), t.id]))
   const vistos = new Set<string>()
+  /** E-mails para onde uma linha válida já leva um login. */
+  const loginsLevados = new Set<string>()
   /** Todo documento que apareceu na planilha, mesmo em linha rejeitada: não conta como ausente. */
   const documentosNaPlanilha = new Set<string>()
   const linhas: LinhaPrevia[] = []
@@ -314,6 +332,19 @@ export function montarPrevia(
       .map((n) => n.trim())
       .filter(Boolean)
     const existente = porDocumento.get(documento)
+    const email = normalizarEmail(l.email)
+    /** O e-mail para onde a linha leva o login do prestador, se leva. */
+    const loginNovo =
+      presentes.has('email') &&
+      existente?.comLogin &&
+      email &&
+      email !== normalizarEmail(existente.email)
+        ? email
+        : null
+    const conta = loginNovo ? contas.get(loginNovo) : undefined
+    const emailEmUso =
+      !!loginNovo &&
+      ((conta !== undefined && conta !== existente?.id) || loginsLevados.has(loginNovo))
     const selo: Selo = !l.nome
       ? 'Sem nome'
       : !tipoDeDocumento(documento)
@@ -326,9 +357,11 @@ export function montarPrevia(
               ? 'Telefone inválido'
               : l.email.trim() && !emailValido(l.email)
                 ? 'E-mail inválido'
-                : existente
-                  ? 'Atualizar'
-                  : 'Novo'
+                : emailEmUso
+                  ? 'E-mail em uso'
+                  : existente
+                    ? 'Atualizar'
+                    : 'Novo'
     const acao: AcaoLinha = selo === 'Novo' ? 'novo' : selo === 'Atualizar' ? 'atualizar' : 'erro'
     const ids = nomes.map((n) => tipoPorNome.get(normalizarTexto(n)))
     linhas.push({
@@ -342,6 +375,7 @@ export function montarPrevia(
     if (acao === 'erro') continue
 
     vistos.add(documento)
+    if (loginNovo) loginsLevados.add(loginNovo)
     if (acao === 'novo' && l.email.trim()) novosComEmail++
     const dados: DadosImportados = {
       nome: l.nome,

@@ -479,19 +479,74 @@ describe('PATCH /api/prestadores/{id}: e-mail e login', () => {
     )
   })
 
-  it('sem usuário vinculado ou sem e-mail no cadastro, o login fica como está', async () => {
+  it('sem usuário vinculado, o login fica como está', async () => {
     const criado = await corpo<Cadastro>(
       criar({ ...NOVO, nome: 'Sem Login', documento: '390.533.447-05', email: '' }),
     )
     const r = await editar(criado.id, await comDados(criado.id, { email: 'sem@login.com' }))
     expect(r.status).toBe(200)
     expect(await prisma.user.count({ where: { prestadorId: criado.id } })).toBe(0)
-
-    const semEmail = await editar('p2', await comDados('p2', { email: '' }))
+    const semEmail = await editar(criado.id, await comDados(criado.id, { email: '' }))
     expect(semEmail.status).toBe(200)
-    expect((await prisma.user.findUniqueOrThrow({ where: { id: 'u-p2' } })).email).toBe(
-      'ana@ribeiroreparos.com.br',
+    expect(await prisma.user.count({ where: { prestadorId: criado.id } })).toBe(0)
+  })
+
+  it('remover o e-mail encerra o login: anônimo, sem sessões, convites nem senha', async () => {
+    const convite = await app.request('/api/prestadores/p1/convite', {
+      method: 'POST',
+      headers: gestora,
+    })
+    expect(convite.status).toBe(200)
+    expect((await app.request('/api/me', { headers: carlos })).status).toBe(200)
+
+    const r = await editar('p1', await comDados('p1', { email: '' }))
+    expect(r.status).toBe(200)
+    expect(await corpo<Cadastro>(r)).toMatchObject({ email: null, acesso: 'sem_email' })
+
+    // O cadastro e o login andam juntos: sem e-mail, o login é anonimizado como na exclusão.
+    const anonimo = 'excluido+p1@invalido.local'
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: 'u-p1' } })).toMatchObject({
+      email: anonimo,
+      prestadorId: 'p1',
+    })
+    expect(await prisma.session.count({ where: { userId: 'u-p1' } })).toBe(0)
+    expect(await prisma.verification.count({ where: { value: 'u-p1' } })).toBe(0)
+    expect(await prisma.account.count({ where: { userId: 'u-p1' } })).toBe(0)
+    expect((await app.request('/api/me', { headers: carlos })).status).toBe(401)
+    expect((await tentarEntrar(EMAIL_PRESTADOR_DEV)).status).toBe(401)
+    // O e-mail anônimo é previsível: a senha antiga não pode abrir o login com ele.
+    expect((await tentarEntrar(anonimo)).status).toBe(401)
+  })
+
+  it('depois de remover o e-mail, o acesso volta com um e-mail novo e um novo convite', async () => {
+    expect((await editar('p1', await comDados('p1', { email: '' }))).status).toBe(200)
+
+    const r = await editar('p1', await comDados('p1', { email: 'carlos.volta@email.com' }))
+    expect(r.status).toBe(200)
+    expect((await corpo<Cadastro>(r)).acesso).toBe('pendente')
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: 'u-p1' } })).email).toBe(
+      'carlos.volta@email.com',
     )
+    expect((await tentarEntrar('carlos.volta@email.com')).status).toBe(401)
+
+    const convite = await app.request('/api/prestadores/p1/convite', {
+      method: 'POST',
+      headers: gestora,
+    })
+    expect(convite.status).toBe(200)
+    const token = /\/convite\?token=([\w%-]+)/.exec(caixa.enviados.at(-1)?.texto ?? '')?.[1] ?? ''
+    const senha = await app.request('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'http://localhost:5174' },
+      body: JSON.stringify({
+        newPassword: 'senha-nova-do-carlos',
+        token: decodeURIComponent(token),
+      }),
+    })
+    expect(senha.status).toBe(200)
+    const novoLogin = await entrar(app, 'carlos.volta@email.com', 'senha-nova-do-carlos')
+    expect((await app.request('/api/me', { headers: novoLogin })).status).toBe(200)
+    expect((await listar()).find((p) => p.id === 'p1')?.acesso).toBe('ativo')
   })
 })
 
@@ -549,6 +604,7 @@ describe('DELETE /api/prestadores/{id}', () => {
     expect(p6.excluidoEm).not.toBeNull()
     expect(p6.status).toBe('inativo')
     expect(await prisma.session.count({ where: { user: { prestadorId: 'p6' } } })).toBe(0)
+    expect(await prisma.account.count({ where: { user: { prestadorId: 'p6' } } })).toBe(0)
     expect((await app.request('/api/me', { headers: luciana })).status).toBe(401)
     expect((await listar()).map((p) => p.id)).not.toContain('p6')
     expect((await excluir('p6')).status).toBe(404)

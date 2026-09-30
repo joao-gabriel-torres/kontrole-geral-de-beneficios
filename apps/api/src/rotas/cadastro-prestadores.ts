@@ -128,7 +128,8 @@ const rotaEditar = createRoute({
   method: 'patch',
   path: '/api/prestadores/{id}',
   tags: ['Prestadores'],
-  summary: 'Edita o cadastro (status, cor e data de credenciamento não mudam)',
+  summary:
+    'Edita o cadastro (status, cor e data de credenciamento não mudam); o login acompanha o e-mail, e sem e-mail o login é encerrado',
   security: [{ Bearer: [] }],
   middleware: apenasGestor,
   request: { params: IdParam, ...corpoDados },

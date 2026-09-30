@@ -2161,7 +2161,7 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        /** Edita o cadastro (status, cor e data de credenciamento não mudam) */
+        /** Edita o cadastro (status, cor e data de credenciamento não mudam); o login acompanha o e-mail, e sem e-mail o login é encerrado */
         patch: {
             parameters: {
                 query?: never;
@@ -2575,7 +2575,7 @@ export interface components {
                 /** @enum {string} */
                 acao: "novo" | "atualizar" | "erro";
                 /** @enum {string} */
-                selo: "Novo" | "Atualizar" | "Sem nome" | "Documento inválido" | "Duplicado na planilha" | "Telefone inválido" | "E-mail inválido";
+                selo: "Novo" | "Atualizar" | "Sem nome" | "Documento inválido" | "Duplicado na planilha" | "Telefone inválido" | "E-mail inválido" | "E-mail em uso";
             }[];
             resumo: {
                 novos: number;

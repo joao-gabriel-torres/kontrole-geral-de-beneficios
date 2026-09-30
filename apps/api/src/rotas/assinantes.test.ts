@@ -1,8 +1,9 @@
 import { EMAIL_PRESTADOR_DEV, GESTORA_DEV } from '@kgb/db/seed'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { corpo } from '../../test/dados'
 import { entrar } from '../../test/sessao'
 import { criarApp } from '../app'
+import { prisma } from '../db'
 
 interface Assinante {
   id: string
@@ -22,6 +23,7 @@ let gestora: Record<string, string>
 beforeAll(async () => {
   gestora = await entrar(app, GESTORA_DEV.email)
 })
+afterEach(() => vi.restoreAllMocks())
 
 const buscar = (busca?: string) =>
   corpo<Assinante[]>(
@@ -52,14 +54,66 @@ describe('GET /api/assinantes', () => {
     expect(lista).toHaveLength(1)
     expect(lista[0]).toMatchObject({
       nome: 'Clínica Vida',
-      cep: '01304001',
-      logradouro: 'Rua Augusta',
-      numero: '1492',
+      cep: '01310200',
+      logradouro: 'Av. Paulista',
+      numero: '1578',
       complemento: null,
-      bairro: 'Consolação',
+      bairro: 'Bela Vista',
       cidade: 'São Paulo',
-      endereco: 'Rua Augusta, 1492 · Consolação',
+      endereco: 'Av. Paulista, 1578 · Bela Vista',
     })
+  })
+
+  it('o endereço traz o complemento depois do número, quando o assinante tem', async () => {
+    const { id } = await prisma.assinante.findFirstOrThrow({ where: { nome: 'Clínica Vida' } })
+    await prisma.assinante.update({ where: { id }, data: { complemento: 'sala 52' } })
+    try {
+      const [clinica] = await buscar('clinica')
+      expect(clinica).toMatchObject({
+        complemento: 'sala 52',
+        endereco: `${clinica!.logradouro}, ${clinica!.numero}, sala 52 · ${clinica!.bairro}`,
+      })
+    } finally {
+      await prisma.assinante.update({ where: { id }, data: { complemento: null } })
+    }
+  })
+
+  it('filtra e limita no banco, pelo nome de busca: não carrega todos os ativos', async () => {
+    const consulta = vi.spyOn(prisma.assinante, 'findMany')
+    const lista = await buscar(encodeURIComponent('ESCRITÓRIO'))
+    expect(lista.map((a) => a.nome)).toEqual(['Escritório Nunes & Lima'])
+    expect(consulta).toHaveBeenCalledOnce()
+    expect(consulta.mock.calls[0]![0]).toMatchObject({
+      where: { status: 'ativo', excluidoEm: null, nomeBusca: { contains: 'escritorio' } },
+      take: 8,
+    })
+  })
+
+  it('com muitos que casam, devolve os 8 primeiros por nome', async () => {
+    const endereco = {
+      cep: '01001000',
+      logradouro: 'Praça da Sé',
+      numero: '1',
+      bairro: 'Sé',
+      cidade: 'São Paulo',
+    }
+    const nomes = Array.from(
+      { length: 12 },
+      (_, i) => `Condomínio Teste ${String(i).padStart(2, '0')}`,
+    )
+    await prisma.assinante.createMany({ data: nomes.map((nome) => ({ nome, ...endereco })) })
+    try {
+      const lista = await buscar('condominio teste')
+      expect(lista.map((a) => a.nome)).toEqual(nomes.slice(0, 8))
+    } finally {
+      await prisma.assinante.deleteMany({ where: { nome: { in: nomes } } })
+    }
+  })
+
+  it('% e _ na busca são texto, não curingas', async () => {
+    expect(await buscar(encodeURIComponent('%'))).toEqual([])
+    expect(await buscar('_')).toEqual([])
+    expect(await buscar(encodeURIComponent('Cl_nica'))).toEqual([])
   })
 
   it('sem resultado devolve lista vazia', async () => {

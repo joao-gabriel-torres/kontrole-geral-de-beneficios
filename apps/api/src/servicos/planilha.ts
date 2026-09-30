@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx'
 import type { UsuarioSessao } from '../contexto'
 import { prisma } from '../db'
 import { ErroDominio } from '../dominio/acionamento'
+import { normalizarEmail } from '../dominio/convites'
 import { dataSP } from '../dominio/datas'
 import { corDoPrestador } from '../dominio/documentos'
 import {
@@ -25,6 +26,7 @@ import {
   type Previa,
 } from '../dominio/planilha'
 import { ErroHttp } from '../erros'
+import { sincronizarLogin } from './convites'
 
 const ehZip = (b: Uint8Array) => b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04
 const ehOle = (b: Uint8Array) => b[0] === 0xd0 && b[1] === 0xcf && b[2] === 0x11 && b[3] === 0xe0
@@ -162,15 +164,37 @@ async function previaNoBanco(
   linhas: readonly LinhaLida[],
   presentes: ReadonlySet<Campo>,
 ): Promise<Previa> {
-  const [existentes, tipos] = await Promise.all([
+  const emails = [
+    ...new Set(linhas.map((l) => normalizarEmail(l.email)).filter((e): e is string => !!e)),
+  ]
+  const [existentes, tipos, contas] = await Promise.all([
     db.prestador.findMany({
       where: { excluidoEm: null },
       orderBy: ORDEM_DE_CADASTRO,
-      select: { id: true, nome: true, documento: true, status: true },
+      select: {
+        id: true,
+        nome: true,
+        documento: true,
+        status: true,
+        email: true,
+        usuario: { select: { id: true } },
+      },
     }),
     db.tipoDemanda.findMany({ where: { excluidoEm: null }, select: { id: true, nome: true } }),
+    emails.length
+      ? db.user.findMany({
+          where: { email: { in: emails, mode: 'insensitive' } },
+          select: { email: true, prestadorId: true },
+        })
+      : [],
   ])
-  return montarPrevia(linhas, existentes, tipos, presentes)
+  return montarPrevia(
+    linhas,
+    existentes.map(({ usuario, ...p }) => ({ ...p, comLogin: !!usuario })),
+    tipos,
+    presentes,
+    new Map(contas.map((c) => [c.email.toLowerCase(), c.prestadorId])),
+  )
 }
 
 export type PreviaPlanilha = Omit<Previa, 'gravacoes'>
@@ -195,11 +219,20 @@ export interface ResultadoImportacao {
 
 const dataPura = (iso: string) => new Date(`${iso}T00:00:00Z`)
 const ehDuplicado = (e: unknown) => (e as { code?: unknown } | null)?.code === 'P2002'
+/** Outra conta pegou o e-mail depois da prévia (o índice único ou a conferência do login). */
+const ehEmailTomado = (e: unknown) => e instanceof ErroDominio && e.codigo === 'email_em_uso'
+const conflitoNaImportacao = () =>
+  new ErroDominio(
+    'planilha_conflito',
+    'Os cadastros mudaram durante a importação. Confira a planilha de novo.',
+    409,
+  )
 
 /**
  * Recalcula a prévia e aplica tudo numa transação: cria os novos (cor pela posição do cadastro,
  * hoje ou a data da planilha), sobrescreve os atualizados (cor e, sem data válida, a data de
- * credenciamento ficam), desativa os ausentes se pedido e grava a auditoria.
+ * credenciamento ficam), desativa os ausentes se pedido e grava a auditoria. O login dos
+ * atualizados acompanha o e-mail com a regra do Editar (`sincronizarLogin`).
  */
 export async function importarPlanilha(
   arquivo: unknown,
@@ -238,6 +271,11 @@ export async function importarPlanilha(
             id = criado.id
           } else {
             id = g.id
+            // A trava põe a gravação em fila com a edição, a exclusão e o convite, que também
+            // mexem no login; excluído depois da prévia, a planilha precisa ser conferida de novo.
+            const [anterior] = await tx.$queryRaw<{ email: string | null }[]>`
+              SELECT email FROM prestador WHERE id = ${id} AND "excluidoEm" IS NULL FOR UPDATE`
+            if (!anterior) throw conflitoNaImportacao()
             if (g.dados.especialidades) atualizadosIds.push(id)
             await tx.prestador.update({
               where: { id },
@@ -246,6 +284,9 @@ export async function importarPlanilha(
                 ...(credenciadoDesde ? { credenciadoDesde: dataPura(credenciadoDesde) } : {}),
               },
             })
+            if (campos.email !== undefined) {
+              await sincronizarLogin(tx, id, anterior.email, campos.email)
+            }
           }
           especialidades?.forEach((tipoId, ordem) =>
             vinculos.push({ prestadorId: id, tipoId, ordem }),
@@ -280,12 +321,8 @@ export async function importarPlanilha(
       { timeout: 60_000 },
     )
   } catch (e) {
-    if (!ehDuplicado(e)) throw e
-    throw new ErroDominio(
-      'planilha_conflito',
-      'Os cadastros mudaram durante a importação. Confira a planilha de novo.',
-      409,
-    )
+    if (ehDuplicado(e) || ehEmailTomado(e)) throw conflitoNaImportacao()
+    throw e
   }
 }
 
