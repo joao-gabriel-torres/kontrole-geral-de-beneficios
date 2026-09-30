@@ -156,13 +156,15 @@ describe('PainelInviavel', () => {
       expect(painel.emitted('fechar')).toHaveLength(1)
     })
 
-    it('desmontado aberto, deixa de ouvir o Esc', async () => {
+    it('desmontado aberto, tira do document o listener do Esc', async () => {
       const painel = montarFechado()
+      const adicionar = vi.spyOn(document, 'addEventListener')
+      const remover = vi.spyOn(document, 'removeEventListener')
       await painel.setProps({ aberto: true })
-      const emitido = painel.emitted()
+      const ouvintes = adicionar.mock.calls.filter(([tipo]) => tipo === 'keydown')
+      expect(ouvintes).toHaveLength(1)
       painel.unmount()
-      esc(document.body)
-      expect(emitido.fechar).toBeUndefined()
+      expect(remover).toHaveBeenCalledWith('keydown', ouvintes[0]![1])
     })
 
     it('se quem abriu saiu da tela (a barra some depois do envio), fechar não quebra', async () => {
