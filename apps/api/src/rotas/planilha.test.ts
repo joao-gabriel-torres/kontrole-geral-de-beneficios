@@ -29,11 +29,13 @@ interface Previa {
     nome: string
     documento: string
     especialidades: string[]
+    especialidadesIgnoradas: string[]
     acao: 'novo' | 'atualizar' | 'erro'
     selo: string
   }[]
   resumo: { novos: number; atualizados: number; erros: number }
   ausentes: { id: string; nome: string }[]
+  novosComEmail: number
 }
 interface Erro {
   erro: { codigo: string; mensagem: string }
@@ -122,10 +124,12 @@ describe('POST /api/prestadores/planilha/previa', () => {
       nome: 'Fernanda Souza',
       documento: '11.222.333/0001-81',
       especialidades: ['limpeza de ar condicionado', 'Jardinagem'],
+      especialidadesIgnoradas: ['Jardinagem'],
       acao: 'novo',
       selo: 'Novo',
     })
     expect(p.resumo).toEqual({ novos: 2, atualizados: 3, erros: 3 })
+    expect(p.novosComEmail).toBe(2)
     expect(p.ausentes.map((a) => a.nome)).toEqual(['João Pires', 'Marina Costa', 'Luciana Prado'])
     expect(await prisma.prestador.count()).toBe(antes)
     expect((await prestadorPorDocumento('31840211750')).telefone).toBe('11987342210')
@@ -271,6 +275,12 @@ describe('POST /api/prestadores/planilha/importacao', () => {
 
   it('especialidade de um tipo excluído não é reconhecida', async () => {
     await prisma.tipoDemanda.update({ where: { id: 't8' }, data: { excluidoEm: new Date() } })
+    const pedroNaPrevia = (await corpo<Previa>(await previa(CSV))).linhas[2]!
+    expect(pedroNaPrevia).toMatchObject({
+      nome: 'Pedro Lima',
+      especialidades: ['Vazamento', 'Chaveiro'],
+      especialidadesIgnoradas: ['Chaveiro'],
+    })
     await importar(CSV)
     expect(
       (await prestadorPorDocumento('52998224725')).especialidades.map((e) => e.tipoId),

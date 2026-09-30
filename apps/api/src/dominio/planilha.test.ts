@@ -79,6 +79,12 @@ describe('decodificarTexto', () => {
   it('o resto é Windows-1252 (CSV do Excel em pt-BR)', () => {
     expect(decodificarTexto(new Uint8Array([0x4a, 0x6f, 0xe3, 0x6f, 0x20, 0x80]))).toBe('João €')
   })
+  it('UTF-16 com BOM ("Texto Unicode" do Excel), little e big endian, sem o BOM no texto', () => {
+    const le = [0xff, 0xfe, 0x4a, 0x00, 0x6f, 0x00, 0xe3, 0x00, 0x6f, 0x00, 0x09, 0x00]
+    const be = [0xfe, 0xff, 0x00, 0x4a, 0x00, 0x6f, 0x00, 0xe3, 0x00, 0x6f, 0x00, 0x09]
+    expect(decodificarTexto(new Uint8Array(le))).toBe('João\t')
+    expect(decodificarTexto(new Uint8Array(be))).toBe('João\t')
+  })
 })
 
 describe('detectarSeparador', () => {
@@ -91,6 +97,10 @@ describe('detectarSeparador', () => {
   })
   it('separadores dentro de aspas não contam', () => {
     expect(detectarSeparador('"a;b;c",d')).toBe(',')
+  })
+  it('tabulação (TSV) quando aparece mais que a vírgula e o ponto e vírgula', () => {
+    expect(detectarSeparador('Nome\tCPF/CNPJ\tEspecialidades\n"Ana, Bia";x')).toBe('\t')
+    expect(detectarSeparador('Nome\tCPF;Região;Status')).toBe(';')
   })
 })
 
@@ -183,6 +193,41 @@ describe('mapearTabela', () => {
   it('números e booleanos viram texto', () => {
     const [linha] = mapearTabela(tabela(['Nome', 'CPF', 'Status'], ['Ana', 31840211750, true]))
     expect(linha).toMatchObject({ documento: '31840211750', status: 'true' })
+  })
+
+  it('documento que o Excel guardou como número volta a ter os zeros à esquerda', () => {
+    const linhas = mapearTabela(
+      tabela(
+        ['Nome', 'CPF/CNPJ', 'Telefone'],
+        ['CPF', 1234567890, 1134567890],
+        ['CNPJ', 1234567000189, 11912345678],
+        ['Texto', '0123', ''],
+      ),
+    )
+    expect(linhas.map((l) => [l.documento, l.telefone])).toEqual([
+      ['01234567890', '1134567890'],
+      ['01234567000189', '11912345678'],
+      ['0123', ''],
+    ])
+  })
+
+  it('linha de título acima: o cabeçalho é a primeira linha com dois cabeçalhos reconhecidos', () => {
+    const linhas = mapearTabela(
+      tabela(
+        ['Credenciados Russo — setembro de 2026'],
+        ['Status', 'atualizado em 29/09'],
+        ['Nome', 'CPF/CNPJ', 'Obs'],
+        ['Ana', '52998224725', 'x'],
+      ),
+    )
+    expect(linhas).toEqual([lida({ nome: 'Ana', documento: '52998224725', telefone: '' })])
+  })
+
+  it('sem linha com dois cabeçalhos reconhecidos, vale a primeira linha preenchida', () => {
+    const linhas = mapearTabela(
+      tabela(['Obs', 'Nome'], ['x', 'Ana'], ['Nome', 'Obs'], ['y', 'Bia']),
+    )
+    expect(linhas.map((l) => l.nome)).toEqual(['Ana', 'Obs', 'Bia'])
   })
 
   it('linhas nulas antes do cabeçalho são ignoradas', () => {
@@ -297,10 +342,37 @@ describe('montarPrevia', () => {
         nome: 'Pedro',
         documento: '529.982.247-25',
         especialidades: ['limpeza de ar condicionado', 'Jardinagem', 'Pintura', 'pintura'],
+        especialidadesIgnoradas: ['Jardinagem'],
         acao: 'novo',
         selo: 'Novo',
       },
     ])
+  })
+
+  it('especialidades que não casam com um tipo ativo ficam marcadas como ignoradas', () => {
+    const { linhas } = previa(
+      { nome: 'Pedro', documento: '52998224725', especialidades: 'Vazamneto; vazamento; Elétrica' },
+      { nome: '', documento: '1', especialidades: 'Jardinagem' },
+      { nome: 'Carlos', documento: '31840211750', especialidades: '' },
+    )
+    expect(linhas.map((l) => l.especialidadesIgnoradas)).toEqual([
+      ['Vazamneto', 'Elétrica'],
+      ['Jardinagem'],
+      [],
+    ])
+  })
+
+  it('conta os novos com e-mail (entram sem convite)', () => {
+    const p = previa(
+      { nome: 'Pedro', documento: '52998224725', email: 'pedro@x.com' },
+      { nome: 'Ana', documento: '11144477735', email: ' ' },
+      { nome: 'Carlos', documento: '31840211750', email: 'carlos@x.com' },
+      { nome: '', documento: '11222333000181', email: 'sem.nome@x.com' },
+      { nome: 'Bia', documento: '11222333000181', email: 'bia@x.com' },
+    )
+    expect(p.linhas.map((l) => l.selo)).toEqual(['Novo', 'Novo', 'Atualizar', 'Sem nome', 'Novo'])
+    expect(p.novosComEmail).toBe(2)
+    expect(previa({ nome: 'Ana', documento: '11144477735' }).novosComEmail).toBe(0)
   })
 
   it('resumo e ausentes (ativos cujo documento não aparece em NENHUMA linha, na ordem de cadastro)', () => {

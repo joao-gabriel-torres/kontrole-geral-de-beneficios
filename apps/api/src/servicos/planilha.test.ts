@@ -1,3 +1,4 @@
+import { deflateRawSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
 import * as XLSX from 'xlsx'
 import { ErroDominio } from '../dominio/acionamento'
@@ -26,6 +27,74 @@ function erroDe(f: () => unknown): ErroDominio {
   }
   throw new Error('não lançou')
 }
+
+function lancado(f: () => unknown): unknown {
+  try {
+    f()
+  } catch (e) {
+    return e
+  }
+  throw new Error('não lançou')
+}
+
+/**
+ * Um ZIP mínimo (o formato do .xlsx) com uma entrada deflate de `descompactado` bytes, que declara
+ * só 10 bytes descompactados; o diretório central pode repetir a entrada `copias` vezes.
+ */
+function zipInflado(descompactado: number, copias = 1): Uint8Array {
+  const dados = deflateRawSync(Buffer.alloc(descompactado))
+  const nome = Buffer.from('xl/worksheets/sheet1.xml')
+  const local = Buffer.alloc(30)
+  local.writeUInt32LE(0x04034b50, 0)
+  local.writeUInt16LE(20, 4)
+  local.writeUInt16LE(8, 8)
+  local.writeUInt32LE(dados.length, 18)
+  local.writeUInt32LE(10, 22)
+  local.writeUInt16LE(nome.length, 26)
+  const central = Buffer.alloc(46)
+  central.writeUInt32LE(0x02014b50, 0)
+  central.writeUInt16LE(20, 4)
+  central.writeUInt16LE(20, 6)
+  central.writeUInt16LE(8, 10)
+  central.writeUInt32LE(dados.length, 20)
+  central.writeUInt32LE(10, 24)
+  central.writeUInt16LE(nome.length, 28)
+  const diretorio = Buffer.concat(Array.from({ length: copias }, () => [central, nome]).flat())
+  const fim = Buffer.alloc(22)
+  fim.writeUInt32LE(0x06054b50, 0)
+  fim.writeUInt16LE(copias, 8)
+  fim.writeUInt16LE(copias, 10)
+  fim.writeUInt32LE(diretorio.length, 12)
+  fim.writeUInt32LE(local.length + nome.length + dados.length, 16)
+  return new Uint8Array(Buffer.concat([local, nome, dados, diretorio, fim]))
+}
+
+describe('.xlsx inflado', () => {
+  const MB = 1024 * 1024
+
+  it('recusa antes da leitura quando passa de 50 MB descompactado, sem crer no tamanho declarado', () => {
+    expect(lancado(() => lerPlanilha(zipInflado(50 * MB + 1)))).toMatchObject({
+      status: 413,
+      codigo: 'planilha_grande',
+      message: 'A planilha passa de 50 MB descompactada',
+    })
+  })
+
+  it('soma todas as entradas do diretório, mesmo as que repetem os mesmos dados', () => {
+    expect(lancado(() => lerPlanilha(zipInflado(20 * MB, 3)))).toMatchObject({ status: 413 })
+  })
+
+  it('até 50 MB segue para a leitura', () => {
+    expect(erroDe(() => lerPlanilha(zipInflado(50 * MB)))).toMatchObject({
+      codigo: 'planilha_ilegivel',
+    })
+    const compactado = gerarXlsx([
+      ['Nome', 'CPF'],
+      ['Ana', '52998224725'],
+    ])
+    expect(lerPlanilha(compactado)).toEqual([expect.objectContaining({ nome: 'Ana' })])
+  })
+})
 
 describe('lerPlanilha', () => {
   it('CSV UTF-8 com BOM, separado por vírgula, com aspas', () => {
@@ -56,6 +125,27 @@ describe('lerPlanilha', () => {
     })
   })
 
+  it('"Texto Unicode" do Excel: UTF-16 com BOM, separado por tabulação', () => {
+    const texto =
+      'Nome\tCPF\tRegião\tEspecialidades\r\nJoão Pires\t012.345.678-90\tCentro\tPintura, Chaveiro\r\n'
+    const utf16le = new Uint8Array(2 + texto.length * 2)
+    utf16le.set([0xff, 0xfe])
+    for (let i = 0; i < texto.length; i++) utf16le[2 + i * 2] = texto.charCodeAt(i)
+    expect(lerPlanilha(utf16le)).toEqual([
+      expect.objectContaining({
+        nome: 'João Pires',
+        documento: '012.345.678-90',
+        regiao: 'Centro',
+        especialidades: 'Pintura, Chaveiro',
+      }),
+    ])
+  })
+
+  it('TSV em UTF-8', () => {
+    const [linha] = lerPlanilha(utf8ComBom('Nome\tCPF\nJoão Pires\t01234567890\n'))
+    expect(linha).toMatchObject({ nome: 'João Pires', documento: '01234567890' })
+  })
+
   it('CSV é lido como texto: o CPF com zero à esquerda continua com 11 dígitos', () => {
     const linhas = lerPlanilha(
       utf8ComBom('Nome,CPF,Credenciado desde\nA,01234567890,12/03/2024\nB,012.345.678-90,\n'),
@@ -83,6 +173,14 @@ describe('lerPlanilha', () => {
         credenciadoDesde: '2024-03-12',
       }),
     ])
+  })
+
+  it('.xlsx: CPF digitado como número volta a ter os zeros à esquerda', () => {
+    const bytes = xlsxDe([
+      ['Nome', 'CPF'],
+      ['Ana', 1234567890],
+    ])
+    expect(lerPlanilha(bytes)[0]).toMatchObject({ nome: 'Ana', documento: '01234567890' })
   })
 
   it('.xls (Excel 97–2003)', () => {

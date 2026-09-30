@@ -41,6 +41,8 @@ export const LINHA_MODELO = [
 export const NOME_MODELO = 'modelo-credenciados-russo.xlsx'
 export const LIMITE_LINHAS = 2000
 export const TAMANHO_MAXIMO_PLANILHA = 5 * 1024 * 1024
+/** Teto do conteúdo de um .xlsx descompactado (a proteção contra arquivo inflado). */
+export const LIMITE_DESCOMPACTADO = 50 * 1024 * 1024
 
 /** O `norm` do protótipo: sem acentos, minúsculo e só letras de a a z. */
 export const normalizarTexto = (texto: string): string =>
@@ -51,12 +53,18 @@ export const normalizarTexto = (texto: string): string =>
     .replace(/[^a-z]/g, '')
 
 /**
- * Texto de um CSV: com BOM, UTF-8; UTF-8 válido, UTF-8; senão Windows-1252 (o CSV que o Excel em
- * pt-BR salva).
+ * Texto de um CSV ou TSV: com BOM, UTF-8 ou UTF-16 (o "Texto Unicode" do Excel); UTF-8 válido,
+ * UTF-8; senão Windows-1252 (o CSV que o Excel em pt-BR salva).
  */
 export function decodificarTexto(bytes: Uint8Array): string {
   if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
     return new TextDecoder('utf-8').decode(bytes.subarray(3))
+  }
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) {
+    return new TextDecoder('utf-16le').decode(bytes.subarray(2))
+  }
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) {
+    return new TextDecoder('utf-16be').decode(bytes.subarray(2))
   }
   try {
     return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
@@ -65,18 +73,24 @@ export function decodificarTexto(bytes: Uint8Array): string {
   }
 }
 
-/** `;` quando aparece mais que `,` na primeira linha (fora de aspas); senão `,`. */
-export function detectarSeparador(texto: string): ',' | ';' {
+/**
+ * Na primeira linha (fora de aspas): tabulação (TSV) quando aparece mais que `,` e `;`; `;` quando
+ * aparece mais que `,`; senão `,`.
+ */
+export function detectarSeparador(texto: string): ',' | ';' | '\t' {
   let entreAspas = false
   let virgulas = 0
   let pontosEVirgulas = 0
+  let tabulacoes = 0
   for (const c of texto) {
     if (c === '"') entreAspas = !entreAspas
     else if (entreAspas) continue
     else if (c === '\n' || c === '\r') break
     else if (c === ',') virgulas++
     else if (c === ';') pontosEVirgulas++
+    else if (c === '\t') tabulacoes++
   }
+  if (tabulacoes > virgulas && tabulacoes > pontosEVirgulas) return '\t'
   return pontosEVirgulas > virgulas ? ';' : ','
 }
 
@@ -117,6 +131,16 @@ const CAMPOS: Record<string, Campo> = {
 
 const textoDaCelula = (c: Celula): string => (c === null || c === undefined ? '' : String(c).trim())
 
+/**
+ * CPF ou CNPJ que o Excel guardou como número perdeu os zeros à esquerda: volta a ter 11 dígitos
+ * (CPF) ou, com 12 ou 13, os 14 do CNPJ. Texto fica como veio.
+ */
+function textoDoDocumento(c: Celula): string {
+  if (typeof c !== 'number' || !Number.isSafeInteger(c) || c < 0) return textoDaCelula(c)
+  const digitos = String(c)
+  return digitos.padStart(digitos.length > 11 ? 14 : 11, '0')
+}
+
 const linhaVazia = (): LinhaLida => ({
   nome: '',
   documento: '',
@@ -128,10 +152,18 @@ const linhaVazia = (): LinhaLida => ({
   credenciadoDesde: '',
 })
 
+/** As colunas de uma linha que são cabeçalhos reconhecidos, com o campo de cada uma. */
+const colunasDoCabecalho = (linha: readonly Celula[]): [number, Campo][] =>
+  linha.flatMap((c, i): [number, Campo][] => {
+    const campo = CAMPOS[normalizarTexto(textoDaCelula(c))]
+    return campo ? [[i, campo]] : []
+  })
+
 /**
- * Converte a primeira aba em linhas. O cabeçalho é a primeira linha não vazia; colunas que caem
- * no mesmo campo ficam com o primeiro valor não vazio; linhas sem nenhum campo reconhecido
- * preenchido são puladas.
+ * Converte a primeira aba em linhas. O cabeçalho é a primeira linha com pelo menos dois campos
+ * reconhecidos (o que vem antes, como uma linha de título, é descartado) ou, sem nenhuma assim, a
+ * primeira linha não vazia; colunas que caem no mesmo campo ficam com o primeiro valor não vazio;
+ * linhas sem nenhum campo reconhecido preenchido são puladas.
  */
 export function mapearTabela(
   tabela: readonly (readonly Celula[] | null | undefined)[],
@@ -147,17 +179,20 @@ export function mapearTabelaComColunas(tabela: readonly (readonly Celula[] | nul
   const preenchidas = tabela.filter(
     (l): l is readonly Celula[] => !!l && l.some((c) => textoDaCelula(c) !== ''),
   )
-  const [cabecalho = [], ...resto] = preenchidas
-  const colunas: [number, Campo][] = []
-  cabecalho.forEach((c, i) => {
-    const campo = CAMPOS[normalizarTexto(textoDaCelula(c))]
-    if (campo) colunas.push([i, campo])
-  })
+  const inicio = Math.max(
+    preenchidas.findIndex(
+      (l) => new Set(colunasDoCabecalho(l).map(([, campo]) => campo)).size >= 2,
+    ),
+    0,
+  )
+  const colunas = colunasDoCabecalho(preenchidas[inicio] ?? [])
   const linhas: LinhaLida[] = []
-  for (const celulas of resto) {
+  for (const celulas of preenchidas.slice(inicio + 1)) {
     const linha = linhaVazia()
     for (const [i, campo] of colunas) {
-      if (!linha[campo]) linha[campo] = textoDaCelula(celulas[i])
+      if (linha[campo]) continue
+      linha[campo] =
+        campo === 'documento' ? textoDoDocumento(celulas[i]) : textoDaCelula(celulas[i])
     }
     if (Object.values(linha).some(Boolean)) linhas.push(linha)
   }
@@ -213,6 +248,8 @@ export interface LinhaPrevia {
   nome: string
   documento: string
   especialidades: string[]
+  /** As de `especialidades` que não casam com nenhum tipo ativo: a importação as ignora. */
+  especialidadesIgnoradas: string[]
   acao: AcaoLinha
   selo: Selo
 }
@@ -243,6 +280,8 @@ export interface Previa {
   resumo: { novos: number; atualizados: number; erros: number }
   /** Ativos cujo documento não está em nenhuma linha válida, na ordem de cadastro. */
   ausentes: { id: string; nome: string }[]
+  /** Linhas "Novo" com e-mail: a importação não manda convite, que sai pelo Editar de cada um. */
+  novosComEmail: number
   gravacoes: Gravacao[]
 }
 
@@ -264,6 +303,7 @@ export function montarPrevia(
   const documentosNaPlanilha = new Set<string>()
   const linhas: LinhaPrevia[] = []
   const gravacoes: Gravacao[] = []
+  let novosComEmail = 0
 
   for (const l of lidas) {
     const documento = soDigitos(l.documento)
@@ -290,20 +330,28 @@ export function montarPrevia(
                   ? 'Atualizar'
                   : 'Novo'
     const acao: AcaoLinha = selo === 'Novo' ? 'novo' : selo === 'Atualizar' ? 'atualizar' : 'erro'
-    linhas.push({ nome: l.nome, documento: l.documento, especialidades: nomes, acao, selo })
+    const ids = nomes.map((n) => tipoPorNome.get(normalizarTexto(n)))
+    linhas.push({
+      nome: l.nome,
+      documento: l.documento,
+      especialidades: nomes,
+      especialidadesIgnoradas: nomes.filter((_, i) => !ids[i]),
+      acao,
+      selo,
+    })
     if (acao === 'erro') continue
 
     vistos.add(documento)
-    const ids = nomes
-      .map((n) => tipoPorNome.get(normalizarTexto(n)))
-      .filter((id): id is string => !!id)
+    if (acao === 'novo' && l.email.trim()) novosComEmail++
     const dados: DadosImportados = {
       nome: l.nome,
       documento,
       telefone,
       ...(presentes.has('email') ? { email: l.email.trim() || null } : {}),
       ...(presentes.has('regiao') ? { regiao: l.regiao || null } : {}),
-      ...(presentes.has('especialidades') ? { especialidades: [...new Set(ids)] } : {}),
+      ...(presentes.has('especialidades')
+        ? { especialidades: [...new Set(ids.filter((id): id is string => !!id))] }
+        : {}),
       ...(presentes.has('status')
         ? { status: normalizarTexto(l.status).startsWith('inativ') ? 'inativo' : 'ativo' }
         : {}),
@@ -323,6 +371,7 @@ export function montarPrevia(
     ausentes: existentes
       .filter((p) => p.status === 'ativo' && !documentosNaPlanilha.has(p.documento))
       .map(({ id, nome }) => ({ id, nome })),
+    novosComEmail,
     gravacoes,
   }
 }

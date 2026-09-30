@@ -33,6 +33,10 @@ export const PreviaPlanilhaSchema = z
         especialidades: z
           .array(z.string())
           .openapi({ description: 'Nomes como vieram, inclusive os não reconhecidos' }),
+        especialidadesIgnoradas: z.array(z.string()).optional().openapi({
+          description:
+            'As de `especialidades` que não casam com nenhum tipo ativo (erro de digitação, tipo excluído): a importação as ignora. A API sempre manda.',
+        }),
         acao: z.enum(['novo', 'atualizar', 'erro']),
         selo: z.enum(SELOS),
       }),
@@ -45,6 +49,10 @@ export const PreviaPlanilhaSchema = z
     ausentes: z
       .array(z.object({ id: z.string(), nome: z.string() }))
       .openapi({ description: 'Ativos cujo documento não está na planilha, na ordem de cadastro' }),
+    novosComEmail: z.number().int().optional().openapi({
+      description:
+        'Linhas "Novo" com e-mail: a importação não manda convite, que sai pelo Editar de cada um. A API sempre manda.',
+    }),
   })
   .openapi('PreviaPlanilha')
 
@@ -58,10 +66,11 @@ export const ResultadoImportacaoSchema = z
 
 const ArquivoPlanilhaSchema = z.object({
   // opcional no schema: a ausência vira o erro de domínio `arquivo_obrigatorio` no serviço
-  arquivo: z
-    .any()
-    .optional()
-    .openapi({ type: 'string', format: 'binary', description: '.xlsx, .xls ou .csv, até 5 MB' }),
+  arquivo: z.any().optional().openapi({
+    type: 'string',
+    format: 'binary',
+    description: '.xlsx, .xls, .csv ou .tsv (inclusive UTF-16), até 5 MB',
+  }),
 })
 const ImportacaoFormSchema = ArquivoPlanilhaSchema.extend({
   desativarAusentes: z
@@ -80,7 +89,7 @@ const errosDeAcesso = {
   403: respostaErro('Só para a gestão'),
 }
 const errosDoArquivo = {
-  413: respostaErro('Planilha acima de 5 MB'),
+  413: respostaErro('Planilha acima de 5 MB, ou .xlsx acima de 50 MB descompactado'),
   422: respostaErro('Sem arquivo, ilegível, sem linhas ou acima de 2000 linhas'),
 }
 const arquivoXlsx = (descricao: string) => ({

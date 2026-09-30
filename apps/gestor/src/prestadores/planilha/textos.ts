@@ -17,6 +17,26 @@ export function resumoDaPrevia(r: { novos: number; atualizados: number; erros: n
   return partes.join(' · ')
 }
 
+/**
+ * As especialidades de uma linha da conferência, na ordem da planilha, com as que não casam com
+ * nenhum tipo ativo (a importação as ignora) marcadas como "(ignorada)".
+ */
+export function especialidadesDaLinha(linha: {
+  especialidades: readonly string[]
+  especialidadesIgnoradas?: readonly string[]
+}): { texto: string; ignorada: boolean }[] {
+  const ignoradas = new Set(linha.especialidadesIgnoradas)
+  return linha.especialidades.map((nome) =>
+    ignoradas.has(nome)
+      ? { texto: `${nome} (ignorada)`, ignorada: true }
+      : { texto: nome, ignorada: false },
+  )
+}
+
+/** Aviso da conferência quando há novos com e-mail: a importação não manda convites. */
+export const AVISO_CONVITE =
+  'Os novos credenciados não recebem convite automático; envie pelo Editar de cada um.'
+
 /** Descrição do "Desativar quem não está na planilha", com todos os nomes. */
 export function textoDosAusentes(nomes: readonly string[]): string {
   const quem =
