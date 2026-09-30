@@ -1,17 +1,26 @@
 <script setup lang="ts">
-import { dataISO, RussoIcone } from '@kgb/ui'
+import { dataISO, RussoIcone, urlMapa } from '@kgb/ui'
 import { computed, onBeforeUnmount, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { mensagemDeErro } from '../../erros'
 import { toastGestor } from '../../toast'
-import { usarCriarAcionamento, usarPrestadoresAtivos, usarTipos } from '../dados'
+import { usarCriarAcionamento, usarTipos } from '../dados'
 import { reiniciarLista } from '../estadoLista'
+import BuscaTipos from './BuscaTipos.vue'
+import CampoBusca from './CampoBusca.vue'
+import { usarAssinantes, usarEnderecoDoCep, usarPrestadoresProximos } from './dados'
 import {
-  alternarTipo,
+  cepDeReferencia,
   corpoDoFormulario,
+  digitosCep,
+  enderecoDoMapa,
+  erroDoCep,
+  filtrarPrestadores,
+  formatarCep,
   formularioInicial,
   formularioValido,
   prestadorPadrao,
+  type OpcaoBusca,
   previaChecklist,
   rotuloContagem,
   rotuloPrestador,
@@ -20,22 +29,101 @@ import {
 const emit = defineEmits<{ fechar: [] }>()
 const router = useRouter()
 const { data: tipos, isError: erroTipos, error: falhaTipos, refetch: recarregarTipos } = usarTipos()
+const { mutateAsync: criar, isPending: criando } = usarCriarAcionamento()
+
+const form = reactive(formularioInicial(dataISO(new Date()), []))
+
+// Cliente: a busca vai à API 250 ms depois da última tecla (apagar tudo busca na hora).
+const buscaCliente = ref('')
+const termoCliente = ref('')
+let esperaCliente: ReturnType<typeof setTimeout> | undefined
+watch(buscaCliente, (texto) => {
+  clearTimeout(esperaCliente)
+  if (!texto.trim()) termoCliente.value = ''
+  else esperaCliente = setTimeout(() => (termoCliente.value = texto), 250)
+})
+onBeforeUnmount(() => clearTimeout(esperaCliente))
+const { data: assinantes, isFetching: buscandoClientes } = usarAssinantes(termoCliente)
+const opcoesClientes = computed<OpcaoBusca[]>(() =>
+  (assinantes.value ?? []).map((a) => ({ id: a.id, titulo: a.nome, detalhe: a.endereco })),
+)
+function escolherAssinante(id: string) {
+  const escolhido = assinantes.value?.find((a) => a.id === id)
+  if (escolhido) form.assinante = escolhido
+}
+
+// Outro endereço: com os 8 dígitos, rua, bairro e cidade vêm da consulta do CEP.
+const cepTocado = ref(false)
+const cepConsultado = computed(() => (form.outroEndereco ? digitosCep(form.cep) : ''))
+const {
+  data: enderecoCep,
+  error: falhaCep,
+  isFetching: consultandoCep,
+} = usarEnderecoDoCep(cepConsultado)
+/** Rua e bairro vindos do CEP ficam só para leitura; num CEP geral de cidade, são digitados. */
+const fixos = reactive({ logradouro: false, bairro: false })
+function preencherPeloCep() {
+  const e = cepConsultado.value.length === 8 ? enderecoCep.value : undefined
+  form.logradouro = e?.logradouro ?? ''
+  form.bairro = e?.bairro ?? ''
+  form.cidade = e?.cidade ?? ''
+  fixos.logradouro = !!e?.logradouro
+  fixos.bairro = !!e?.bairro
+}
+watch([cepConsultado, enderecoCep], preencherPeloCep)
+function digitarCep(evento: Event) {
+  const campo = evento.target as HTMLInputElement
+  form.cep = formatarCep(campo.value)
+  campo.value = form.cep
+}
+const erroCep = computed(() => {
+  if (!form.outroEndereco) return ''
+  if (cepConsultado.value.length === 8) return falhaCep.value ? mensagemDeErro(falhaCep.value) : ''
+  return cepTocado.value ? erroDoCep(form.cep) : ''
+})
+const mapa = computed(() => enderecoDoMapa(form))
+
+// Prestador: a lista vem do mais próximo ao mais distante do CEP em uso, e o mais próximo já vem
+// escolhido (uma vez por CEP: a escolha da gestora vale até o CEP mudar).
+const cepPrestadores = computed(() => cepDeReferencia(form))
 const {
   data: prestadores,
   isError: erroPrestadores,
   error: falhaPrestadores,
   refetch: recarregarPrestadores,
-} = usarPrestadoresAtivos()
+} = usarPrestadoresProximos(cepPrestadores)
+let cepDaEscolha = ''
+watch(
+  prestadores,
+  (resposta) => {
+    if (!resposta) return
+    const { cep, lista } = resposta
+    if (cep && cep !== cepDaEscolha && lista[0]) {
+      form.prestadorId = lista[0].id
+      cepDaEscolha = cep
+    } else if (!lista.some((p) => p.id === form.prestadorId)) {
+      form.prestadorId = prestadorPadrao(lista)
+    }
+  },
+  { immediate: true },
+)
 // Sem a lista, a falha vira mensagem com "Tentar de novo". Com a lista já carregada, uma nova busca
 // que falhe não esconde o que a gestora está vendo.
 const semTipos = computed(() => erroTipos.value && !tipos.value)
 const semPrestadores = computed(() => erroPrestadores.value && !prestadores.value)
-const { mutateAsync: criar, isPending: criando } = usarCriarAcionamento()
-
-const form = reactive(formularioInicial(dataISO(new Date()), prestadores.value ?? []))
-// Os prestadores podem chegar depois de o modal abrir.
-watch(prestadores, (lista) => {
-  if (lista && !form.prestadorId) form.prestadorId = prestadorPadrao(lista)
+const buscaPrestador = ref('')
+const listaPrestadores = computed(() => prestadores.value?.lista ?? [])
+const opcoesPrestadores = computed<OpcaoBusca[]>(() => {
+  const proximo = cepPrestadores.value ? listaPrestadores.value[0]?.id : undefined
+  return filtrarPrestadores(listaPrestadores.value, buscaPrestador.value).map((p) => ({
+    id: p.id,
+    titulo: p.nome,
+    detalhe: [p.regiao, p.id === proximo ? 'mais próximo' : ''].filter(Boolean).join(' · '),
+  }))
+})
+const rotuloDoPrestador = computed(() => {
+  const escolhido = listaPrestadores.value.find((p) => p.id === form.prestadorId)
+  return escolhido ? rotuloPrestador(escolhido) : ''
 })
 
 const valido = computed(() => formularioValido(form))
@@ -101,6 +189,7 @@ onUnmounted(() => focoAnterior?.focus())
         </button>
       </div>
       <div class="colunas">
+        <!-- Os campos divergem do protótipo a pedido do usuário (30/09): buscas, CEP e mapa. -->
         <div class="campos">
           <label class="campo"
             >Título do acionamento
@@ -111,35 +200,106 @@ onUnmounted(() => focoAnterior?.focus())
             />
           </label>
           <div class="grupo-tipos">
-            <div id="novo-tipos" class="rotulo">Tipos de demanda</div>
+            <label id="novo-tipos" for="novo-busca-tipos" class="rotulo">Tipos de demanda</label>
             <div v-if="semTipos" class="falha" role="alert">
               {{ mensagemDeErro(falhaTipos) }}
               <button type="button" class="tentar" @click="recarregarTipos()">
                 Tentar de novo
               </button>
             </div>
-            <div v-else class="tipos" role="group" aria-labelledby="novo-tipos">
-              <button
-                v-for="t in tipos ?? []"
-                :key="t.id"
-                type="button"
-                class="tipo"
-                :class="{ escolhido: form.tipoIds.includes(t.id) }"
-                :aria-pressed="form.tipoIds.includes(t.id)"
-                @click="form.tipoIds = alternarTipo(form.tipoIds, t.id)"
+            <BuscaTipos v-else id="novo-busca-tipos" v-model="form.tipoIds" :tipos="tipos ?? []" />
+          </div>
+          <div class="campo">
+            <label for="novo-cliente">Cliente</label>
+            <CampoBusca
+              id="novo-cliente"
+              :opcoes="opcoesClientes"
+              :valor="form.assinante?.nome ?? ''"
+              :selecionado-id="form.assinante?.id ?? null"
+              placeholder="Buscar assinante pelo nome"
+              vazio="Nenhum assinante encontrado"
+              :carregando="buscandoClientes"
+              @buscar="buscaCliente = $event"
+              @escolher="escolherAssinante"
+            />
+          </div>
+          <div class="campo endereco">
+            <div class="rotulo-linha">
+              <label :for="form.outroEndereco ? 'novo-cep' : 'novo-endereco'">Endereço</label>
+              <a
+                v-if="mapa"
+                class="mapa"
+                :href="urlMapa(mapa)"
+                target="_blank"
+                rel="noopener"
+                title="Abrir o endereço no Google Maps"
               >
-                <span class="bolinha" :style="{ background: t.cor }" />{{ t.nome }}
-              </button>
+                <RussoIcone nome="pin" :tamanho="16" />Ver no mapa
+              </a>
+            </div>
+            <input
+              v-if="!form.outroEndereco"
+              id="novo-endereco"
+              class="entrada"
+              readonly
+              :value="form.assinante?.endereco ?? ''"
+              placeholder="Escolha o cliente para preencher o endereço"
+            />
+            <label class="outro-endereco">
+              <input v-model="form.outroEndereco" type="checkbox" class="caixa" />
+              Atender em outro endereço
+            </label>
+            <div v-if="form.outroEndereco" class="outro">
+              <div class="linha">
+                <label class="campo cep"
+                  >CEP
+                  <input
+                    id="novo-cep"
+                    class="entrada"
+                    inputmode="numeric"
+                    placeholder="00000-000"
+                    :value="form.cep"
+                    :aria-invalid="!!erroCep || undefined"
+                    aria-describedby="novo-cep-erro"
+                    @input="digitarCep"
+                    @blur="cepTocado = true"
+                  />
+                </label>
+                <label class="campo rua"
+                  >Rua
+                  <input
+                    v-model="form.logradouro"
+                    class="entrada"
+                    :readonly="fixos.logradouro"
+                    :placeholder="consultandoCep ? 'Buscando o CEP…' : 'Preenchida pelo CEP'"
+                  />
+                </label>
+              </div>
+              <div class="linha">
+                <label class="campo casa"
+                  >Número
+                  <input v-model="form.numero" class="entrada" placeholder="Ex.: 410" />
+                </label>
+                <label class="campo complemento"
+                  >Complemento
+                  <input v-model="form.complemento" class="entrada" placeholder="Opcional" />
+                </label>
+              </div>
+              <div class="linha">
+                <label class="campo bairro"
+                  >Bairro
+                  <input v-model="form.bairro" class="entrada" :readonly="fixos.bairro" />
+                </label>
+                <label class="campo cidade"
+                  >Cidade
+                  <input class="entrada" readonly :value="form.cidade" />
+                </label>
+              </div>
+              <div v-if="erroCep" id="novo-cep-erro" class="falha" role="alert">
+                {{ erroCep }}
+              </div>
             </div>
           </div>
-          <label class="campo"
-            >Cliente
-            <input v-model="form.cliente" class="entrada" placeholder="Nome do cliente" />
-          </label>
-          <label class="campo"
-            >Endereço
-            <input v-model="form.endereco" class="entrada" placeholder="Rua, número · bairro" />
-          </label>
           <div class="horarios">
             <label class="campo data"
               >Data
@@ -154,23 +314,27 @@ onUnmounted(() => focoAnterior?.focus())
               <input v-model="form.fim" type="time" class="entrada compacta" />
             </label>
           </div>
-          <div v-if="semPrestadores" class="campo">
-            Prestador
-            <div class="falha" role="alert">
+          <div class="campo prestador">
+            <label for="novo-prestador">Prestador</label>
+            <div v-if="semPrestadores" class="falha" role="alert">
               {{ mensagemDeErro(falhaPrestadores) }}
               <button type="button" class="tentar" @click="recarregarPrestadores()">
                 Tentar de novo
               </button>
             </div>
+            <CampoBusca
+              v-else
+              id="novo-prestador"
+              :opcoes="opcoesPrestadores"
+              :valor="rotuloDoPrestador"
+              :selecionado-id="form.prestadorId || null"
+              placeholder="Buscar por nome ou região"
+              vazio="Nenhum prestador encontrado"
+              para-cima
+              @buscar="buscaPrestador = $event"
+              @escolher="form.prestadorId = $event"
+            />
           </div>
-          <label v-else class="campo"
-            >Prestador
-            <select v-model="form.prestadorId" class="entrada compacta selecao">
-              <option v-for="p in prestadores ?? []" :key="p.id" :value="p.id">
-                {{ rotuloPrestador(p) }}
-              </option>
-            </select>
-          </label>
         </div>
         <div class="previa">
           <div>
@@ -277,6 +441,15 @@ onUnmounted(() => focoAnterior?.focus())
   flex-direction: column;
   gap: 14px;
 }
+/*
+ * Lado a lado com a prévia, a coluna tem no mínimo a altura da coluna do protótipo (medida a 1440
+ * px, com os chips de tipos em três linhas): o modal não muda de altura e os botões ficam no lugar.
+ */
+@media (min-width: 656px) {
+  .campos {
+    min-height: 572px;
+  }
+}
 .campo {
   display: flex;
   flex-direction: column;
@@ -300,8 +473,78 @@ onUnmounted(() => focoAnterior?.focus())
 .entrada:focus {
   border-color: var(--kgb-tinta);
 }
-.selecao {
-  background: var(--kgb-branco);
+.entrada[readonly] {
+  background: var(--kgb-superficie1);
+  color: var(--kgb-secundario);
+}
+.entrada[readonly]:focus {
+  border-color: var(--kgb-divisor);
+}
+.rotulo-linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mapa {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kgb-primaria);
+}
+.mapa:hover {
+  color: var(--kgb-primaria-hover);
+}
+.outro-endereco {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--kgb-texto);
+  cursor: pointer;
+}
+.caixa {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--kgb-primaria);
+}
+.outro {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.linha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.cep {
+  flex: 1 1 120px;
+}
+.rua {
+  flex: 3 1 200px;
+}
+.casa {
+  flex: 1 1 100px;
+}
+.complemento {
+  flex: 2 1 160px;
+}
+.bairro,
+.cidade {
+  flex: 1 1 160px;
+}
+.linha .campo {
+  min-width: 0;
+}
+.linha .entrada {
+  width: 100%;
+  min-width: 0;
 }
 .horarios {
   display: flex;
@@ -323,29 +566,6 @@ onUnmounted(() => focoAnterior?.focus())
   font-size: 13px;
   font-weight: 600;
   color: var(--kgb-texto);
-}
-.tipos {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.tipo {
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--kgb-divisor);
-  border-radius: 999px;
-  background: var(--kgb-branco);
-  color: var(--kgb-texto);
-  font-size: 13px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.tipo.escolhido {
-  border-color: var(--kgb-primaria);
-  background: var(--kgb-primaria-tint);
-  color: var(--kgb-primaria-escura);
 }
 .bolinha {
   width: 8px;
@@ -432,7 +652,7 @@ onUnmounted(() => focoAnterior?.focus())
   background: var(--kgb-primaria-tint-forte);
   color: var(--kgb-primaria-escura);
 }
-/* Falha ao carregar tipos ou prestadores: não existe em repouso. */
+/* Falhas (tipos, prestadores, CEP): não existem em repouso. */
 .falha {
   display: flex;
   flex-wrap: wrap;

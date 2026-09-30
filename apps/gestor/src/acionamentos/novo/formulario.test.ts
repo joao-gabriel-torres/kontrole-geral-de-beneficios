@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { PRESTADORES, TIPOS } from '../../../test/fixtures'
+import { ASSINANTES, PRESTADORES, TIPOS } from '../../../test/fixtures'
 import {
   alternarTipo,
+  cepDeReferencia,
   corpoDoFormulario,
+  digitosCep,
+  enderecoDoFormulario,
+  enderecoDoMapa,
+  erroDoCep,
+  filtrarPrestadores,
+  formatarCep,
   formularioInicial,
   formularioValido,
+  gruposDeTipos,
+  montarEndereco,
   prestadorPadrao,
   previaChecklist,
   rotuloContagem,
@@ -12,40 +21,61 @@ import {
   type FormularioAcionamento,
 } from './formulario'
 
+const aurora = ASSINANTES.find((a) => a.id === 'a1')!
+
 const valido = (dados: Partial<FormularioAcionamento> = {}): FormularioAcionamento => ({
   ...formularioInicial('2026-09-28', PRESTADORES),
   titulo: 'Vazamento no banheiro social',
   tipoIds: ['t1'],
-  cliente: 'Edifício Aurora',
-  endereco: 'Rua Harmonia, 410 · Vila Madalena',
+  assinante: aurora,
   ...dados,
 })
 
+/** Atendimento em outro endereço, com o CEP já consultado. */
+const outroEndereco = (dados: Partial<FormularioAcionamento> = {}) =>
+  valido({
+    outroEndereco: true,
+    cep: '01310-200',
+    logradouro: 'Avenida Paulista',
+    numero: '1578',
+    bairro: 'Bela Vista',
+    cidade: 'São Paulo',
+    ...dados,
+  })
+
 describe('formulário do Novo acionamento', () => {
-  it('abre com hoje, 09:00–11:00 e o Carlos (p1)', () => {
+  it('abre com hoje, 09:00–11:00, sem cliente e com o Carlos (p1)', () => {
     expect(formularioInicial('2026-09-28', PRESTADORES)).toEqual({
       titulo: '',
       tipoIds: [],
-      cliente: '',
-      endereco: '',
+      assinante: null,
+      outroEndereco: false,
+      cep: '',
+      logradouro: '',
+      numero: '',
+      complemento: '',
+      bairro: '',
+      cidade: '',
       data: '2026-09-28',
       inicio: '09:00',
       fim: '11:00',
       prestadorId: 'p1',
     })
   })
+
   it('sem o Carlos entre os ativos, escolhe o primeiro; sem prestadores, nenhum', () => {
     expect(prestadorPadrao(PRESTADORES.filter((p) => p.id !== 'p1'))).toBe('p2')
     expect(prestadorPadrao([])).toBe('')
   })
-  it('é válido com título, tipo, cliente, endereço, data, início < fim e prestador', () => {
+
+  it('é válido com título, tipo, cliente escolhido, data, início < fim e prestador', () => {
     expect(formularioValido(valido())).toBe(true)
   })
+
   it.each([
     ['título vazio', { titulo: '   ' }],
     ['sem tipo', { tipoIds: [] }],
-    ['cliente vazio', { cliente: '' }],
-    ['endereço vazio', { endereco: ' ' }],
+    ['sem cliente escolhido', { assinante: null }],
     ['sem data', { data: '' }],
     ['início igual ao fim', { inicio: '11:00', fim: '11:00' }],
     ['início depois do fim', { inicio: '14:00', fim: '09:30' }],
@@ -53,10 +83,27 @@ describe('formulário do Novo acionamento', () => {
   ])('é inválido com %s', (_, dados) => {
     expect(formularioValido(valido(dados))).toBe(false)
   })
+
+  describe('em outro endereço', () => {
+    it('é válido com CEP de 8 dígitos, rua e número (complemento e bairro são opcionais)', () => {
+      expect(formularioValido(outroEndereco())).toBe(true)
+      expect(formularioValido(outroEndereco({ bairro: '', complemento: '' }))).toBe(true)
+    })
+    it.each([
+      ['CEP incompleto', { cep: '01310-20' }],
+      ['sem CEP', { cep: '' }],
+      ['sem rua', { logradouro: ' ' }],
+      ['sem número', { numero: '  ' }],
+    ])('é inválido com %s', (_, dados) => {
+      expect(formularioValido(outroEndereco(dados))).toBe(false)
+    })
+  })
+
   it('liga e desliga um tipo, guardando a ordem de escolha', () => {
     expect(alternarTipo(['t1'], 't6')).toEqual(['t1', 't6'])
     expect(alternarTipo(['t1', 't6'], 't1')).toEqual(['t6'])
   })
+
   it('monta a prévia do checklist na ordem de escolha, com a contagem', () => {
     const previa = previaChecklist(TIPOS, ['t6', 't1'])
     expect(previa.map((t) => [t.nome, t.etapas.length])).toEqual([
@@ -67,6 +114,7 @@ describe('formulário do Novo acionamento', () => {
     expect(rotuloContagem([])).toBe('0 itens no checklist')
     expect(rotuloContagem(previaChecklist(TIPOS, ['t9']))).toBe('1 item no checklist')
   })
+
   it('rótulo do prestador: "Nome · Região", ou só o nome sem região', () => {
     expect(PRESTADORES.map(rotuloPrestador)).toEqual([
       'Ana Ribeiro · Zona Sul',
@@ -74,20 +122,130 @@ describe('formulário do Novo acionamento', () => {
       'Pedro Lima',
     ])
   })
-  it('manda os textos aparados para a API', () => {
-    expect(
-      corpoDoFormulario(
-        valido({ titulo: '  Vazamento ', cliente: ' Aurora ', endereco: ' Rua A ' }),
-      ),
-    ).toEqual({
+})
+
+describe('busca de tipos', () => {
+  const nomes = (grupos: ReturnType<typeof gruposDeTipos>) =>
+    grupos.map((g) => [g.categoria, g.tipos.map((t) => t.nome)])
+
+  it('agrupa por categoria em ordem alfabética, com "Outros" (sem categoria) no fim', () => {
+    expect(nomes(gruposDeTipos(TIPOS, ''))).toEqual([
+      ['Acabamento', ['Reparo em gesso']],
+      ['Elétrica', ['Revisão elétrica']],
+      ['Hidráulica', ['Vazamento']],
+      ['Outros', ['Vistoria']],
+    ])
+  })
+
+  it('filtra pelo nome do tipo, sem acentos e sem maiúsculas', () => {
+    expect(nomes(gruposDeTipos(TIPOS, '  ELETRICA '))).toEqual([['Elétrica', ['Revisão elétrica']]])
+    expect(nomes(gruposDeTipos(TIPOS, 'gesso'))).toEqual([['Acabamento', ['Reparo em gesso']]])
+  })
+
+  it('filtra pelo nome da categoria (inclusive "Outros")', () => {
+    expect(nomes(gruposDeTipos(TIPOS, 'hidraul'))).toEqual([['Hidráulica', ['Vazamento']]])
+    expect(nomes(gruposDeTipos(TIPOS, 'outros'))).toEqual([['Outros', ['Vistoria']]])
+  })
+
+  it('sem resultado, nenhum grupo', () => {
+    expect(gruposDeTipos(TIPOS, 'jardinagem')).toEqual([])
+  })
+
+  it('ordena os tipos pelo nome dentro da categoria', () => {
+    const eletricos = [
+      { ...TIPOS[1]!, id: 'x1', nome: 'Troca de disjuntor' },
+      { ...TIPOS[1]!, id: 'x2', nome: 'Ponto de luz' },
+      TIPOS[1]!,
+    ]
+    expect(nomes(gruposDeTipos(eletricos, ''))).toEqual([
+      ['Elétrica', ['Ponto de luz', 'Revisão elétrica', 'Troca de disjuntor']],
+    ])
+  })
+})
+
+describe('busca de prestadores', () => {
+  it('filtra por nome ou região, sem acentos, mantendo a ordem da API (proximidade)', () => {
+    expect(filtrarPrestadores(PRESTADORES, '').map((p) => p.id)).toEqual(['p2', 'p1', 'p7'])
+    expect(filtrarPrestadores(PRESTADORES, 'oeste').map((p) => p.id)).toEqual(['p1'])
+    expect(filtrarPrestadores(PRESTADORES, 'LIMA').map((p) => p.id)).toEqual(['p7'])
+    expect(filtrarPrestadores(PRESTADORES, 'xyz')).toEqual([])
+  })
+})
+
+describe('CEP e endereço', () => {
+  it('só os dígitos, no máximo 8', () => {
+    expect(digitosCep(' 01310-200 ')).toBe('01310200')
+    expect(digitosCep('013102009')).toBe('01310200')
+  })
+
+  it('formata com hífen a partir do sexto dígito', () => {
+    expect(formatarCep('01310200')).toBe('01310-200')
+    expect(formatarCep('013102')).toBe('01310-2')
+    expect(formatarCep('01310')).toBe('01310')
+    expect(formatarCep('')).toBe('')
+  })
+
+  it('erro só para CEP começado e incompleto', () => {
+    expect(erroDoCep('')).toBe('')
+    expect(erroDoCep('01310-200')).toBe('')
+    expect(erroDoCep('0131')).toBe('Informe um CEP com 8 dígitos')
+  })
+
+  it('monta o endereço no formato do protótipo, com o complemento depois do número', () => {
+    const base = { logradouro: 'Avenida Paulista', numero: '1578', bairro: 'Bela Vista' }
+    expect(montarEndereco({ ...base, complemento: '' })).toBe('Avenida Paulista, 1578 · Bela Vista')
+    expect(montarEndereco({ ...base, complemento: ' conj. 12 ' })).toBe(
+      'Avenida Paulista, 1578, conj. 12 · Bela Vista',
+    )
+    expect(montarEndereco({ ...base, bairro: '', complemento: '' })).toBe('Avenida Paulista, 1578')
+  })
+
+  it('o endereço e o CEP são os do assinante, ou os digitados em outro endereço', () => {
+    expect(enderecoDoFormulario(valido())).toBe('Rua Harmonia, 410 · Vila Madalena')
+    expect(cepDeReferencia(valido())).toBe('05433000')
+    expect(enderecoDoFormulario(valido({ assinante: null }))).toBe('')
+    expect(cepDeReferencia(valido({ assinante: null }))).toBe('')
+
+    const outro = outroEndereco({ complemento: 'sala 3' })
+    expect(enderecoDoFormulario(outro)).toBe('Avenida Paulista, 1578, sala 3 · Bela Vista')
+    expect(cepDeReferencia(outro)).toBe('01310200')
+    expect(cepDeReferencia(outroEndereco({ cep: '0131' }))).toBe('')
+  })
+
+  it('o mapa usa o endereço sem o complemento, e só com rua e número', () => {
+    expect(enderecoDoMapa(valido())).toBe('Rua Harmonia, 410 · Vila Madalena')
+    expect(enderecoDoMapa(outroEndereco({ complemento: 'sala 3' }))).toBe(
+      'Avenida Paulista, 1578 · Bela Vista',
+    )
+    expect(enderecoDoMapa(outroEndereco({ numero: '' }))).toBe('')
+    expect(enderecoDoMapa(valido({ assinante: null }))).toBe('')
+  })
+})
+
+describe('corpo do POST', () => {
+  it('manda o assinante, o endereço dele, o CEP e os textos aparados', () => {
+    expect(corpoDoFormulario(valido({ titulo: '  Vazamento ' }))).toEqual({
       titulo: 'Vazamento',
-      cliente: 'Aurora',
-      endereco: 'Rua A',
+      cliente: 'Edifício Aurora',
+      endereco: 'Rua Harmonia, 410 · Vila Madalena',
+      assinanteId: 'a1',
+      cep: '05433000',
       data: '2026-09-28',
       inicio: '09:00',
       fim: '11:00',
       tipoIds: ['t1'],
       prestadorId: 'p1',
+    })
+  })
+
+  it('em outro endereço, manda o endereço montado e o CEP digitado', () => {
+    expect(
+      corpoDoFormulario(outroEndereco({ numero: ' 1578 ', complemento: ' sala 3 ' })),
+    ).toMatchObject({
+      cliente: 'Edifício Aurora',
+      endereco: 'Avenida Paulista, 1578, sala 3 · Bela Vista',
+      assinanteId: 'a1',
+      cep: '01310200',
     })
   })
 })
