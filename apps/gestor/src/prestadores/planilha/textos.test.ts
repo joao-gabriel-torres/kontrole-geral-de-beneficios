@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AVISO_CONVITE,
   avisoDeImportacao,
+  especialidadesDaLinha,
   NOME_MODELO,
   nomeDaExportacao,
   resumoDaPrevia,
@@ -57,5 +59,34 @@ describe('nomes dos arquivos', () => {
   })
   it('o modelo tem nome fixo', () => {
     expect(NOME_MODELO).toBe('modelo-credenciados-russo.xlsx')
+  })
+})
+
+describe('especialidadesDaLinha', () => {
+  it('marca as ignoradas pela importação, na ordem da planilha', () => {
+    expect(
+      especialidadesDaLinha({
+        especialidades: ['Vazamento', 'Jardinagem', 'Pintura', 'jardinagem'],
+        especialidadesIgnoradas: ['Jardinagem', 'jardinagem'],
+      }),
+    ).toEqual([
+      { texto: 'Vazamento', ignorada: false },
+      { texto: 'Jardinagem (ignorada)', ignorada: true },
+      { texto: 'Pintura', ignorada: false },
+      { texto: 'jardinagem (ignorada)', ignorada: true },
+    ])
+  })
+  it('sem a lista de ignoradas, nenhuma é marcada', () => {
+    expect(especialidadesDaLinha({ especialidades: ['Pintura'] })).toEqual([
+      { texto: 'Pintura', ignorada: false },
+    ])
+  })
+})
+
+describe('AVISO_CONVITE', () => {
+  it('diz que o convite sai pelo Editar', () => {
+    expect(AVISO_CONVITE).toBe(
+      'Os novos credenciados não recebem convite automático; envie pelo Editar de cada um.',
+    )
   })
 })

@@ -7,7 +7,13 @@ import { usarModalAberto } from '../../modais'
 import { toastGestor } from '../../toast'
 import Interruptor from '../Interruptor.vue'
 import { importacao, usarImportarPlanilha, type PreviaPlanilha } from './estado'
-import { avisoDeImportacao, resumoDaPrevia, textoDosAusentes } from './textos'
+import {
+  AVISO_CONVITE,
+  avisoDeImportacao,
+  especialidadesDaLinha,
+  resumoDaPrevia,
+  textoDosAusentes,
+} from './textos'
 
 const props = defineProps<{ arquivo: File; previa: DeepReadonly<PreviaPlanilha> }>()
 const emit = defineEmits<{ fechar: [] }>()
@@ -79,10 +85,15 @@ onUnmounted(() => focoAnterior?.focus())
             <div class="nome">{{ linha.nome || '(sem nome)' }}</div>
             <div class="documento">{{ linha.documento || '—' }}</div>
           </div>
-          <div class="especialidades">{{ linha.especialidades.join(', ') || '—' }}</div>
+          <div class="especialidades">
+            <span v-for="(e, j) in especialidadesDaLinha(linha)" :key="j"
+              >{{ j ? ', ' : '' }}<span :class="{ ignorada: e.ignorada }">{{ e.texto }}</span></span
+            >{{ linha.especialidades.length ? '' : '—' }}
+          </div>
           <span class="selo" :class="linha.acao">{{ linha.selo }}</span>
         </div>
       </div>
+      <div v-if="previa.novosComEmail" class="aviso-convite">{{ AVISO_CONVITE }}</div>
       <button
         v-if="previa.ausentes.length"
         type="button"
@@ -216,6 +227,10 @@ onUnmounted(() => focoAnterior?.focus())
   font-size: 12px;
   color: var(--kgb-secundario);
 }
+/* Fora do protótipo: a cor das mensagens de validação dele (#B85200). */
+.ignorada {
+  color: var(--kgb-laranja-texto);
+}
 .selo {
   font-size: 12px;
   font-weight: 600;
@@ -234,6 +249,15 @@ onUnmounted(() => focoAnterior?.focus())
 .selo.erro {
   background: var(--kgb-perigo-fundo);
   color: var(--kgb-perigo-texto);
+}
+/* Fora do protótipo: bloco no formato do dos ausentes, nas cores do selo de pendência dele. */
+.aviso-convite {
+  background: var(--kgb-laranja-claro);
+  color: var(--kgb-laranja-texto);
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-size: 13px;
+  font-weight: 500;
 }
 .ausentes {
   border: 0;
