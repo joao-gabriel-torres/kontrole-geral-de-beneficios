@@ -3280,7 +3280,7 @@
             }
           },
           "413": {
-            "description": "Planilha acima de 5 MB",
+            "description": "Planilha acima de 5 MB, ou .xlsx acima de 50 MB descompactado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3380,7 +3380,7 @@
             }
           },
           "413": {
-            "description": "Planilha acima de 5 MB",
+            "description": "Planilha acima de 5 MB, ou .xlsx acima de 50 MB descompactado",
             "content": {
               "application/json": {
                 "schema": {

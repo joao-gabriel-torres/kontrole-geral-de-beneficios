@@ -41,6 +41,8 @@ export const LINHA_MODELO = [
 export const NOME_MODELO = 'modelo-credenciados-russo.xlsx'
 export const LIMITE_LINHAS = 2000
 export const TAMANHO_MAXIMO_PLANILHA = 5 * 1024 * 1024
+/** Teto do conteúdo de um .xlsx descompactado (a proteção contra arquivo inflado). */
+export const LIMITE_DESCOMPACTADO = 50 * 1024 * 1024
 
 /** O `norm` do protótipo: sem acentos, minúsculo e só letras de a a z. */
 export const normalizarTexto = (texto: string): string =>

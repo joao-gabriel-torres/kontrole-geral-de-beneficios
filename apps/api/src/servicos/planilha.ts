@@ -1,3 +1,4 @@
+import { inflateRawSync } from 'node:zlib'
 import type { Prisma } from '@kgb/db'
 import * as XLSX from 'xlsx'
 import type { UsuarioSessao } from '../contexto'
@@ -10,6 +11,7 @@ import {
   decodificarTexto,
   detectarSeparador,
   LARGURAS_EXPORTACAO,
+  LIMITE_DESCOMPACTADO,
   LINHA_MODELO,
   linhasDeExportacao,
   mapearTabelaComColunas,
@@ -24,10 +26,52 @@ import {
 } from '../dominio/planilha'
 import { ErroHttp } from '../erros'
 
+const ehZip = (b: Uint8Array) => b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04
+const ehOle = (b: Uint8Array) => b[0] === 0xd0 && b[1] === 0xcf && b[2] === 0x11 && b[3] === 0xe0
 /** `.xlsx` (ZIP) ou `.xls` (OLE2) vão direto ao SheetJS; o resto é lido como CSV ou TSV. */
-const ehBinario = (b: Uint8Array) =>
-  (b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04) ||
-  (b[0] === 0xd0 && b[1] === 0xcf && b[2] === 0x11 && b[3] === 0xe0)
+const ehBinario = (b: Uint8Array) => ehZip(b) || ehOle(b)
+
+/**
+ * Se o ZIP passa de `limite` bytes descompactado. Percorre as entradas como o SheetJS (o fim do
+ * diretório central, cada entrada dele e o cabeçalho local para onde ela aponta) e descompacta
+ * cada uma até o fim do fluxo, com teto no que falta: não crê nos tamanhos declarados, que um
+ * arquivo malicioso falseia, e conta de novo as entradas que repetem os mesmos dados. Estrutura
+ * que não se lê fica para o SheetJS recusar.
+ */
+export function passaDoLimiteDescompactado(bytes: Uint8Array, limite: number): boolean {
+  const visao = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  const u16 = (i: number) => (i >= 0 && i + 2 <= bytes.length ? visao.getUint16(i, true) : 0)
+  const u32 = (i: number) => (i >= 0 && i + 4 <= bytes.length ? visao.getUint32(i, true) : 0)
+  let fim = bytes.length - 4
+  while (fim >= 0 && u32(fim) !== 0x06054b50) fim--
+  if (fim < 0) return false
+  const entradas = u16(fim + 8)
+  let central = u32(fim + 16)
+  let total = 0
+  for (let n = 0; n < entradas; n++) {
+    if (u32(central) !== 0x02014b50) return false
+    const local = u32(central + 42)
+    central += 46 + u16(central + 28) + u16(central + 30) + u16(central + 32)
+    if (u32(local) !== 0x04034b50) return false
+    const inicio = local + 30 + u16(local + 26) + u16(local + 28)
+    if (u16(local + 8) !== 8) {
+      // Guardada sem compressão: ocupa o que declara, dentro do próprio arquivo.
+      total += Math.min(u32(local + 18), Math.max(bytes.length - inicio, 0))
+    } else {
+      try {
+        const dados = inflateRawSync(bytes.subarray(inicio), {
+          maxOutputLength: limite - total + 1,
+        })
+        total += dados.length
+      } catch (e) {
+        if ((e as { code?: unknown }).code === 'ERR_BUFFER_TOO_LARGE') return true
+        return false
+      }
+    }
+    if (total > limite) return true
+  }
+  return false
+}
 
 const doisDigitos = (n: number) => String(n).padStart(2, '0')
 
@@ -49,8 +93,14 @@ export function lerPlanilha(bytes: Uint8Array): LinhaLida[] {
   return lerPlanilhaComColunas(bytes).linhas
 }
 
-/** Como `lerPlanilha`, dizendo também quais campos o cabeçalho trouxe. */
+/**
+ * Como `lerPlanilha`, dizendo também quais campos o cabeçalho trouxe. Um .xlsx que passa do limite
+ * descompactado é recusado antes do SheetJS, que descompacta tudo em memória.
+ */
 export function lerPlanilhaComColunas(bytes: Uint8Array) {
+  if (ehZip(bytes) && passaDoLimiteDescompactado(bytes, LIMITE_DESCOMPACTADO)) {
+    throw new ErroHttp(413, 'planilha_grande', 'A planilha passa de 50 MB descompactada')
+  }
   let livro: XLSX.WorkBook
   try {
     if (ehBinario(bytes)) {

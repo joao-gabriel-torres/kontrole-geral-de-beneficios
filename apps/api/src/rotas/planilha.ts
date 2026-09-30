@@ -66,14 +66,11 @@ export const ResultadoImportacaoSchema = z
 
 const ArquivoPlanilhaSchema = z.object({
   // opcional no schema: a ausência vira o erro de domínio `arquivo_obrigatorio` no serviço
-  arquivo: z
-    .any()
-    .optional()
-    .openapi({
-      type: 'string',
-      format: 'binary',
-      description: '.xlsx, .xls, .csv ou .tsv (inclusive UTF-16), até 5 MB',
-    }),
+  arquivo: z.any().optional().openapi({
+    type: 'string',
+    format: 'binary',
+    description: '.xlsx, .xls, .csv ou .tsv (inclusive UTF-16), até 5 MB',
+  }),
 })
 const ImportacaoFormSchema = ArquivoPlanilhaSchema.extend({
   desativarAusentes: z
@@ -92,7 +89,7 @@ const errosDeAcesso = {
   403: respostaErro('Só para a gestão'),
 }
 const errosDoArquivo = {
-  413: respostaErro('Planilha acima de 5 MB'),
+  413: respostaErro('Planilha acima de 5 MB, ou .xlsx acima de 50 MB descompactado'),
   422: respostaErro('Sem arquivo, ilegível, sem linhas ou acima de 2000 linhas'),
 }
 const arquivoXlsx = (descricao: string) => ({

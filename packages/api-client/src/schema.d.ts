@@ -1717,7 +1717,7 @@ export interface paths {
                         "application/json": components["schemas"]["Erro"];
                     };
                 };
-                /** @description Planilha acima de 5 MB */
+                /** @description Planilha acima de 5 MB, ou .xlsx acima de 50 MB descompactado */
                 413: {
                     headers: {
                         [name: string]: unknown;
@@ -1813,7 +1813,7 @@ export interface paths {
                         "application/json": components["schemas"]["Erro"];
                     };
                 };
-                /** @description Planilha acima de 5 MB */
+                /** @description Planilha acima de 5 MB, ou .xlsx acima de 50 MB descompactado */
                 413: {
                     headers: {
                         [name: string]: unknown;
