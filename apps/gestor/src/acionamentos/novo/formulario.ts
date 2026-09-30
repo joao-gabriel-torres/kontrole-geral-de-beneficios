@@ -3,6 +3,8 @@ import type { NovoAcionamento } from '../dados'
 
 export type Assinante = components['schemas']['Assinante']
 export type EnderecoCep = components['schemas']['EnderecoCep']
+/** Uma posição no mapa, em graus decimais. */
+export type Localizacao = components['schemas']['Localizacao']
 
 export interface FormularioAcionamento {
   titulo: string
@@ -23,6 +25,11 @@ export interface FormularioAcionamento {
   inicio: string
   fim: string
   prestadorId: string
+  /**
+   * A posição confirmada no mapa ("Localização conferida"). Vale para o cliente, o CEP e o endereço
+   * em uso quando foi confirmada: trocar qualquer um deles a descarta (`chaveDaLocalizacao`).
+   */
+  localizacao: Localizacao | null
 }
 
 /** Uma opção das buscas de cliente e de prestador (título e, abaixo, o detalhe). */
@@ -59,6 +66,7 @@ export function formularioInicial(
     inicio: '09:00',
     fim: '11:00',
     prestadorId: prestadorPadrao(prestadores),
+    localizacao: null,
   }
 }
 
@@ -174,6 +182,30 @@ export function enderecoDoMapa(f: FormularioAcionamento): string {
   if (!f.outroEndereco) return enderecoDoAssinante(f.assinante)
   if (!f.logradouro.trim() || !f.numero.trim()) return ''
   return enderecoDigitado(f, '')
+}
+
+/** Onde o mapa abre quando o endereço não é achado: a Praça da Sé, no centro de São Paulo. */
+export const CENTRO_SAO_PAULO: Localizacao = { latitude: -23.55052, longitude: -46.633308 }
+
+/**
+ * A posição que o mapa já conhece para o endereço em uso: a localização conferida neste formulário
+ * ou, no endereço do próprio assinante, a última conferida para ele. Sem nenhuma, null: o mapa
+ * procura o endereço.
+ */
+export function posicaoConhecida(f: FormularioAcionamento): Localizacao | null {
+  if (f.localizacao) return f.localizacao
+  const a = f.assinante
+  if (f.outroEndereco || a?.latitude == null || a.longitude == null) return null
+  return { latitude: a.latitude, longitude: a.longitude }
+}
+
+/**
+ * O lugar a que a localização conferida se refere: o cliente, se é o endereço dele ou outro, o CEP
+ * e o endereço do mapa. Quando a chave muda, a localização conferida é descartada.
+ */
+export function chaveDaLocalizacao(f: FormularioAcionamento): string {
+  const cep = f.outroEndereco ? digitosCep(f.cep) : (f.assinante?.cep ?? '')
+  return JSON.stringify([f.assinante?.id ?? '', f.outroEndereco, cep, enderecoDoMapa(f)])
 }
 
 /** O CEP em uso (8 dígitos) para ordenar os prestadores, ou vazio. */
@@ -317,6 +349,9 @@ export function corpoDoFormulario(f: FormularioAcionamento): NovoAcionamento {
     endereco: enderecoDoFormulario(f),
     ...(f.assinante ? { assinanteId: f.assinante.id } : {}),
     ...(cep ? { cep } : {}),
+    ...(f.localizacao
+      ? { latitude: f.localizacao.latitude, longitude: f.localizacao.longitude }
+      : {}),
     data: f.data,
     inicio: f.inicio,
     fim: f.fim,
