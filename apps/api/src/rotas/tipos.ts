@@ -18,6 +18,12 @@ const NovoTipoSchema = z.object({ nome: z.string().max(500) }).openapi('NovoTipo
 const AtualizacaoTipoSchema = z
   .object({
     nome: z.string().max(500).optional(),
+    categoria: z
+      .string()
+      .max(500)
+      .nullable()
+      .optional()
+      .openapi({ description: 'Grupo maior da tela; null ou vazio limpa (vira "Outros")' }),
     checklist: z
       .array(z.string().max(1000))
       .max(100)

@@ -84,7 +84,13 @@ export const DetalheAcionamentoSchema = ResumoAcionamentoSchema.extend({
 }).openapi('DetalheAcionamento')
 
 export const TipoDemandaSchema = z
-  .object({ id: z.string(), nome: z.string(), cor: z.string(), checklist: z.array(z.string()) })
+  .object({
+    id: z.string(),
+    nome: z.string(),
+    cor: z.string(),
+    categoria: z.string().nullable().openapi({ description: 'Grupo maior; null vira "Outros"' }),
+    checklist: z.array(z.string()),
+  })
   .openapi('TipoDemanda')
 
 export const PrestadorOpcaoSchema = z

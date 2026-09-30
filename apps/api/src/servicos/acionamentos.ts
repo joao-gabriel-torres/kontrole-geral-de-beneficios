@@ -84,7 +84,7 @@ export async function listarTipos() {
   return prisma.tipoDemanda.findMany({
     where: { excluidoEm: null },
     orderBy: [{ criadoEm: 'asc' }, { id: 'asc' }],
-    select: { id: true, nome: true, cor: true, checklist: true },
+    select: { id: true, nome: true, cor: true, categoria: true, checklist: true },
   })
 }
 

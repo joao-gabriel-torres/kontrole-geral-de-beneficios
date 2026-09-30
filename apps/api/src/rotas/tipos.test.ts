@@ -9,6 +9,7 @@ interface Tipo {
   id: string
   nome: string
   cor: string
+  categoria: string | null
   checklist: string[]
 }
 interface Detalhe {
@@ -55,6 +56,7 @@ describe('POST /api/tipos', () => {
       id: expect.any(String),
       nome: 'Jardinagem',
       cor: '#0069BD',
+      categoria: null,
       checklist: [],
     })
     const segundo = await corpo<Tipo>(pedir('POST', '/api/tipos', gestora, { nome: 'Dedetização' }))
@@ -107,6 +109,7 @@ describe('PATCH /api/tipos/:id', () => {
       id: 't8',
       nome: 'Chaveiro 24h',
       cor: '#A6A6A6',
+      categoria: 'Segurança',
       checklist: ['Avaliar fechadura', 'Testar chaves'],
     }
     expect(await r.json()).toEqual(esperado)
@@ -124,6 +127,29 @@ describe('PATCH /api/tipos/:id', () => {
       pedir('PATCH', '/api/tipos/t6', gestora, { checklist: ['Uma etapa'] }),
     )
     expect(tipo).toMatchObject({ nome: 'Reparo em gesso', checklist: ['Uma etapa'] })
+  })
+
+  it('grava a categoria com trim e limpa com null (a tela mostra "Outros")', async () => {
+    const tipo = await corpo<Tipo>(
+      pedir('PATCH', '/api/tipos/t8', gestora, { categoria: ' Serralheria ' }),
+    )
+    expect(tipo).toMatchObject({ nome: 'Chaveiro', categoria: 'Serralheria' })
+    const limpo = await corpo<Tipo>(pedir('PATCH', '/api/tipos/t8', gestora, { categoria: null }))
+    expect(limpo.categoria).toBeNull()
+  })
+
+  it('só a categoria: nome e checklist ficam como estavam', async () => {
+    const tipo = await corpo<Tipo>(
+      pedir('PATCH', '/api/tipos/t6', gestora, { categoria: 'Reformas' }),
+    )
+    expect(tipo).toMatchObject({ nome: 'Reparo em gesso', categoria: 'Reformas' })
+    expect(tipo.checklist).toHaveLength(4)
+  })
+
+  it('recusa categoria com mais de 60 caracteres (422)', async () => {
+    const r = await pedir('PATCH', '/api/tipos/t8', gestora, { categoria: 'a'.repeat(61) })
+    expect(r.status).toBe(422)
+    expect(await r.json()).toMatchObject(erro('texto_longo', 'A categoria pode ter até 60 caracteres'))
   })
 
   it('o próprio nome em outra grafia não conta como duplicado', async () => {

@@ -9,9 +9,19 @@ describe('GET /api/tipos', () => {
   it('lista os tipos com o checklist, na ordem do cadastro', async () => {
     const r = await app.request('/api/tipos', { headers: await entrar(app, EMAIL_PRESTADOR_DEV) })
     expect(r.status).toBe(200)
-    const tipos = (await r.json()) as { nome: string; cor: string; checklist: string[] }[]
+    const tipos = (await r.json()) as {
+      nome: string
+      cor: string
+      categoria: string | null
+      checklist: string[]
+    }[]
     expect(tipos).toHaveLength(8)
-    expect(tipos[0]).toMatchObject({ id: 't1', nome: 'Vazamento', cor: '#0069BD' })
+    expect(tipos[0]).toMatchObject({
+      id: 't1',
+      nome: 'Vazamento',
+      cor: '#0069BD',
+      categoria: 'Hidráulica',
+    })
     expect(tipos[0]!.checklist).toHaveLength(5)
   })
 })
