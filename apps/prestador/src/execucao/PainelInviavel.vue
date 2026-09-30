@@ -30,13 +30,43 @@ function limpar() {
   comentario.value = ''
 }
 
+const painel = ref<HTMLElement>()
+/** Quem tinha o foco ao abrir ("Marcar como inviável"): recebe o foco de volta ao fechar. */
+let focoAnterior: HTMLElement | null = null
+
+// Depois do DOM atualizado: ao abrir, o painel já existe; ao fechar, a tela por trás já saiu do
+// `inert` (um elemento inerte não recebe foco).
 watch(
   () => props.aberto,
   (aberto) => {
-    if (!aberto) limpar()
+    if (aberto) {
+      focoAnterior = document.activeElement instanceof HTMLElement ? document.activeElement : null
+      // O painel, e não o textarea: o foco no textarea muda a borda dele, e o protótipo abre sem.
+      painel.value?.focus()
+    } else {
+      limpar()
+      focoAnterior?.focus()
+      focoAnterior = null
+    }
   },
+  { flush: 'post' },
 )
 onBeforeUnmount(limpar)
+
+function fecharComEsc(evento: KeyboardEvent) {
+  if (evento.key === 'Escape') emit('fechar')
+}
+// No document enquanto aberto: o Esc fecha com o foco em qualquer lugar (o foco pode ter ido para
+// o body, por exemplo depois de tocar na sobreposição). A limpeza roda ao fechar e ao desmontar.
+watch(
+  () => props.aberto,
+  (aberto, _anterior, aoLimpar) => {
+    if (!aberto) return
+    document.addEventListener('keydown', fecharComEsc)
+    aoLimpar(() => document.removeEventListener('keydown', fecharComEsc))
+  },
+  { immediate: true },
+)
 
 function adicionar(foto: FotoCapturada) {
   if (fotos.value.length >= MAXIMO_FOTOS_INVIAVEL) return
@@ -66,15 +96,15 @@ function enviar() {
 </script>
 
 <template>
-  <div
-    v-if="aberto"
-    class="sobreposicao"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="titulo-inviavel"
-    @keydown.esc="$emit('fechar')"
-  >
-    <div class="painel">
+  <div v-if="aberto" class="sobreposicao">
+    <div
+      ref="painel"
+      class="painel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="titulo-inviavel"
+      tabindex="-1"
+    >
       <div class="alca" />
       <div>
         <div id="titulo-inviavel" class="titulo-painel">Marcar como inviável</div>
@@ -116,13 +146,18 @@ function enviar() {
   flex-direction: column;
   justify-content: flex-end;
 }
+/* Os 28px de baixo são do protótipo; a área segura soma o indicador de início do iPhone. */
 .painel {
   background: #fff;
   border-radius: 24px 24px 0 0;
-  padding: 12px 24px 28px;
+  padding: 12px 24px calc(28px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+/* O painel é o contêiner do diálogo, não um controle: recebe o foco ao abrir, sem contorno. */
+.painel:focus {
+  outline: none;
 }
 .alca {
   width: 40px;

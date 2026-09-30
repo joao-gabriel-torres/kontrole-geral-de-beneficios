@@ -1,4 +1,5 @@
-import { reactive } from 'vue'
+import { reactive, watch } from 'vue'
+import { sessao } from '../sessao'
 import type { FiltroLista } from './filtros'
 
 /**
@@ -14,3 +15,9 @@ export function reiniciarLista(): void {
   estadoLista.filtro = 'todos'
   estadoLista.busca = ''
 }
+
+// A busca pode conter nome de cliente: nada sobrevive à troca de conta (saída OU sessão recusada).
+watch(
+  () => sessao.usuario,
+  () => reiniciarLista(),
+)

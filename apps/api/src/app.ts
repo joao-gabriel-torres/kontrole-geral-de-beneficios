@@ -1,8 +1,9 @@
 import { OpenAPIHono } from '@hono/zod-openapi'
+import { Prisma } from '@kgb/db'
 import { Scalar } from '@scalar/hono-api-reference'
 import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
-import { auth } from './auth'
+import { auth, guardaAuth } from './auth'
 import type { Ambiente } from './contexto'
 import { ErroDominio } from './dominio/acionamento'
 import { env } from './env'
@@ -10,11 +11,27 @@ import { corpoErro, ErroHttp } from './erros'
 import { sessao } from './middlewares/sessao'
 import { rotasAcionamentos } from './rotas/acionamentos'
 import { rotasArquivos } from './rotas/arquivos'
+import { rotasAssinantes } from './rotas/assinantes'
+import { rotasCadastroPrestadores } from './rotas/cadastro-prestadores'
 import { rotasCatalogo } from './rotas/catalogo'
+import { rotasCep } from './rotas/cep'
+import { rotasConvites } from './rotas/convites'
 import { rotasExecucao } from './rotas/execucao'
+import { rotasGeocodificacao } from './rotas/geocodificacao'
 import { rotasPrestador } from './rotas/prestador'
 import { rotasMe } from './rotas/me'
+import { rotasPainel } from './rotas/painel'
+import { rotasPlanilha } from './rotas/planilha'
 import { rotasSaude } from './rotas/saude'
+import { rotasTipos } from './rotas/tipos'
+
+/** SQLSTATE do Postgres dentro do erro do Prisma (P2010 traz o código no driver ou na mensagem). */
+function codigoPostgres(erro: Prisma.PrismaClientKnownRequestError): string | undefined {
+  const causa = (erro.meta as { driverAdapterError?: { cause?: { code?: unknown } } } | undefined)
+    ?.driverAdapterError?.cause
+  if (typeof causa?.code === 'string') return causa.code
+  return /Code: `(\w+)`/.exec(erro.message)?.[1]
+}
 
 export const INFO_OPENAPI = {
   openapi: '3.1.0',
@@ -48,7 +65,10 @@ export function criarApp() {
       exposeHeaders: ['set-auth-token'],
     }),
   )
-  app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
+  // A foto assinada responde sem ler a sessão: a <img> do gestor web leva cookie, e cada miniatura
+  // faria uma consulta à toa.
+  app.route('/', rotasArquivos)
+  app.on(['GET', 'POST'], '/api/auth/*', guardaAuth, (c) => auth.handler(c.req.raw))
   app.use('/api/*', sessao)
 
   app.openAPIRegistry.registerComponent('securitySchemes', 'Bearer', {
@@ -58,10 +78,18 @@ export function criarApp() {
   app.route('/', rotasSaude)
   app.route('/', rotasMe)
   app.route('/', rotasAcionamentos)
+  app.route('/', rotasAssinantes)
+  app.route('/', rotasCep)
+  app.route('/', rotasGeocodificacao)
   app.route('/', rotasCatalogo)
   app.route('/', rotasExecucao)
-  app.route('/', rotasArquivos)
   app.route('/', rotasPrestador)
+  app.route('/', rotasPainel)
+  app.route('/', rotasTipos)
+  // A planilha antes do cadastro: /api/prestadores/planilha… não pode cair em /api/prestadores/{id}.
+  app.route('/', rotasPlanilha)
+  app.route('/', rotasConvites)
+  app.route('/', rotasCadastroPrestadores)
 
   app.doc31('/api/openapi.json', INFO_OPENAPI)
   app.get('/api/docs', Scalar({ url: '/api/openapi.json' }))
@@ -70,6 +98,15 @@ export function criarApp() {
   app.onError((erro, c) => {
     if (erro instanceof ErroDominio || erro instanceof ErroHttp) {
       return c.json(corpoErro(erro.codigo, erro.message), erro.status)
+    }
+    // Texto com byte nulo: o Postgres o recusa (22021) antes de olhar o WHERE. Vindo de um
+    // parâmetro de rota (%00 no caminho), é um id que nunca existe: 404. Vindo do corpo ou da
+    // query, é entrada inválida: 422. Nunca 500 com stack no log.
+    if (erro instanceof Prisma.PrismaClientKnownRequestError && codigoPostgres(erro) === '22021') {
+      if (new URL(c.req.url).pathname.includes('%00')) {
+        return c.json(corpoErro('nao_encontrado', 'Registro não encontrado'), 404)
+      }
+      return c.json(corpoErro('validacao', 'Dados inválidos'), 422)
     }
     if (erro instanceof HTTPException) {
       const codigo =

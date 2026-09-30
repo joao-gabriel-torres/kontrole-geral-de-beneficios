@@ -3,16 +3,18 @@ import { FormularioLogin } from '@kgb/ui'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { destinoSeguro } from '../router'
-import { entrar, mensagemDoMotivo } from '../sessao'
+import { avisoDoMotivo, entrar, mensagemDoMotivo } from '../sessao'
 
 const rota = useRoute()
 const router = useRouter()
 const enviando = ref(false)
 const erro = ref<string | null>(mensagemDoMotivo(rota.query.motivo))
+const aviso = ref<string | null>(avisoDoMotivo(rota.query.motivo))
 
 async function enviar(email: string, senha: string) {
   enviando.value = true
   erro.value = null
+  aviso.value = null
   const resultado = await entrar(email, senha)
   enviando.value = false
   if (resultado.ok) await router.replace(destinoSeguro(rota.query.voltar))
@@ -24,6 +26,7 @@ async function enviar(email: string, senha: string) {
   <FormularioLogin
     subtitulo="App do prestador"
     :erro="erro"
+    :aviso="aviso"
     :enviando="enviando"
     @enviar="enviar"
   />

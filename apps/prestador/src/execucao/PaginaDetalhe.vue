@@ -38,6 +38,8 @@ const editavel = computed(() => (d.value ? podeEditar(d.value.status) : false))
 const faixa = computed(() => (d.value ? faixaDoStatus(d.value) : null))
 const tipos = computed(() => d.value?.tipos.map((t) => t.nome).join(' + ') ?? '')
 const andamento = computed(() => progresso(d.value?.etapas ?? { feitas: 0, total: 0 }))
+/** O Google Maps no local do atendimento: a posição conferida no mapa, quando há, ou o endereço. */
+const rota = computed(() => (d.value ? urlMapa(d.value.endereco, d.value) : ''))
 const envio = computed(() =>
   d.value
     ? avaliarEnvio({
@@ -93,7 +95,8 @@ function voltar() {
 
 <template>
   <div class="detalhe">
-    <div class="cabecalho">
+    <!-- Com o painel "Marcar como inviável" aberto, a tela por trás fica inerte: o Tab não sai dele. -->
+    <div class="cabecalho" :inert="painelInviavel || undefined">
       <button type="button" class="voltar" aria-label="Voltar" @click="voltar">
         <RussoIcone nome="chevron-right" :tamanho="20" class="seta" />
       </button>
@@ -101,7 +104,7 @@ function voltar() {
       <div class="espaco" />
     </div>
 
-    <div v-if="d" class="corpo">
+    <div v-if="d" class="corpo" :inert="painelInviavel || undefined">
       <div class="identificacao">
         <StatusChip class="chip-status" :status="d.status" :inviavel="d.inviavel" />
         <div class="titulo-detalhe">{{ d.titulo }}</div>
@@ -116,7 +119,7 @@ function voltar() {
         <div class="linha-info">
           <RussoIcone nome="pin" :tamanho="20" />
           <div class="texto-info endereco">{{ d.endereco }}</div>
-          <a class="link-rota" :href="urlMapa(d.endereco)" target="_blank" rel="noopener">Rota</a>
+          <a class="link-rota" :href="rota" target="_blank" rel="noopener">Rota</a>
         </div>
         <div class="linha-info">
           <RussoIcone nome="description" :tamanho="20" />
@@ -192,7 +195,7 @@ function voltar() {
         @remover-foto="acoes.removerFoto"
       />
     </div>
-    <div v-else-if="acoes.erro.value" class="corpo">
+    <div v-else-if="acoes.erro.value" class="corpo" :inert="painelInviavel || undefined">
       <div class="erro">{{ mensagemDeErro(acoes.erro.value) }}</div>
     </div>
 
@@ -201,6 +204,7 @@ function voltar() {
       :status="d.status"
       :envio="envio"
       :ocupado="ocupado"
+      :inert="painelInviavel || undefined"
       @iniciar="acoes.iniciar"
       @enviar="enviar"
       @inviavel="painelInviavel = true"

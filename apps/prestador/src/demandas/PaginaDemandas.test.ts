@@ -29,6 +29,8 @@ const resumo = (
   ],
   etapas: { feitas: 3, total: 9 },
   ultimoEnvioEm: null,
+  latitude: null,
+  longitude: null,
   ...extra,
 })
 const ok = (data: unknown) => ({ data, response: new Response(null, { status: 200 }) })
@@ -78,6 +80,26 @@ describe('PaginaDemandas', () => {
     await flushPromises()
     expect(router.currentRoute.value.query.filtro).toBe('analise')
     expect(wrapper.find('.vazio').text()).toBe('Nada por aqui.')
+  })
+
+  it('o chip ativo é anunciado como pressionado', async () => {
+    const { wrapper } = await montar(PaginaDemandas, { rotaInicial: '/demandas?filtro=corrigir' })
+    expect(wrapper.findAll('.chip-filtro').map((c) => c.attributes('aria-pressed'))).toEqual([
+      'false',
+      'true',
+      'false',
+      'false',
+    ])
+  })
+
+  it('Espaço no cartão abre o detalhe, sem rolar a página', async () => {
+    const { wrapper, router } = await montar(PaginaDemandas, { rotaInicial: '/demandas' })
+    const espaco = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })
+    wrapper.findAll('.cartao')[1]!.element.dispatchEvent(espaco)
+    await flushPromises()
+    expect(espaco.defaultPrevented).toBe(true)
+    expect(router.currentRoute.value.name).toBe('detalhe')
+    expect(router.currentRoute.value.params.id).toBe('2')
   })
 
   it('tocar no cartão abre o detalhe', async () => {

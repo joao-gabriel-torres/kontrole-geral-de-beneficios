@@ -11,10 +11,13 @@ type Ponto = { x: number; y: number }
 
 const PASTA_PROTOTIPO = fileURLToPath(new URL('../../docs/design/', import.meta.url))
 const SAIDA = fileURLToPath(new URL('./.saida/', import.meta.url))
+const PASTA_FIXTURES = fileURLToPath(new URL('./fixtures/', import.meta.url))
 /** Fração máxima de pixels diferentes na região inteira. */
 const LIMITE = Number(process.env.LIMITE_DIFERENCA ?? '0.002')
 /** Fração máxima de pixels diferentes em relação aos pixels de conteúdo (não-fundo) do protótipo. */
 const LIMITE_CONTEUDO = Number(process.env.LIMITE_CONTEUDO ?? '0.02')
+/** Sensibilidade por pixel do pixelmatch (0 a 1): menor detecta divergências mais sutis de cor. */
+const LIMIAR_PIXEL = Number(process.env.LIMIAR_PIXEL ?? '0.05')
 const URL_APP = {
   gestor: process.env.URL_GESTOR ?? 'http://localhost:5173',
   prestador: process.env.URL_PRESTADOR ?? 'http://localhost:5174',
@@ -56,13 +59,35 @@ function servirPrototipo(): Promise<{ url: string; fechar: () => void }> {
   )
 }
 
+const escapar = (texto: string) => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 async function aplicarPassos(pagina: Page, passos: readonly Passo[] = []) {
+  // A fonte muda a largura dos textos: clicar antes de ela chegar mede e rola diferente.
+  await pagina.evaluate(() => document.fonts.ready)
   for (const passo of passos) {
-    const alvo =
-      passo.papel === 'text'
-        ? pagina.getByText(passo.clicar, { exact: true })
-        : pagina.getByRole(passo.papel ?? 'button', { name: passo.clicar, exact: true })
-    await alvo.first().click()
+    if ('esperar' in passo) {
+      await pagina.waitForTimeout(passo.esperar)
+      continue
+    }
+    if ('preencher' in passo) {
+      const porPlaceholder = pagina.getByPlaceholder(passo.preencher, { exact: true })
+      const campo = (await porPlaceholder.count())
+        ? porPlaceholder
+        : pagina.getByLabel(passo.preencher, { exact: true })
+      await campo.first().fill(passo.com)
+    } else if ('anexar' in passo) {
+      await pagina
+        .locator('input[type="file"]')
+        .first()
+        .setInputFiles(join(PASTA_FIXTURES, passo.anexar))
+    } else {
+      const nome = passo.inicio ? new RegExp(`^${escapar(passo.clicar)}(\\s|$)`) : passo.clicar
+      const alvo =
+        passo.papel === 'text'
+          ? pagina.getByText(nome, { exact: true })
+          : pagina.getByRole(passo.papel ?? 'button', { name: nome, exact: true })
+      await alvo.first().click()
+    }
     await pagina.waitForTimeout(250)
   }
   await pagina.mouse.move(1, 1)
@@ -75,8 +100,10 @@ async function abrirPrototipo(navegador: Browser, url: string, caso: Caso): Prom
     localStorage.removeItem('acionamentos_v3')
     localStorage.setItem('acionamentos_v3_mode', modo)
   }, caso.modo)
-  await pagina.goto(url)
-  await pagina.getByText('Restaurar exemplo').waitFor()
+  // O protótipo busca fontes e scripts em CDN: esperar o "load" deixa a rodada à mercê da rede.
+  // A fonte é aguardada antes dos passos (document.fonts.ready).
+  await pagina.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 })
+  await pagina.getByText('Restaurar exemplo').waitFor({ timeout: 60_000 })
   if (caso.navegarPrototipo) {
     await pagina
       .getByRole('button', { name: new RegExp(`^\\s*${caso.navegarPrototipo}`) })
@@ -154,6 +181,35 @@ function mascararCantosDaMoldura(imgs: PNG[], caso: Caso, r: Regiao): void {
   }
 }
 
+type Caixa = { x: number; y: number; largura: number; altura: number }
+
+/** Caixas dos seletores `ocultarNoApp`, em coordenadas da área útil do app. */
+async function caixasOcultas(pagina: Page, seletores: readonly string[] = []): Promise<Caixa[]> {
+  const caixas: Caixa[] = []
+  for (const seletor of seletores) {
+    for (const el of await pagina.locator(seletor).all()) {
+      const c = await el.boundingBox()
+      if (c) caixas.push({ x: c.x, y: c.y, largura: c.width, altura: c.height })
+    }
+  }
+  return caixas
+}
+
+/** Zera nas duas imagens os pixels da região que caem numa caixa oculta. */
+function ocultar(imgs: PNG[], r: Regiao, caixas: readonly Caixa[]): void {
+  for (const c of caixas) {
+    const x0 = Math.max(Math.floor(c.x) - r.x, 0)
+    const y0 = Math.max(Math.floor(c.y) - r.y, 0)
+    const x1 = Math.min(Math.ceil(c.x + c.largura) - r.x, r.largura)
+    const y1 = Math.min(Math.ceil(c.y + c.altura) - r.y, r.altura)
+    for (let j = y0; j < y1; j++) {
+      for (let i = x0; i < x1; i++) {
+        for (const img of imgs) img.data.writeUInt32BE(0, (j * r.largura + i) * 4)
+      }
+    }
+  }
+}
+
 async function recortar(pagina: Page, origem: Ponto, r: Regiao): Promise<PNG> {
   const buffer = await pagina.screenshot({
     clip: { x: origem.x + r.x, y: origem.y + r.y, width: r.largura, height: r.altura },
@@ -181,7 +237,9 @@ interface Diferenca {
 
 function diferenca(a: PNG, b: PNG, arquivoDiff?: string): Diferenca {
   const diff = new PNG({ width: a.width, height: a.height })
-  const pixels = pixelmatch(a.data, b.data, diff.data, a.width, a.height, { threshold: 0.1 })
+  const pixels = pixelmatch(a.data, b.data, diff.data, a.width, a.height, {
+    threshold: LIMIAR_PIXEL,
+  })
   if (arquivoDiff) writeFileSync(arquivoDiff, PNG.sync.write(diff))
   return {
     regiao: pixels / (a.width * a.height),
@@ -204,10 +262,12 @@ try {
     const [app, origemA] = sanidade
       ? await abrirPrototipo(navegador, url, caso)
       : await abrirApp(navegador, caso)
+    const ocultas = sanidade ? [] : await caixasOcultas(app, caso.ocultarNoApp)
     for (const regiao of caso.regioes) {
       const imgP = await recortar(prototipo, origemP, regiao)
       const imgA = await recortar(app, origemA, regiao)
       mascararCantosDaMoldura([imgP, imgA], caso, regiao)
+      ocultar([imgP, imgA], regiao, ocultas)
       const base = join(SAIDA, `${caso.nome}--${regiao.nome}`)
       writeFileSync(`${base}--prototipo.png`, PNG.sync.write(imgP))
       writeFileSync(`${base}--app.png`, PNG.sync.write(imgA))

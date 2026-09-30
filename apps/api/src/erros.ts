@@ -26,11 +26,12 @@ export function respostaErro(descricao: string) {
 
 export class ErroHttp extends Error {
   constructor(
-    readonly status: 401 | 403 | 404 | 409 | 413 | 415 | 422,
+    readonly status: 401 | 403 | 404 | 409 | 413 | 415 | 422 | 502,
     readonly codigo: string,
     mensagem: string,
+    opcoes?: ErrorOptions,
   ) {
-    super(mensagem)
+    super(mensagem, opcoes)
     this.name = 'ErroHttp'
   }
 }

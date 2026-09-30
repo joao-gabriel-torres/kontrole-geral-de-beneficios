@@ -8,7 +8,7 @@ import {
   StatusChip,
   urlMapa,
 } from '@kgb/ui'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import PaginaGestor from '../../componentes/PaginaGestor.vue'
 import { ErroApi, mensagemDeErro } from '../../erros'
 import { toastGestor } from '../../toast'
@@ -18,16 +18,27 @@ import { MENSAGENS_REVISAO, prepararRevisao, ultimaDecisao, type Decisao } from 
 import { urlFoto } from './fotos'
 import { montarLinhaDoTempo } from './linhaDoTempo'
 
-const props = defineProps<{ id: string; origem: 'acionamentos' | 'aprovacoes' }>()
+const props = defineProps<{ id: string; origem: 'acionamentos' | 'aprovacoes' | 'painel' }>()
 
 const { data: acionamento, isError, error } = usarDetalhe(() => props.id)
-const { mutateAsync: revisar, isPending: enviando } = usarRevisao(() => props.id)
+const { mutateAsync: revisar, isPending, variables } = usarRevisao(() => props.id)
+/** A decisão em envio, para o rótulo do botão clicado; null em repouso. */
+const enviando = computed(() => (isPending.value ? (variables.value?.decisao ?? null) : null))
 const observacao = ref('')
+// O componente é reaproveitado entre acionamentos (só o :id muda): a nota de um nunca vai para outro.
+watch(
+  () => props.id,
+  () => {
+    observacao.value = ''
+  },
+)
 
 const voltar = computed(() =>
   props.origem === 'aprovacoes'
     ? { rota: 'aprovacoes', rotulo: 'Aprovações' }
-    : { rota: 'acionamentos', rotulo: 'Acionamentos' },
+    : props.origem === 'painel'
+      ? { rota: 'painel', rotulo: 'Painel' }
+      : { rota: 'acionamentos', rotulo: 'Acionamentos' },
 )
 const historico = computed(() => montarLinhaDoTempo(acionamento.value?.eventos ?? []))
 const decisaoAnterior = computed(() =>
@@ -38,6 +49,9 @@ const temConclusao = computed(
     !!acionamento.value &&
     (acionamento.value.fotosConclusao.length > 0 || !!acionamento.value.comentarioConclusao),
 )
+// Uma nova busca que falha (foco na janela, revisão, API lenta) mantém o dado do cache: o aviso só
+// substitui o Detalhe quando não há o que mostrar.
+const semDetalhe = computed(() => isError.value && !acionamento.value)
 const aviso = computed(() =>
   error.value instanceof ErroApi && error.value.status === 404
     ? 'Acionamento não encontrado.'
@@ -47,7 +61,7 @@ const progressoDemanda = (etapas: readonly { feita: boolean }[]) =>
   `${etapas.filter((e) => e.feita).length}/${etapas.length}`
 
 async function decidir(decisao: Decisao, texto: string) {
-  if (enviando.value) return
+  if (isPending.value) return
   const pedido = prepararRevisao(decisao, texto)
   if (!pedido.ok) return toastGestor.mostrar(pedido.mensagem)
   try {
@@ -65,7 +79,7 @@ async function decidir(decisao: Decisao, texto: string) {
     <RouterLink :to="{ name: voltar.rota }" class="voltar">
       <RussoIcone nome="chevron-right" :tamanho="18" class="seta" />{{ voltar.rotulo }}
     </RouterLink>
-    <div v-if="isError" class="cartao aviso">{{ aviso }}</div>
+    <div v-if="semDetalhe" class="cartao aviso">{{ aviso }}</div>
     <template v-else-if="acionamento">
       <div class="topo">
         <div class="identificacao">
@@ -85,7 +99,7 @@ async function decidir(decisao: Decisao, texto: string) {
               <div class="rotulo">Endereço</div>
               <a
                 class="endereco"
-                :href="urlMapa(acionamento.endereco)"
+                :href="urlMapa(acionamento.endereco, acionamento)"
                 target="_blank"
                 rel="noopener"
                 >{{ acionamento.endereco }}</a

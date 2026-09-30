@@ -2,7 +2,9 @@ import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { APIError } from 'better-auth/api'
 import { bearer } from 'better-auth/plugins'
+import { createMiddleware } from 'hono/factory'
 import { prisma } from './db'
+import { identificadorGravado, PREFIXO_CONVITE } from './dominio/convites'
 import { env } from './env'
 import { prestadorBloqueado } from './prestador-bloqueado'
 
@@ -11,7 +13,20 @@ export const auth = betterAuth({
   basePath: '/api/auth',
   secret: env.BETTER_AUTH_SECRET,
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
-  emailAndPassword: { enabled: true, disableSignUp: true },
+  // Criar a senha pelo convite também serve de redefinição: as sessões abertas com a senha antiga caem.
+  emailAndPassword: { enabled: true, disableSignUp: true, revokeSessionsOnPasswordReset: true },
+  verification: {
+    // O convite (a redefinição de senha) fica gravado só como hash; ver identificadorGravado. Um
+    // convite antigo, em texto puro, ainda vale até vencer: o Better Auth procura os dois.
+    storeIdentifier: {
+      default: 'plain',
+      overrides: {
+        [PREFIXO_CONVITE]: {
+          hash: (identificador) => Promise.resolve(identificadorGravado(identificador)),
+        },
+      },
+    },
+  },
   user: {
     additionalFields: {
       role: { type: 'string', required: false, defaultValue: 'prestador', input: false },
@@ -28,8 +43,8 @@ export const auth = betterAuth({
           })
           if (usuario?.role !== 'gestor' && (await prestadorBloqueado(usuario?.prestadorId))) {
             throw new APIError('FORBIDDEN', {
-              message: 'Seu cadastro de prestador está inativo',
-              code: 'PRESTADOR_INATIVO',
+              message: 'Seu cadastro de prestador foi encerrado',
+              code: 'PRESTADOR_EXCLUIDO',
             })
           }
         },
@@ -38,4 +53,30 @@ export const auth = betterAuth({
   },
   plugins: [bearer()],
   trustedOrigins: env.CORS_ORIGINS,
+})
+
+/** Caminhos que o prestador excluído ainda usa: entrar com outra conta e sair. */
+const LIVRES_DA_GUARDA = /^\/api\/auth\/(sign-in\/|sign-out$)/
+
+/**
+ * A sessão de um prestador excluído não vale nem nas rotas do Better Auth: sem isso, ele continua
+ * lendo a sessão e o token, listando sessões e trocando o perfil. Fica no Hono porque o
+ * `hooks.before` do Better Auth roda antes do plugin `bearer` (não veria o token do app) e também
+ * roda no `auth.api.getSession` do middleware `sessao` (o erro viraria 500 em /api/me).
+ * O inativo passa: ver `prestadorBloqueado`.
+ */
+export const guardaAuth = createMiddleware(async (c, next) => {
+  if (LIVRES_DA_GUARDA.test(c.req.path)) return next()
+  const sessao = await auth.api.getSession({
+    headers: c.req.raw.headers,
+    query: { disableRefresh: true },
+  })
+  const usuario = sessao?.user
+  if (usuario && usuario.role !== 'gestor' && (await prestadorBloqueado(usuario.prestadorId))) {
+    return c.json(
+      { code: 'PRESTADOR_EXCLUIDO', message: 'Seu cadastro de prestador foi encerrado' },
+      401,
+    )
+  }
+  return next()
 })

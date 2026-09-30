@@ -1,8 +1,9 @@
 import { EMAIL_PRESTADOR_DEV, GESTORA_DEV } from '@kgb/db/seed'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { criarAcionamento, formularioFoto, JPEG, loginDePrestador } from '../../test/dados'
 import { entrar } from '../../test/sessao'
 import { criarApp } from '../app'
+import { armazenamento } from '../arquivos'
 import { assinar } from '../arquivos/assinatura'
 import { prisma } from '../db'
 
@@ -16,6 +17,8 @@ beforeAll(async () => {
   carlos = await entrar(app, EMAIL_PRESTADOR_DEV)
   ana = await entrar(app, await loginDePrestador('p2'))
 })
+
+afterEach(() => vi.restoreAllMocks())
 
 const req = (metodo: string, caminho: string, headers: Record<string, string>, corpo?: unknown) =>
   app.request(caminho, {
@@ -229,6 +232,73 @@ describe('fotos', () => {
     expect(await prisma.foto.count({ where: { id: foto.id } })).toBe(0)
     expect((await app.request(foto.url)).status).toBe(404)
   })
+
+  it('remover a foto responde 200 mesmo se o arquivo não puder ser apagado', async () => {
+    const id = await novoIniciado()
+    const foto = await (
+      await req(
+        'POST',
+        `/api/acionamentos/${id}/fotos`,
+        carlos,
+        formularioFoto({ contexto: 'conclusao' }),
+      )
+    ).json()
+    vi.spyOn(armazenamento, 'remover').mockRejectedValueOnce(new Error('armazenamento fora do ar'))
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const r = await req('DELETE', `/api/acionamentos/${id}/fotos/${foto.id}`, carlos)
+    expect(r.status).toBe(200)
+    expect(await prisma.foto.count({ where: { id: foto.id } })).toBe(0)
+    expect(log).toHaveBeenCalledWith(
+      'Não foi possível remover o arquivo',
+      expect.stringContaining(foto.id),
+      expect.any(Error),
+    )
+  })
+
+  it('id com barra codificada responde 404, não 500', async () => {
+    const r = await req(
+      'POST',
+      '/api/acionamentos/..%2F..%2Fx/fotos',
+      carlos,
+      formularioFoto({ contexto: 'conclusao' }),
+    )
+    expect(r.status).toBe(404)
+    expect(await r.json()).toMatchObject({ erro: { codigo: 'nao_encontrado' } })
+  })
+
+  it('id com byte nulo responde 404, não 500', async () => {
+    // O Postgres recusa texto com \0 (22021): não pode virar 500 com stack no log.
+    const r = await req(
+      'POST',
+      '/api/acionamentos/a%00b/fotos',
+      carlos,
+      formularioFoto({ contexto: 'conclusao' }),
+    )
+    expect(r.status).toBe(404)
+    expect(await r.json()).toMatchObject({ erro: { codigo: 'nao_encontrado' } })
+  })
+
+  it('falha ao gravar a foto: a limpeza não troca o erro original', async () => {
+    const id = await novoIniciado()
+    const original = new Error('disco cheio')
+    vi.spyOn(armazenamento, 'salvar').mockRejectedValueOnce(original)
+    const remover = vi
+      .spyOn(armazenamento, 'remover')
+      .mockRejectedValueOnce(new Error('armazenamento fora do ar'))
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const r = await req(
+      'POST',
+      `/api/acionamentos/${id}/fotos`,
+      carlos,
+      formularioFoto({ contexto: 'conclusao' }),
+    )
+    expect(r.status).toBe(500)
+    // A limpeza tem de tentar remover a chave deste acionamento (no S3/R2, objeto parcial órfão).
+    expect(remover).toHaveBeenCalledWith(expect.stringMatching(new RegExp(`^${id}/`)))
+    // o onError da app loga o erro que chegou até ele: tem de ser o original
+    expect(log).toHaveBeenCalledWith(original)
+    expect(await prisma.foto.count({ where: { acionamentoId: id } })).toBe(0)
+  })
 })
 
 describe('enviar para aprovação', () => {
@@ -304,5 +374,40 @@ describe('marcar como inviável', () => {
         await req('POST', `/api/acionamentos/${id}/inviavel`, carlos, formulario('x', 0))
       ).json(),
     ).toMatchObject({ erro: { codigo: 'fotos_insuficientes' } })
+  })
+
+  it('id com barra codificada responde 404', async () => {
+    const r = await req(
+      'POST',
+      '/api/acionamentos/..%2F..%2Fx/inviavel',
+      carlos,
+      formulario('Sem acesso', 1),
+    )
+    expect(r.status).toBe(404)
+  })
+
+  it('falha ao gravar a 2ª foto: a limpeza remove as duas chaves já salvas', async () => {
+    const id = await criarAcionamento(app, gestora)
+    const salvar = vi
+      .spyOn(armazenamento, 'salvar')
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('disco cheio'))
+    const remover = vi.spyOn(armazenamento, 'remover').mockResolvedValue(undefined)
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const r = await req(
+      'POST',
+      `/api/acionamentos/${id}/inviavel`,
+      carlos,
+      formulario('Portão trancado', 2),
+    )
+
+    expect(r.status).toBe(500)
+    expect(salvar).toHaveBeenCalledTimes(2)
+    // As duas chaves deste acionamento vão para a limpeza (no S3/R2, objeto parcial órfão).
+    const chavesSalvas = salvar.mock.calls.map(([chave]) => chave)
+    for (const chave of chavesSalvas) expect(chave).toMatch(new RegExp(`^${id}/`))
+    expect(remover.mock.calls.map(([chave]) => chave).sort()).toEqual([...chavesSalvas].sort())
+    expect(await prisma.foto.count({ where: { acionamentoId: id } })).toBe(0)
   })
 })

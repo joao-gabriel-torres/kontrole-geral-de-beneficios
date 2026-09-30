@@ -24,6 +24,15 @@ textarea,
 select,
 button {
   font-family: inherit;
+}
+/*
+ * Fora de camada, esta regra venceria as do Vuetify (que ficam em @layer) e poria tinta escura no
+ * texto dos v-btn coloridos: os botões do Vuetify seguem a cor do tema.
+ */
+input,
+textarea,
+select,
+button:not(.v-btn) {
   color: var(--kgb-tinta);
 }
 button {

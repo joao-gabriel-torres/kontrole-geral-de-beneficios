@@ -26,6 +26,13 @@ export function opcoesVuetify({ fundo = cores.superficie1 }: OpcoesTemaRusso = {
             success: cores.sucesso,
             warning: cores.laranja,
             info: cores.primaria,
+            // O Vuetify escolhe o texto pelo contraste calculado e pôs tinta escura sobre o azul.
+            'on-primary': cores.branco,
+            'on-secondary': cores.branco,
+            'on-error': cores.branco,
+            'on-success': cores.branco,
+            'on-warning': cores.branco,
+            'on-info': cores.branco,
           },
         },
       },

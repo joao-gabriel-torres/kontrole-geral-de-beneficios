@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { simularApi } from '../../test/api-falsa'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nuncaResponde, simularApi } from '../../test/api-falsa'
 import { contagem, resumo } from '../../test/fixtures'
 import { aguardar, montar } from '../../test/montar'
 import { api } from '../api'
+import { MENSAGEM_FALHA } from '../erros'
 import { estadoLista, reiniciarLista } from './estadoLista'
 import { novoAcionamento } from './novo/estado'
 import PaginaAcionamentos from './PaginaAcionamentos.vue'
@@ -88,6 +89,27 @@ describe('PaginaAcionamentos', () => {
     await aguardar()
     const novas = simulada.chamadas('GET', '/api/acionamentos').slice(antes)
     expect(novas.map((c) => c.params!.query!.busca)).toEqual(['vazamento'])
+  })
+
+  describe('com a API travada', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('depois de 8 s sem resposta, mostra a mensagem de conexão em vez da lista vazia', async () => {
+      simularApi(api, {
+        'GET /api/acionamentos/contagem': contagem(),
+        'GET /api/acionamentos': nuncaResponde,
+      })
+      const { tela } = await montar(PaginaAcionamentos)
+      expect(tela.find('.aviso').exists()).toBe(false)
+      await vi.advanceTimersByTimeAsync(8_000)
+      await aguardar()
+      expect(tela.find('.aviso').text()).toBe(MENSAGEM_FALHA)
+    })
   })
 
   it('lista vazia mostra o aviso', async () => {

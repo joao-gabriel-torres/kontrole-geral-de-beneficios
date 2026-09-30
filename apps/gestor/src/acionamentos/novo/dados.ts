@@ -1,0 +1,108 @@
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { computed, toValue, type MaybeRefOrGetter } from 'vue'
+import { api } from '../../api'
+import { CHAVES, comLimite } from '../../consultas'
+import { exigir } from '../../erros'
+import type { EnderecoDoPonto, Localizacao } from './formulario'
+
+/** Assinantes ativos cujo nome contém a busca (a API devolve no máximo 8, por nome). */
+export function usarAssinantes(busca: MaybeRefOrGetter<string>) {
+  return useQuery({
+    queryKey: computed(() => ['assinantes', toValue(busca).trim()] as const),
+    queryFn: ({ queryKey, signal }) =>
+      exigir(
+        comLimite(
+          (s) =>
+            api.GET('/api/assinantes', {
+              params: { query: { busca: queryKey[1] || undefined } },
+              signal: s,
+            }),
+          signal,
+        ),
+      ),
+    // Enquanto a próxima busca não chega, a lista mostra a anterior em vez de piscar vazia.
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  })
+}
+
+/**
+ * Prestadores ativos; com um CEP, do mais próximo ao mais distante. A resposta leva o CEP da
+ * consulta: o modal só escolhe o mais próximo com a lista daquele CEP. A chave começa com
+ * ['prestadores', 'ativos'], invalidada pelas mudanças no cadastro.
+ */
+export function usarPrestadoresProximos(cep: MaybeRefOrGetter<string>) {
+  return useQuery({
+    queryKey: computed(() => [...CHAVES.prestadoresAtivos, toValue(cep)] as const),
+    queryFn: async ({ queryKey, signal }) => ({
+      cep: queryKey[2],
+      lista: await exigir(
+        comLimite(
+          (s) =>
+            api.GET('/api/prestadores', {
+              params: { query: { status: 'ativo', cep: queryKey[2] || undefined } },
+              signal: s,
+            }),
+          signal,
+        ),
+      ),
+    }),
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  })
+}
+
+/**
+ * A posição de um endereço no mapa (Nominatim pela API), para abrir o "Ver no mapa" nela. Uma
+ * tentativa só: sem resultado ou com o serviço fora, o mapa abre no centro de São Paulo e a gestora
+ * arrasta o pino. Só busca quando `habilitada` (sem posição já conhecida) e com um endereço.
+ */
+export function usarGeocodificacao(
+  endereco: MaybeRefOrGetter<string>,
+  habilitada: MaybeRefOrGetter<boolean>,
+) {
+  return useQuery({
+    queryKey: computed(() => ['geocodificacao', toValue(endereco)] as const),
+    queryFn: ({ queryKey, signal }) =>
+      exigir(
+        comLimite(
+          (s) =>
+            api.GET('/api/geocodificacao', {
+              params: { query: { endereco: queryKey[1] } },
+              signal: s,
+            }),
+          signal,
+        ),
+      ),
+    enabled: computed(() => toValue(habilitada) && !!toValue(endereco)),
+    retry: false,
+    staleTime: Infinity,
+  })
+}
+
+/**
+ * A consulta reversa do pino movido: o endereço do ponto (Nominatim pela API), para preencher o
+ * outro endereço. Uma tentativa só, guardada por ponto; a falha fica para o modal avisar.
+ */
+export function usarEnderecoDoPonto() {
+  const consultas = useQueryClient()
+  return (ponto: Localizacao): Promise<EnderecoDoPonto> =>
+    consultas.fetchQuery({
+      queryKey: ['geocodificacao-reversa', ponto.latitude, ponto.longitude] as const,
+      queryFn: ({ queryKey, signal }) =>
+        exigir(
+          comLimite(
+            (s) =>
+              api.GET('/api/geocodificacao/reversa', {
+                params: {
+                  query: { latitude: String(queryKey[1]), longitude: String(queryKey[2]) },
+                },
+                signal: s,
+              }),
+            signal,
+          ),
+        ),
+      retry: false,
+      staleTime: Infinity,
+    })
+}

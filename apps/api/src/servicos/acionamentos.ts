@@ -16,8 +16,11 @@ import {
   type Regras,
   type StatusAcionamento,
 } from '../dominio/acionamento'
+import { normalizarCepOpcional } from '../dominio/cep'
 import { dataSP } from '../dominio/datas'
 import { calcularInicio } from '../dominio/inicio-prestador'
+import { ehEnderecoDoAssinante, normalizarCoordenadas } from '../dominio/localizacao'
+import { ordenarPorProximidade } from '../dominio/proximidade'
 import { ErroHttp, naoEncontrado } from '../erros'
 import {
   incluirDetalhe,
@@ -84,16 +87,18 @@ export async function listarTipos() {
   return prisma.tipoDemanda.findMany({
     where: { excluidoEm: null },
     orderBy: [{ criadoEm: 'asc' }, { id: 'asc' }],
-    select: { id: true, nome: true, cor: true, checklist: true },
+    select: { id: true, nome: true, cor: true, categoria: true, checklist: true },
   })
 }
 
-export async function listarPrestadoresAtivos() {
-  return prisma.prestador.findMany({
+/** Ativos na ordem do cadastro; com um CEP de referência, do mais próximo para o mais distante. */
+export async function listarPrestadoresAtivos(cepDeReferencia?: string) {
+  const ativos = await prisma.prestador.findMany({
     where: { status: 'ativo', excluidoEm: null },
     orderBy: [{ criadoEm: 'asc' }, { id: 'asc' }],
-    select: { id: true, nome: true, regiao: true, cor: true },
+    select: { id: true, nome: true, regiao: true, cep: true, cor: true },
   })
+  return cepDeReferencia ? ordenarPorProximidade(ativos, cepDeReferencia) : ativos
 }
 
 export interface LinhaTravada {
@@ -114,20 +119,58 @@ export async function travar(
   return linha ?? null
 }
 
+/**
+ * Apaga os arquivos em melhor esforço: roda depois do commit ou para desfazer um envio, e uma falha
+ * do armazenamento não pode virar erro de uma ação já gravada nem trocar o erro original. Cada
+ * falha fica no log.
+ */
 export async function removerArquivos(chaves: readonly string[]): Promise<void> {
-  await Promise.all(
-    chaves.filter((c) => !c.startsWith(PREFIXO_PLACEHOLDER)).map((c) => armazenamento.remover(c)),
-  )
+  const reais = chaves.filter((c) => !c.startsWith(PREFIXO_PLACEHOLDER))
+  const resultados = await Promise.allSettled(reais.map((c) => armazenamento.remover(c)))
+  resultados.forEach((r, i) => {
+    if (r.status === 'rejected') {
+      console.error('Não foi possível remover o arquivo', reais[i], r.reason)
+    }
+  })
 }
 
 export async function criarAcionamento(u: UsuarioSessao, dados: DadosNovoAcionamento) {
   const d = normalizarNovoAcionamento(dados)
+  const cep = normalizarCepOpcional(d.cep)
+  const localizacao = normalizarCoordenadas(d.latitude, d.longitude)
+  const assinanteId = d.assinanteId?.trim() || null
   const id = await prisma.$transaction(async (tx) => {
-    const prestador = await tx.prestador.findFirst({
-      where: { id: d.prestadorId, status: 'ativo', excluidoEm: null },
-      select: { id: true },
-    })
+    // FOR SHARE segura o prestador até o INSERT: uma exclusão ou desativação em andamento termina
+    // antes, e a condição é conferida de novo na linha já gravada (o excluído não recebe nada).
+    // Uma exclusão que chega depois espera esta transação e já conta o acionamento novo.
+    const [prestador] = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM prestador
+      WHERE id = ${d.prestadorId} AND status = 'ativo' AND "excluidoEm" IS NULL
+      FOR SHARE`
     if (!prestador) throw new ErroDominio('prestador_inativo', 'Escolha um prestador ativo')
+    if (assinanteId) {
+      const assinante = await tx.assinante.findFirst({
+        where: { id: assinanteId, status: 'ativo', excluidoEm: null },
+        select: {
+          id: true,
+          cep: true,
+          logradouro: true,
+          numero: true,
+          complemento: true,
+          bairro: true,
+        },
+      })
+      if (!assinante) throw new ErroDominio('assinante_invalido', 'Escolha um assinante ativo')
+      // A posição conferida no endereço do próprio assinante fica no cadastro dele: o mapa do
+      // próximo acionamento já abre nela. Em outro endereço, fica só no acionamento.
+      if (
+        localizacao &&
+        !d.posicaoSoNoAcionamento &&
+        ehEnderecoDoAssinante({ cep, endereco: d.endereco }, assinante)
+      ) {
+        await tx.assinante.update({ where: { id: assinante.id }, data: localizacao })
+      }
+    }
     const tipos = await tx.tipoDemanda.findMany({
       where: { id: { in: d.tipoIds }, excluidoEm: null },
     })
@@ -139,6 +182,10 @@ export async function criarAcionamento(u: UsuarioSessao, dados: DadosNovoAcionam
         titulo: d.titulo,
         cliente: d.cliente,
         endereco: d.endereco,
+        assinanteId,
+        cep,
+        latitude: localizacao?.latitude ?? null,
+        longitude: localizacao?.longitude ?? null,
         data: new Date(`${d.data}T00:00:00Z`),
         inicio: d.inicio,
         fim: d.fim,
@@ -300,23 +347,26 @@ export async function adicionarFoto(
     throw new ErroHttp(422, 'etapa_obrigatoria', 'Informe a etapa da foto')
   }
   const fotoId = randomUUID()
-  const chave = `${id}/${fotoId}.${tipo.extensao}`
+  // A chave só existe depois de travar a linha, e usa o id dela: um id malformado na URL cai no
+  // 404 sem nunca virar caminho de arquivo.
+  let chave: string | null = null
   try {
     const foto = await prisma.$transaction(async (tx) => {
       const a = await travarDoPrestador(tx, u, id)
       exigirStatus('editar', a.status)
       if (entrada.contexto === 'etapa') {
         const etapa = await tx.etapa.findFirst({
-          where: { id: entrada.etapaId, demanda: { acionamentoId: id } },
+          where: { id: entrada.etapaId, demanda: { acionamentoId: a.id } },
           select: { id: true },
         })
         if (!etapa) throw naoEncontrado('Etapa')
       }
+      chave = `${a.id}/${fotoId}.${tipo.extensao}`
       await armazenamento.salvar(chave, dados, tipo.mime)
       return tx.foto.create({
         data: {
           id: fotoId,
-          acionamentoId: id,
+          acionamentoId: a.id,
           contexto: entrada.contexto,
           etapaId: entrada.contexto === 'etapa' ? entrada.etapaId! : null,
           storageKey: chave,
@@ -326,7 +376,7 @@ export async function adicionarFoto(
     })
     return paraFoto(foto)
   } catch (erro) {
-    await armazenamento.remover(chave)
+    if (chave) await removerArquivos([chave])
     throw erro
   }
 }
@@ -386,13 +436,13 @@ export async function marcarInviavel(
       const agora = new Date()
       for (const imagem of imagens) {
         const fotoId = randomUUID()
-        const chave = `${id}/${fotoId}.${imagem.tipo.extensao}`
-        await armazenamento.salvar(chave, imagem.dados, imagem.tipo.mime)
+        const chave = `${a.id}/${fotoId}.${imagem.tipo.extensao}`
         chaves.push(chave)
+        await armazenamento.salvar(chave, imagem.dados, imagem.tipo.mime)
         await tx.foto.create({
           data: {
             id: fotoId,
-            acionamentoId: id,
+            acionamentoId: a.id,
             contexto: 'inviabilidade',
             storageKey: chave,
             tiradaEm: agora,

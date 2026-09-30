@@ -92,6 +92,90 @@ describe('PainelInviavel', () => {
     expect(painel.emitted('enviar')).toBeUndefined()
   })
 
+  describe('foco', () => {
+    let gatilho: HTMLButtonElement
+    beforeEach(() => {
+      gatilho = document.createElement('button')
+      gatilho.textContent = 'Marcar como inviável'
+      document.body.append(gatilho)
+      gatilho.focus()
+    })
+    afterEach(() => gatilho.remove())
+
+    const montarFechado = () =>
+      mount(PainelInviavel, {
+        props: { aberto: false, enviando: false },
+        attachTo: document.body,
+      })
+
+    it('ao abrir, o foco vai para o painel (o diálogo); ao fechar, volta para quem abriu', async () => {
+      const painel = montarFechado()
+      expect(document.activeElement).toBe(gatilho)
+      await painel.setProps({ aberto: true })
+      const dialogo = painel.find('[role="dialog"]')
+      expect(dialogo.classes()).toContain('painel')
+      expect(dialogo.attributes('aria-modal')).toBe('true')
+      expect(dialogo.attributes('tabindex')).toBe('-1')
+      expect(document.activeElement).toBe(dialogo.element)
+      await painel.setProps({ aberto: false })
+      expect(document.activeElement).toBe(gatilho)
+    })
+
+    it('Esc com o foco no painel fecha', async () => {
+      const painel = montarFechado()
+      await painel.setProps({ aberto: true })
+      document.activeElement!.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+      )
+      expect(painel.emitted('fechar')).toHaveLength(1)
+    })
+
+    const esc = (alvo: EventTarget) =>
+      alvo.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+
+    it('Esc com o foco fora do painel (no body) também fecha, e o foco volta a quem abriu', async () => {
+      const painel = montarFechado()
+      await painel.setProps({ aberto: true })
+      ;(document.activeElement as HTMLElement).blur()
+      expect(document.activeElement).toBe(document.body)
+      esc(document.body)
+      expect(painel.emitted('fechar')).toHaveLength(1)
+      await painel.setProps({ aberto: false })
+      expect(document.activeElement).toBe(gatilho)
+    })
+
+    it('Esc só fecha enquanto o painel está aberto, e uma vez por tecla', async () => {
+      const painel = montarFechado()
+      esc(document.body)
+      expect(painel.emitted('fechar')).toBeUndefined()
+      await painel.setProps({ aberto: true })
+      esc(document.activeElement!)
+      expect(painel.emitted('fechar')).toHaveLength(1)
+      await painel.setProps({ aberto: false })
+      esc(document.body)
+      expect(painel.emitted('fechar')).toHaveLength(1)
+    })
+
+    it('desmontado aberto, tira do document o listener do Esc', async () => {
+      const painel = montarFechado()
+      const adicionar = vi.spyOn(document, 'addEventListener')
+      const remover = vi.spyOn(document, 'removeEventListener')
+      await painel.setProps({ aberto: true })
+      const ouvintes = adicionar.mock.calls.filter(([tipo]) => tipo === 'keydown')
+      expect(ouvintes).toHaveLength(1)
+      painel.unmount()
+      expect(remover).toHaveBeenCalledWith('keydown', ouvintes[0]![1])
+    })
+
+    it('se quem abriu saiu da tela (a barra some depois do envio), fechar não quebra', async () => {
+      const painel = montarFechado()
+      await painel.setProps({ aberto: true })
+      gatilho.remove()
+      await painel.setProps({ aberto: false })
+      expect(document.activeElement).toBe(document.body)
+    })
+  })
+
   it('durante o envio, o botão mostra "Enviando…" e fica desabilitado', async () => {
     const painel = montarPainel()
     await painel.find('textarea').setValue('Sem acesso')

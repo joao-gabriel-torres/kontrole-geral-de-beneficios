@@ -11,12 +11,14 @@ import {
   urlRota,
   type NomeIcone,
 } from '@kgb/ui'
+import { useQueryClient } from '@tanstack/vue-query'
 import { computed } from 'vue'
 import { useRouter, type RouteLocationRaw } from 'vue-router'
+import { reiniciarAgenda } from '../agenda/usarAgenda'
 import { mensagemDeErro } from '../consultas'
 import { sair, sessao } from '../sessao'
 import CartaoProximo from './CartaoProximo.vue'
-import { cartoesMetricas } from './inicio'
+import { cartoesMetricas, paradasDaRota } from './inicio'
 import { usarInicio } from './usarInicio'
 
 const agora = new Date()
@@ -49,15 +51,20 @@ const atalhos = computed<Atalho[]>(() => [
   },
 ])
 
+/** Os endereços pendentes de hoje, com a posição conferida no mapa de cada um quando há. */
 function abrirRotaDoDia() {
-  const enderecos = data.value?.rotaDoDia ?? []
-  if (enderecos.length) window.open(urlRota(enderecos), '_blank')
+  const paradas = data.value ? paradasDaRota(data.value.rotaDoDia, data.value.hoje) : []
+  if (paradas.length) window.open(urlRota(paradas), '_blank')
 }
 function abrir(id: string) {
   void router.push({ name: 'detalhe', params: { id } })
 }
+const consultas = useQueryClient()
+/** Sair da conta sem deixar dados nem a escolha da Agenda da sessão anterior para o próximo login. */
 async function encerrarSessao() {
   await sair()
+  consultas.clear()
+  reiniciarAgenda()
   await router.replace({ name: 'login' })
 }
 </script>
@@ -112,6 +119,7 @@ async function encerrarSessao() {
         tabindex="0"
         @click="abrir(a.id)"
         @keydown.enter="abrir(a.id)"
+        @keydown.space.prevent="abrir(a.id)"
       >
         <div class="hora">{{ a.inicio }}</div>
         <div class="corpo-item">

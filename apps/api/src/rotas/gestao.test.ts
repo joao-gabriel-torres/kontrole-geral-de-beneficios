@@ -1,5 +1,5 @@
 import { EMAIL_PRESTADOR_DEV, GESTORA_DEV } from '@kgb/db/seed'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { criarAcionamento, formularioFoto } from '../../test/dados'
 import { entrar } from '../../test/sessao'
 import { criarApp } from '../app'
@@ -14,6 +14,8 @@ beforeAll(async () => {
   gestora = await entrar(app, GESTORA_DEV.email)
   carlos = await entrar(app, EMAIL_PRESTADOR_DEV)
 })
+
+afterEach(() => vi.restoreAllMocks())
 
 const post = (caminho: string, headers: Record<string, string>, corpo?: unknown) =>
   app.request(caminho, {
@@ -66,6 +68,260 @@ describe('POST /api/acionamentos', () => {
       'Retocar pintura',
     ])
     expect(d.eventos.map((e: { tipo: string }) => e.tipo)).toEqual(['criado'])
+  })
+
+  it('grava o assinante e o CEP (só dígitos) quando informados', async () => {
+    const id = await criarAcionamento(app, gestora, { assinanteId: 'a1', cep: '01304-001' })
+    const gravado = await prisma.acionamento.findUniqueOrThrow({ where: { id } })
+    expect(gravado).toMatchObject({ assinanteId: 'a1', cep: '01304001' })
+  })
+
+  it('sem assinante e sem CEP, grava null nos dois', async () => {
+    const id = await criarAcionamento(app, gestora)
+    const gravado = await prisma.acionamento.findUniqueOrThrow({ where: { id } })
+    expect(gravado).toMatchObject({ assinanteId: null, cep: null })
+  })
+
+  it('recusa assinante inexistente ou inativo (422 assinante_invalido)', async () => {
+    const inexistente = await post('/api/acionamentos', gestora, {
+      titulo: 'X',
+      cliente: 'C',
+      endereco: 'Rua A, 1 · Centro',
+      data: '2026-10-01',
+      inicio: '09:00',
+      fim: '10:00',
+      tipoIds: ['t1'],
+      prestadorId: 'p1',
+      assinanteId: 'nao-existe',
+    })
+    expect(inexistente.status).toBe(422)
+    expect(await inexistente.json()).toMatchObject({
+      erro: { codigo: 'assinante_invalido', mensagem: 'Escolha um assinante ativo' },
+    })
+
+    await prisma.assinante.update({ where: { id: 'a2' }, data: { status: 'inativo' } })
+    try {
+      const inativo = await post('/api/acionamentos', gestora, {
+        titulo: 'X',
+        cliente: 'C',
+        endereco: 'Rua A, 1 · Centro',
+        data: '2026-10-01',
+        inicio: '09:00',
+        fim: '10:00',
+        tipoIds: ['t1'],
+        prestadorId: 'p1',
+        assinanteId: 'a2',
+      })
+      expect(inativo.status).toBe(422)
+    } finally {
+      await prisma.assinante.update({ where: { id: 'a2' }, data: { status: 'ativo' } })
+    }
+  })
+
+  describe('localização conferida no mapa', () => {
+    const OSCAR_FREIRE = { latitude: -23.5671492, longitude: -46.6644067 }
+    const NO_ASSINANTE = {
+      assinanteId: 'a1',
+      cliente: 'Loja Casa Bela',
+      endereco: 'Rua Oscar Freire, 900 · Jardins',
+      cep: '01426-002',
+    }
+
+    const localizacaoDoAssinante = async (id = 'a1') =>
+      prisma.assinante.findUniqueOrThrow({
+        where: { id },
+        select: { latitude: true, longitude: true },
+      })
+
+    afterEach(async () => {
+      await prisma.assinante.update({
+        where: { id: 'a1' },
+        data: { latitude: null, longitude: null },
+      })
+    })
+
+    it('grava latitude e longitude (6 casas) e as devolve no resumo e no detalhe', async () => {
+      const r = await post('/api/acionamentos', gestora, {
+        titulo: 'Vazamento',
+        cliente: 'Cliente Teste',
+        endereco: 'Rua Teste, 1 · Centro',
+        data: '2026-10-01',
+        inicio: '09:00',
+        fim: '10:00',
+        tipoIds: ['t1'],
+        prestadorId: 'p1',
+        ...OSCAR_FREIRE,
+      })
+      expect(r.status).toBe(201)
+      const criado = await r.json()
+      expect(criado).toMatchObject({ latitude: -23.567149, longitude: -46.664407 })
+      const gravado = await prisma.acionamento.findUniqueOrThrow({ where: { id: criado.id } })
+      expect(gravado).toMatchObject({ latitude: -23.567149, longitude: -46.664407 })
+      expect(await detalhe(criado.id)).toMatchObject({
+        latitude: -23.567149,
+        longitude: -46.664407,
+      })
+      // O prestador do acionamento também recebe a posição (a rota do app usa ela).
+      const doCarlos = await (
+        await app.request(`/api/acionamentos/${criado.id}`, { headers: carlos })
+      ).json()
+      expect(doCarlos).toMatchObject({ latitude: -23.567149, longitude: -46.664407 })
+    })
+
+    it('sem localização (ausente ou null), latitude e longitude são null', async () => {
+      for (const extra of [{}, { latitude: null, longitude: null }]) {
+        const id = await criarAcionamento(app, gestora, extra)
+        const d = await detalhe(id)
+        expect(d).toMatchObject({ latitude: null, longitude: null })
+        const lista = await (await app.request('/api/acionamentos', { headers: gestora })).json()
+        expect(lista.find((a: { id: string }) => a.id === id)).toMatchObject({
+          latitude: null,
+          longitude: null,
+        })
+      }
+    })
+
+    it.each([
+      [{ latitude: -23.5 }, 'localizacao_invalida', 'Informe a latitude e a longitude juntas'],
+      [{ longitude: -46.6 }, 'localizacao_invalida', 'Informe a latitude e a longitude juntas'],
+      [
+        { latitude: -23.5, longitude: null },
+        'localizacao_invalida',
+        'Informe a latitude e a longitude juntas',
+      ],
+      [
+        { latitude: 40.7128, longitude: -74.006 },
+        'localizacao_invalida',
+        'A localização precisa ficar no Brasil',
+      ],
+      [
+        { latitude: -46.6, longitude: -23.5 },
+        'localizacao_invalida',
+        'A localização precisa ficar no Brasil',
+      ],
+      [{ latitude: '-23.5', longitude: -46.6 }, 'validacao', 'Dados inválidos'],
+    ])('recusa %j (422 %s), sem gravar nada', async (extra, codigo, mensagem) => {
+      const antes = await prisma.acionamento.count()
+      const r = await post('/api/acionamentos', gestora, {
+        titulo: 'X',
+        cliente: 'C',
+        endereco: 'Rua A, 1 · Centro',
+        data: '2026-10-01',
+        inicio: '09:00',
+        fim: '10:00',
+        tipoIds: ['t1'],
+        prestadorId: 'p1',
+        ...extra,
+      })
+      expect(r.status).toBe(422)
+      expect(await r.json()).toMatchObject({ erro: { codigo, mensagem } })
+      expect(await prisma.acionamento.count()).toBe(antes)
+    })
+
+    it('no endereço do próprio assinante, grava também no assinante (e a busca a devolve)', async () => {
+      await criarAcionamento(app, gestora, { ...NO_ASSINANTE, ...OSCAR_FREIRE })
+      expect(await localizacaoDoAssinante()).toEqual({
+        latitude: -23.567149,
+        longitude: -46.664407,
+      })
+      const busca = await (
+        await app.request(`/api/assinantes?busca=${encodeURIComponent('Casa Bela')}`, {
+          headers: gestora,
+        })
+      ).json()
+      expect(busca[0]).toMatchObject({
+        id: 'a1',
+        latitude: -23.567149,
+        longitude: -46.664407,
+      })
+    })
+
+    it('pino movido (posicaoSoNoAcionamento): mesmo caindo no endereço dele, o assinante não muda', async () => {
+      const antes = await localizacaoDoAssinante()
+      const id = await criarAcionamento(app, gestora, {
+        ...NO_ASSINANTE,
+        ...OSCAR_FREIRE,
+        posicaoSoNoAcionamento: true,
+      })
+      expect(await localizacaoDoAssinante()).toEqual(antes)
+      expect(await prisma.acionamento.findUnique({ where: { id } })).toMatchObject({
+        latitude: -23.567149,
+        longitude: -46.664407,
+      })
+    })
+
+    it('sem CEP no corpo, o endereço do assinante também conta como dele', async () => {
+      await criarAcionamento(app, gestora, {
+        ...NO_ASSINANTE,
+        cep: undefined,
+        latitude: -23.5,
+        longitude: -46.6,
+      })
+      expect(await localizacaoDoAssinante()).toEqual({ latitude: -23.5, longitude: -46.6 })
+    })
+
+    it('em outro endereço, a localização fica só no acionamento', async () => {
+      for (const outro of [
+        { cep: '01310-200', endereco: 'Avenida Paulista, 1000 · Bela Vista' },
+        { cep: '01426-002', endereco: 'Rua Oscar Freire, 950 · Jardins' },
+      ]) {
+        const id = await criarAcionamento(app, gestora, {
+          ...NO_ASSINANTE,
+          ...outro,
+          ...OSCAR_FREIRE,
+        })
+        expect(await prisma.acionamento.findUniqueOrThrow({ where: { id } })).toMatchObject({
+          latitude: -23.567149,
+        })
+        expect(await localizacaoDoAssinante()).toEqual({ latitude: null, longitude: null })
+      }
+    })
+
+    it('sem localização no acionamento, a do assinante continua a mesma', async () => {
+      await prisma.assinante.update({
+        where: { id: 'a1' },
+        data: { latitude: -23.5, longitude: -46.6 },
+      })
+      await criarAcionamento(app, gestora, NO_ASSINANTE)
+      expect(await localizacaoDoAssinante()).toEqual({ latitude: -23.5, longitude: -46.6 })
+    })
+  })
+
+  it('recusa CEP malformado (422 cep_invalido)', async () => {
+    const r = await post('/api/acionamentos', gestora, {
+      titulo: 'X',
+      cliente: 'C',
+      endereco: 'Rua A, 1 · Centro',
+      data: '2026-10-01',
+      inicio: '09:00',
+      fim: '10:00',
+      tipoIds: ['t1'],
+      prestadorId: 'p1',
+      cep: '12',
+    })
+    expect(r.status).toBe(422)
+    expect(await r.json()).toMatchObject({ erro: { codigo: 'cep_invalido' } })
+  })
+
+  it('texto com byte nulo no corpo: 422 de validação, não 404', async () => {
+    // O Postgres recusa \0 num texto (22021). Na URL isso é um id que não existe; no corpo, é
+    // entrada inválida.
+    const antes = await prisma.acionamento.count()
+    const r = await post('/api/acionamentos', gestora, {
+      titulo: 'Vazamento\u0000 no banheiro',
+      cliente: 'C',
+      endereco: 'Rua A, 1 · Centro',
+      data: '2026-10-01',
+      inicio: '09:00',
+      fim: '10:00',
+      tipoIds: ['t1'],
+      prestadorId: 'p1',
+    })
+    expect(r.status).toBe(422)
+    expect(await r.json()).toMatchObject({
+      erro: { codigo: 'validacao', mensagem: 'Dados inválidos' },
+    })
+    expect(await prisma.acionamento.count()).toBe(antes)
   })
 
   it('editar o checklist do tipo depois não muda o acionamento já criado', async () => {
@@ -181,6 +437,27 @@ describe('POST /api/acionamentos/:id/revisao', () => {
       await prisma.foto.count({ where: { acionamentoId: id, contexto: 'inviabilidade' } }),
     ).toBe(0)
     expect(await armazenamento.abrir(chave)).toBeNull()
+  })
+
+  it('recusar a inviabilidade grava mesmo se o arquivo não puder ser apagado', async () => {
+    const id = await criarAcionamento(app, gestora)
+    const formulario = new FormData()
+    formulario.set('comentario', 'Sem acesso ao local')
+    formulario.append('arquivos', formularioFoto({}).get('arquivo') as File)
+    const inviavel = await app.request(`/api/acionamentos/${id}/inviavel`, {
+      method: 'POST',
+      headers: carlos,
+      body: formulario,
+    })
+    expect(inviavel.status).toBe(200)
+    vi.spyOn(armazenamento, 'remover').mockRejectedValueOnce(new Error('armazenamento fora do ar'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const r = await post(`/api/acionamentos/${id}/revisao`, gestora, {
+      decisao: 'reprovado',
+      motivo: 'Dá para fazer',
+    })
+    expect(r.status).toBe(200)
+    expect(await r.json()).toMatchObject({ status: 'reprovado', inviavel: false })
   })
 
   it('só a gestão revisa', async () => {

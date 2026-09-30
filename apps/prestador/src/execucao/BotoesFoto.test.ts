@@ -1,10 +1,15 @@
+import { Capacitor } from '@capacitor/core'
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { prepararArquivo } = vi.hoisted(() => ({ prepararArquivo: vi.fn() }))
+const { prepararArquivo, capturarNativa } = vi.hoisted(() => ({
+  prepararArquivo: vi.fn(),
+  capturarNativa: vi.fn(),
+}))
 vi.mock('./fotos', async (original) => ({
   ...(await original<typeof import('./fotos')>()),
   prepararArquivo,
+  capturarNativa,
 }))
 const { default: BotoesFoto } = await import('./BotoesFoto.vue')
 
@@ -13,13 +18,20 @@ function escolherArquivo(input: HTMLInputElement, arquivo: File) {
   input.dispatchEvent(new Event('change'))
 }
 
+type Botoes = ReturnType<typeof mount>
+const galeria = (botoes: Botoes) =>
+  botoes.findAll('button.bloco-foto').find((b) => b.text() === 'Galeria')!
+
 describe('BotoesFoto', () => {
-  beforeEach(() => prepararArquivo.mockReset())
+  beforeEach(() => {
+    prepararArquivo.mockReset()
+    capturarNativa.mockReset()
+  })
+  afterEach(() => vi.restoreAllMocks())
 
   it('tem Câmera (com captura traseira) e Galeria, só imagens', () => {
     const botoes = mount(BotoesFoto, { props: { cor: 'azul' } })
-    expect(botoes.find('button.bloco-foto').text()).toBe('Câmera')
-    expect(botoes.find('label.bloco-foto').text()).toBe('Galeria')
+    expect(botoes.findAll('button.bloco-foto').map((b) => b.text())).toEqual(['Câmera', 'Galeria'])
     const camera = botoes.find('input[data-origem="camera"]')
     expect(camera.attributes('accept')).toBe('image/*')
     expect(camera.attributes('capture')).toBe('environment')
@@ -53,7 +65,32 @@ describe('BotoesFoto', () => {
     const clicar = vi.spyOn(input, 'click')
     await botoes.find('button.bloco-foto').trigger('click')
     expect(clicar).toHaveBeenCalled()
-    botoes.unmount()
+  })
+
+  it('na web, a Galeria é um botão que recebe foco pelo teclado e abre o seletor', async () => {
+    const botoes = mount(BotoesFoto, { props: { cor: 'azul' }, attachTo: document.body })
+    const botao = galeria(botoes)
+    expect(botao.attributes('type')).toBe('button')
+    ;(botao.element as HTMLElement).focus()
+    expect(document.activeElement).toBe(botao.element)
+    const input = botoes.find('input[data-origem="galeria"]').element as HTMLInputElement
+    const clicar = vi.spyOn(input, 'click')
+    await botao.trigger('click')
+    expect(clicar).toHaveBeenCalled()
+  })
+
+  it('no aparelho, a Galeria abre a galeria nativa e entrega a foto', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true)
+    const pronta = { arquivo: new Blob(['j']), tiradaEm: '2026-09-28T15:10:00-03:00' }
+    capturarNativa.mockResolvedValue(pronta)
+    const botoes = mount(BotoesFoto, { props: { cor: 'azul' } })
+    const input = botoes.find('input[data-origem="galeria"]').element as HTMLInputElement
+    const clicar = vi.spyOn(input, 'click')
+    await galeria(botoes).trigger('click')
+    await flushPromises()
+    expect(capturarNativa).toHaveBeenCalledWith('galeria')
+    expect(clicar).not.toHaveBeenCalled()
+    expect(botoes.emitted('foto')).toEqual([[pronta]])
   })
 
   it('mostra um bloco "Carregando…" enquanto a foto é preparada', async () => {

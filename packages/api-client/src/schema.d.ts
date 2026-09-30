@@ -372,6 +372,316 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/assinantes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Assinantes ativos por nome (a busca do Novo acionamento; no máximo 8) */
+        get: {
+            parameters: {
+                query?: {
+                    busca?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Assinantes */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Assinante"][];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cep/{cep}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Endereço de um CEP (ViaCEP), para atendimento em outro endereço e para o cadastro de prestadores */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description 8 dígitos, com ou sem hífen */
+                    cep: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Endereço */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EnderecoCep"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description CEP não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description CEP malformado */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description O ViaCEP não respondeu */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/geocodificacao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Posição de um endereço no mapa (Nominatim), para conferir no Novo acionamento */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description No formato do sistema ("Rua Harmonia, 410 · Vila Madalena", com " · Osasco - SP" no fim fora da capital); até 300 caracteres */
+                    endereco?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Posição do primeiro resultado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Localizacao"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Endereço não encontrado no mapa (localizacao_nao_encontrada) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Endereço vazio ou longo demais */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description O serviço de mapas não respondeu (geocodificacao_indisponivel) */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/geocodificacao/reversa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Endereço de um ponto do mapa (Nominatim reverse), para o pino movido no Novo acionamento */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Latitude em graus decimais, com ponto ("-23.557") */
+                    latitude?: string;
+                    /** @description Longitude em graus decimais, com ponto ("-46.6905") */
+                    longitude?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description O endereço mais próximo do ponto; null no que o mapa não sabe */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EnderecoDoPonto"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Nenhum endereço no ponto (localizacao_nao_encontrada) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Ponto ausente, que não é número ou fora do Brasil (localizacao_invalida) */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description O serviço de mapas não respondeu (geocodificacao_indisponivel) */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tipos": {
         parameters: {
             query?: never;
@@ -410,7 +720,67 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        /** Cria um tipo de demanda (checklist vazio, cor pela paleta) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["NovoTipo"];
+                };
+            };
+            responses: {
+                /** @description Tipo de demanda */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TipoDemanda"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Já existe um tipo com esse nome */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Dados inválidos */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -424,11 +794,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Prestadores ativos (seletor do Novo acionamento) */
+        /** Prestadores ativos (seletor do Novo acionamento); com ?cep=, do mais próximo ao mais distante */
         get: {
             parameters: {
                 query?: {
                     status?: "ativo";
+                    /** @description CEP de referência (8 dígitos, com ou sem hífen) */
+                    cep?: string;
                 };
                 header?: never;
                 path?: never;
@@ -463,10 +835,79 @@ export interface paths {
                         "application/json": components["schemas"]["Erro"];
                     };
                 };
+                /** @description CEP malformado */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
             };
         };
         put?: never;
-        post?: never;
+        /** Credencia um prestador (ativo, desde hoje) e, com e-mail, envia o convite de acesso */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DadosPrestador"];
+                };
+            };
+            responses: {
+                /** @description Credenciado, com o resultado do convite */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrestadorCredenciado"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Documento já cadastrado */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Dados inválidos */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -1176,6 +1617,872 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/painel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** KPIs, volume por dia, reprovações por tipo e ranking do período */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Últimos 7 ou 30 dias */
+                    periodo?: "7" | "30";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Painel do gestor */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PainelGestor"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Período inválido */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tipos/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Exclui o tipo (os acionamentos já criados não mudam) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Excluído */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            ok: true;
+                        };
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Tipo não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Último tipo ativo */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Renomeia o tipo e/ou grava o checklist inteiro */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AtualizacaoTipo"];
+                };
+            };
+            responses: {
+                /** @description Tipo de demanda */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TipoDemanda"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Tipo não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Já existe um tipo com esse nome */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Dados inválidos */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/prestadores/planilha/previa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confere a planilha sem gravar: selo de cada linha, resumo e ausentes */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": {
+                        /**
+                         * Format: binary
+                         * @description .xlsx, .xls, .csv ou .tsv (inclusive UTF-16), até 5 MB
+                         */
+                        arquivo?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Prévia da importação */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PreviaPlanilha"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Planilha acima de 5 MB, ou .xlsx acima de 50 MB descompactado */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem arquivo, ilegível, sem linhas ou acima de 2000 linhas */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/prestadores/planilha/importacao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Importa a planilha numa transação (recalcula a prévia) e grava a auditoria */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": {
+                        /**
+                         * Format: binary
+                         * @description .xlsx, .xls, .csv ou .tsv (inclusive UTF-16), até 5 MB
+                         */
+                        arquivo?: string;
+                        /**
+                         * @description Desativa os ativos que não estão na planilha (padrão: false)
+                         * @enum {string}
+                         */
+                        desativarAusentes?: "true" | "false";
+                    };
+                };
+            };
+            responses: {
+                /** @description Contagens aplicadas */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ResultadoImportacao"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Os cadastros mudaram durante a importação */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Planilha acima de 5 MB, ou .xlsx acima de 50 MB descompactado */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem arquivo, ilegível, sem linhas ou acima de 2000 linhas */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/prestadores/planilha": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Exporta os prestadores não excluídos (credenciados-russo-DD-MM-AAAA.xlsx) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Planilha de credenciados */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/prestadores/planilha/modelo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Modelo da planilha (modelo-credenciados-russo.xlsx) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Modelo com o cabeçalho e uma linha de exemplo */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/prestadores/{id}/convite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Envia ou reenvia o convite de acesso do prestador por e-mail
+         * @description Cria ou atualiza o usuário do prestador (sem senha) e manda um link de uso único, válido por 7 dias, para ele criar a senha. Invalida os convites anteriores. Quem já tem senha recebe o mesmo convite, que funciona como redefinição.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Convite enviado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConviteEnviado"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Prestador não encontrado ou excluído */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Prestador sem e-mail, com e-mail inválido ou usado por outra conta */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description O servidor de e-mail não aceitou a mensagem */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/prestadores/cadastro": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Prestadores não excluídos, por nome, com especialidades e carga */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Cadastro */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrestadorCadastro"][];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/prestadores/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Exclui (lógico) quem não tem acionamentos em aberto e derruba a sessão dele */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Excluído */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            ok: true;
+                        };
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Prestador não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Prestador com acionamentos em aberto */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Edita o cadastro (status, cor e data de credenciamento não mudam); o login acompanha o e-mail, e sem e-mail o login é encerrado */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DadosPrestador"];
+                };
+            };
+            responses: {
+                /** @description Cadastro do prestador */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrestadorCadastro"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Prestador não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Documento já cadastrado */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Dados inválidos */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/prestadores/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Ativa ou desativa (o switch da lista e o "Desativar" da exclusão) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StatusPrestador"];
+                };
+            };
+            responses: {
+                /** @description Cadastro do prestador */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrestadorCadastro"];
+                    };
+                };
+                /** @description Sem sessão */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Só para a gestão */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Prestador não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Dados inválidos */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1238,6 +2545,10 @@ export interface components {
                 total: number;
             };
             ultimoEnvioEm: string | null;
+            /** @description Posição conferida no mapa (graus decimais); null quando não há */
+            latitude: number | null;
+            /** @description Posição conferida no mapa (graus decimais); null quando não há */
+            longitude: number | null;
         };
         DetalheAcionamento: components["schemas"]["ResumoAcionamento"] & {
             criadoEm: string;
@@ -1290,6 +2601,16 @@ export interface components {
             titulo: string;
             cliente: string;
             endereco: string;
+            /** @description Assinante escolhido na busca (cliente e endereço são snapshots) */
+            assinanteId?: string;
+            /** @description CEP do atendimento: 8 dígitos, com ou sem hífen */
+            cep?: string;
+            /** @description Posição conferida no mapa, com a longitude (as duas ou nenhuma), no Brasil. No endereço do próprio assinante, também vai para o cadastro dele */
+            latitude?: number | null;
+            /** @description Posição conferida no mapa, com a latitude */
+            longitude?: number | null;
+            /** @description Pino movido no mapa: a posição vale só para este acionamento e nunca vai para o cadastro do assinante */
+            posicaoSoNoAcionamento?: boolean;
             /** Format: date */
             data: string;
             inicio: string;
@@ -1302,16 +2623,62 @@ export interface components {
             decisao: "aprovado" | "reprovado";
             motivo?: string;
         };
+        Assinante: {
+            id: string;
+            nome: string;
+            /** @description Só os 8 dígitos */
+            cep: string;
+            logradouro: string;
+            numero: string;
+            complemento: string | null;
+            bairro: string;
+            cidade: string;
+            /** @description Pronto para exibir: "Logradouro, número · bairro" */
+            endereco: string;
+            /** @description Última posição conferida no mapa para este endereço; null quando não há */
+            latitude: number | null;
+            longitude: number | null;
+        };
+        EnderecoCep: {
+            /** @description Só os 8 dígitos */
+            cep: string;
+            /** @description Vazio nos CEPs gerais de cidade */
+            logradouro: string;
+            bairro: string;
+            cidade: string;
+            /** @description Sigla do estado, como "SP" */
+            uf: string;
+        };
+        Localizacao: {
+            /** @description Graus decimais, 6 casas */
+            latitude: number;
+            /** @description Graus decimais, 6 casas */
+            longitude: number;
+        };
+        EnderecoDoPonto: {
+            /** @description Só os 8 dígitos; null quando não há */
+            cep: string | null;
+            logradouro: string | null;
+            numero: string | null;
+            bairro: string | null;
+            cidade: string | null;
+            /** @description Sigla ("SP") */
+            uf: string | null;
+        };
         TipoDemanda: {
             id: string;
             nome: string;
             cor: string;
+            /** @description Grupo maior; null vira "Outros" */
+            categoria: string | null;
             checklist: string[];
         };
         PrestadorOpcao: {
             id: string;
             nome: string;
             regiao: string | null;
+            /** @description Só os 8 dígitos */
+            cep: string | null;
             cor: string;
         };
         AtualizacaoEtapa: {
@@ -1322,7 +2689,7 @@ export interface components {
             comentario: string;
         };
         InicioPrestador: {
-            proximo: components["schemas"]["ResumoAcionamento"] & (Record<string, never> | null);
+            proximo: components["schemas"]["ResumoAcionamento"] | null;
             hoje: components["schemas"]["ResumoAcionamento"][];
             metricas: {
                 hoje: number;
@@ -1334,6 +2701,175 @@ export interface components {
                 paraCorrigir: number;
             };
             rotaDoDia: string[];
+        };
+        PainelGestor: {
+            /** @example 2026-09-29 */
+            hoje: string;
+            periodo: 7 | 30;
+            /** @description Aberto, em execução ou reprovado */
+            emAberto: number;
+            /** @description Atendimentos de hoje não aprovados */
+            paraHoje: number;
+            aguardando: number;
+            aprovacao: {
+                aprovadas: number;
+                total: number;
+            };
+            /**
+             * @description Média de (1º envio − início) em minutos, com fração; null sem dados
+             * @example 106.15
+             */
+            tempoMedioMin: number | null;
+            inviaveis: {
+                quantidade: number;
+                totalPeriodo: number;
+            };
+            volume: {
+                /** @example 2026-09-29 */
+                data: string;
+                total: number;
+                aprovados: number;
+            }[];
+            reprovacoesPorTipo: {
+                tipoNome: string;
+                reprovacoes: number;
+                demandas: number;
+            }[];
+            ranking: {
+                prestador: {
+                    id: string;
+                    nome: string;
+                    cor: string;
+                };
+                concluidos: number;
+                revisoes: {
+                    aprovadas: number;
+                    total: number;
+                };
+                /**
+                 * @description Média de (1º envio − início) em minutos, com fração; null sem dados
+                 * @example 106.15
+                 */
+                tempoMedioMin: number | null;
+            }[];
+        };
+        NovoTipo: {
+            nome: string;
+        };
+        AtualizacaoTipo: {
+            nome?: string;
+            /** @description Grupo maior da tela; null ou vazio limpa (vira "Outros") */
+            categoria?: string | null;
+            /** @description O checklist inteiro, na ordem (etapas vazias são descartadas) */
+            checklist?: string[];
+        };
+        PreviaPlanilha: {
+            linhas: {
+                /** @description Como veio na planilha (vazio = sem nome) */
+                nome: string;
+                /** @description Como veio na planilha */
+                documento: string;
+                /** @description Nomes como vieram, inclusive os não reconhecidos */
+                especialidades: string[];
+                /** @description As de `especialidades` que não casam com nenhum tipo ativo (erro de digitação, tipo excluído): a importação as ignora. A API sempre manda. */
+                especialidadesIgnoradas?: string[];
+                /** @enum {string} */
+                acao: "novo" | "atualizar" | "erro";
+                /** @enum {string} */
+                selo: "Novo" | "Atualizar" | "Sem nome" | "Documento inválido" | "Duplicado na planilha" | "Telefone inválido" | "E-mail inválido" | "E-mail em uso";
+            }[];
+            resumo: {
+                novos: number;
+                atualizados: number;
+                erros: number;
+            };
+            /** @description Ativos cujo documento não está na planilha, na ordem de cadastro */
+            ausentes: {
+                id: string;
+                nome: string;
+            }[];
+            /** @description Linhas "Novo" com e-mail: a importação não manda convite, que sai pelo Editar de cada um. A API sempre manda. */
+            novosComEmail?: number;
+        };
+        ResultadoImportacao: {
+            novos: number;
+            atualizados: number;
+            desativados: number;
+        };
+        ConviteEnviado: {
+            /** @description E-mail que recebeu o convite e vira o login */
+            email: string;
+            /** @description Validade do link (ISO 8601) */
+            expiraEm: string;
+        };
+        PrestadorCadastro: {
+            id: string;
+            nome: string;
+            /** @description Só dígitos (11 ou 14) */
+            documento: string;
+            /** @description Só dígitos, com DDD */
+            telefone: string;
+            email: string | null;
+            regiao: string | null;
+            /** @description Só os 8 dígitos */
+            cep: string | null;
+            logradouro: string | null;
+            numero: string | null;
+            complemento: string | null;
+            bairro: string | null;
+            cidade: string | null;
+            /** @description 2 letras maiúsculas */
+            uf: string | null;
+            /** @enum {string} */
+            status: "ativo" | "inativo";
+            cor: string;
+            /** @description AAAA-MM-DD */
+            credenciadoDesde: string;
+            /** @description Na ordem cadastrada, sem os tipos excluídos */
+            especialidades: {
+                id: string;
+                nome: string;
+            }[];
+            /** @description Acionamentos agendados, em execução, reprovados ou aguardando */
+            emAberto: number;
+            total: number;
+            /**
+             * @description Acesso ao app: ativo (tem senha), convidado (convite válido), pendente (tem e-mail, sem convite válido nem senha) ou sem_email
+             * @enum {string}
+             */
+            acesso: "sem_email" | "pendente" | "convidado" | "ativo";
+        };
+        PrestadorCredenciado: components["schemas"]["PrestadorCadastro"] & {
+            convite: {
+                /** @enum {string} */
+                situacao: "enviado" | "falhou" | "sem_email";
+                email: string | null;
+                /** @description Por que o convite não saiu (o cadastro vale mesmo assim) */
+                mensagem: string | null;
+            };
+        };
+        DadosPrestador: {
+            nome: string;
+            /** @description CPF ou CNPJ, com ou sem máscara */
+            documento: string;
+            telefone: string;
+            email?: string | null;
+            regiao?: string | null;
+            /** @description 8 dígitos, com ou sem hífen (422 cep_invalido) */
+            cep?: string | null;
+            logradouro?: string | null;
+            numero?: string | null;
+            complemento?: string | null;
+            bairro?: string | null;
+            cidade?: string | null;
+            /** @description 2 letras; gravada em maiúsculas (422 uf_invalida) */
+            uf?: string | null;
+            /** @description Ids dos tipos, na ordem escolhida */
+            especialidades: string[];
+        };
+        StatusPrestador: {
+            /** @enum {string} */
+            status: "ativo" | "inativo";
         };
     };
     responses: never;

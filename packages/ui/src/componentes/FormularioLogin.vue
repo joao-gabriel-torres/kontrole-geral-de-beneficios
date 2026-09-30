@@ -1,13 +1,27 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import marcaRusso from '../assets/russo-mark.png'
+import { computed, onMounted, ref } from 'vue'
+import CartaoAcesso from './CartaoAcesso.vue'
 
-defineProps<{ subtitulo: string; erro: string | null; enviando: boolean }>()
+const props = defineProps<{
+  subtitulo: string
+  erro: string | null
+  enviando: boolean
+  /** Mensagem de sucesso acima dos campos (ex.: senha criada pelo convite). */
+  aviso?: string | null
+}>()
 const emit = defineEmits<{ enviar: [email: string, senha: string] }>()
 
 const email = ref('')
 const senha = ref('')
 const preenchido = computed(() => email.value.trim() !== '' && senha.value !== '')
+
+// Muitos leitores de tela não anunciam região viva que entra no DOM já preenchida. A região
+// role="status" fica sempre montada e o texto do aviso só entra depois de montar.
+const montado = ref(false)
+onMounted(() => {
+  montado.value = true
+})
+const avisoAnunciado = computed(() => (montado.value && props.aviso ? props.aviso : null))
 
 function enviar() {
   if (preenchido.value) emit('enviar', email.value.trim(), senha.value)
@@ -15,102 +29,43 @@ function enviar() {
 </script>
 
 <template>
-  <div class="login">
-    <form class="cartao" novalidate @submit.prevent="enviar">
-      <div class="marca">
-        <img :src="marcaRusso" alt="" />
-        <div class="nome-marca">RUSSO <span>ASSISTÊNCIA</span></div>
-      </div>
-      <div>
-        <h1 class="titulo">Entrar</h1>
-        <p class="apoio">{{ subtitulo }}</p>
-      </div>
-      <div class="campo">
-        <label for="login-email">E-mail</label>
-        <v-text-field id="login-email" v-model="email" type="email" autocomplete="username" />
-      </div>
-      <div class="campo">
-        <label for="login-senha">Senha</label>
-        <v-text-field
-          id="login-senha"
-          v-model="senha"
-          type="password"
-          autocomplete="current-password"
-        />
-      </div>
-      <p v-if="erro" class="erro" role="alert">{{ erro }}</p>
-      <v-btn type="submit" block color="primary" :loading="enviando" :disabled="!preenchido">
-        Entrar
-      </v-btn>
-    </form>
-  </div>
+  <CartaoAcesso titulo="Entrar" :apoio="subtitulo" @enviar="enviar">
+    <p class="aviso" :class="{ vazio: !avisoAnunciado }" role="status">{{ avisoAnunciado }}</p>
+    <div class="campo">
+      <label for="login-email">E-mail</label>
+      <v-text-field id="login-email" v-model="email" type="email" autocomplete="username" />
+    </div>
+    <div class="campo">
+      <label for="login-senha">Senha</label>
+      <v-text-field
+        id="login-senha"
+        v-model="senha"
+        type="password"
+        autocomplete="current-password"
+      />
+    </div>
+    <p v-if="erro" class="erro" role="alert">{{ erro }}</p>
+    <v-btn type="submit" block color="primary" :loading="enviando" :disabled="!preenchido">
+      Entrar
+    </v-btn>
+  </CartaoAcesso>
 </template>
 
 <style scoped>
-.login {
-  min-height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px 16px;
-  background: var(--kgb-superficie1);
-}
-.cartao {
-  width: 100%;
-  max-width: 400px;
-  background: var(--kgb-branco);
-  border-radius: 24px;
-  padding: 32px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.marca {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.marca img {
-  height: 30px;
-  width: auto;
-  display: block;
-}
-.nome-marca {
-  font-weight: 800;
-  font-size: 16px;
-  color: var(--kgb-primaria);
-  letter-spacing: 0.01em;
+/*
+  Vazia, a região sai do fluxo (o cartão usa gap: 20px, e a faixa verde não pode aparecer sem
+  texto), mas continua visível para a árvore de acessibilidade: display: none faria o leitor de
+  tela ignorar o texto que entra depois.
+*/
+.aviso.vazio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  background: none;
   white-space: nowrap;
-}
-.nome-marca span {
-  font-weight: 600;
-}
-.titulo {
-  margin: 0;
-  font-size: 24px;
-  line-height: 36px;
-  font-weight: 700;
-  color: var(--kgb-titulo);
-}
-.apoio {
-  margin: 0;
-  font-size: 14px;
-  color: var(--kgb-secundario);
-}
-.campo {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.campo label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--kgb-texto);
-}
-.erro {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--kgb-laranja-texto);
 }
 </style>

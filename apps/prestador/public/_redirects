@@ -1,0 +1,9 @@
+# Redirecionamentos do Cloudflare Pages (https://developers.cloudflare.com/pages/configuration/redirects/).
+#
+# SPA: nenhuma regra. Sem um 404.html na raiz do build, o Pages já serve o index.html (com 200)
+# em qualquer caminho que não seja arquivo, e o vue-router resolve a rota (inclusive o link do
+# convite, /convite?token=…). Não crie um 404.html em public/: ele desliga esse comportamento e
+# as rotas abertas direto (ou recarregadas) dão 404.
+#
+# Não use "/* /index.html 200": o Pages a recusa ("Infinite loop detected in this rule and has
+# been ignored"), porque ele mesmo redireciona /index.html para / e a regra casaria de novo.

@@ -3,12 +3,31 @@ defineProps<{ mensagem: string | null; variante: 'gestor' | 'prestador' }>()
 </script>
 
 <template>
-  <div v-if="mensagem" class="toast" :class="variante" role="status" aria-live="polite">
-    {{ mensagem }}
+  <!--
+    A região viva fica sempre montada: um role="status" que entra no DOM já com o texto (v-if) nem
+    sempre é anunciado pelo VoiceOver e pelo NVDA. O anúncio vem do texto entrando nesta região.
+    O role="status" fica só no invólucro — role no .toast criaria regiões vivas aninhadas e
+    anúncio duplo no VoiceOver/NVDA.
+  -->
+  <div class="regiao-aviso" role="status" aria-live="polite" aria-atomic="true">
+    <div v-if="mensagem" class="toast" :class="variante">
+      {{ mensagem }}
+    </div>
   </div>
 </template>
 
 <style scoped>
+/*
+  Mesma largura e mesma base do contêiner, sem altura e sem z-index (não cria contexto de
+  empilhamento): as posições do .toast continuam relativas ao mesmo retângulo de antes.
+*/
+.regiao-aviso {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+}
 .toast {
   position: absolute;
   background: var(--kgb-tinta);

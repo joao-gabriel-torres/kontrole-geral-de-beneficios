@@ -23,5 +23,6 @@ export const rotasArquivos = new Hono<Ambiente>().get('/api/arquivos/fotos/:id',
   return c.body(dados, 200, {
     'Content-Type': mimeDaChave(foto.storageKey),
     'Cache-Control': 'private, max-age=3600',
+    'X-Content-Type-Options': 'nosniff',
   })
 })

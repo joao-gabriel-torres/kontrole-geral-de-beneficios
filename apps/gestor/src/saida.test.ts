@@ -6,7 +6,7 @@ import { novoAcionamento } from './acionamentos/novo/estado'
 import { usarSaida } from './saida'
 import { sair } from './sessao'
 
-vi.mock('./sessao', () => ({ sair: vi.fn() }))
+vi.mock('./sessao', () => ({ sair: vi.fn(), sessao: { usuario: null } }))
 
 const ComSaida = defineComponent({
   setup: () => ({ encerrar: usarSaida() }),

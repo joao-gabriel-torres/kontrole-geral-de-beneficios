@@ -25,6 +25,7 @@ export interface DadosSeed {
   tipos: Prisma.TipoDemandaCreateManyInput[]
   prestadores: { dados: Prisma.PrestadorCreateManyInput; especialidades: string[] }[]
   usuarios: UsuarioSeed[]
+  assinantes: Prisma.AssinanteCreateManyInput[]
   acionamentos: Prisma.AcionamentoCreateManyInput[]
   demandas: Prisma.DemandaCreateManyInput[]
   etapas: Prisma.EtapaCreateManyInput[]
@@ -38,9 +39,153 @@ const dataPura = (iso: string) => new Date(`${iso}T00:00:00Z`)
 const instante = (data: string, hora: string) => new Date(`${data}T${hora}:00${FUSO}`)
 const idUsuarioPrestador = (prestadorId: string) => `u-${prestadorId}`
 
+/** Categorias dos tipos do protótipo (spec "Novo acionamento inteligente"). */
+const CATEGORIAS: Record<string, string> = {
+  Vazamento: 'Hidráulica',
+  'Revisão elétrica': 'Elétrica',
+  'Ponto de luz': 'Elétrica',
+  'Troca de disjuntor': 'Elétrica',
+  Pintura: 'Acabamento',
+  'Reparo em gesso': 'Acabamento',
+  'Limpeza de ar-condicionado': 'Climatização',
+  Chaveiro: 'Segurança',
+}
+
+/** CEP plausível para a região de cada prestador (conferidos no ViaCEP em 30/09/2026). */
+const CEPS_PRESTADORES: Record<string, string> = {
+  p1: '05422001', // Zona Oeste — Rua dos Pinheiros, Pinheiros
+  p2: '04010000', // Zona Sul — Rua Domingos de Morais, Vila Mariana
+  p3: '01001000', // Centro — Praça da Sé
+  p4: '05018000', // Zona Oeste — Rua Cayowaá, Perdizes
+  p5: '02011000', // Zona Norte — Rua Voluntários da Pátria, Santana
+  p6: '03071000', // Zona Leste — Rua Cesário Galero, Tatuapé
+}
+
+type EnderecoPrestador = Pick<
+  Prisma.PrestadorCreateManyInput,
+  'logradouro' | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf'
+>
+
+/**
+ * O endereço de cada prestador na rua do CEP dele, com um número dentro da faixa que o ViaCEP dá
+ * para aquele CEP (conferidos em 30/09/2026).
+ */
+const ENDERECOS_PRESTADORES: Record<string, EnderecoPrestador> = {
+  // 05422-001: de 536 a 1046, lado par
+  p1: { logradouro: 'Rua dos Pinheiros', numero: '812', complemento: null, bairro: 'Pinheiros' },
+  // 04010-000: até 512, lado par
+  p2: {
+    logradouro: 'Rua Domingos de Morais',
+    numero: '348',
+    complemento: 'sala 12',
+    bairro: 'Vila Mariana',
+  },
+  // 01001-000: lado ímpar
+  p3: { logradouro: 'Praça da Sé', numero: '111', complemento: 'conj. 1203', bairro: 'Sé' },
+  // 05018-000: até 699/700
+  p4: { logradouro: 'Rua Cayowaá', numero: '214', complemento: null, bairro: 'Perdizes' },
+  // 02011-000: até 891, lado ímpar
+  p5: {
+    logradouro: 'Rua Voluntários da Pátria',
+    numero: '657',
+    complemento: null,
+    bairro: 'Santana',
+  },
+  // 03071-000: a rua inteira
+  p6: { logradouro: 'Rua Cesário Galero', numero: '430', complemento: 'casa 2', bairro: 'Tatuapé' },
+}
+
+/** Endereço do prestador no seed, em São Paulo; quem não está no mapa fica sem endereço. */
+function enderecoDoPrestador(id: string): EnderecoPrestador {
+  const endereco = ENDERECOS_PRESTADORES[id]
+  return endereco ? { ...endereco, cidade: 'São Paulo', uf: 'SP' } : {}
+}
+
+/**
+ * O endereço de cada cliente: o do primeiro acionamento dele entre os escritos à mão no protótipo
+ * (`NAMED` em acionamentos-data.js). Os gerados ao acaso sorteiam cliente e endereço separados, e
+ * o endereço deles não é do cliente. O CEP é o do trecho da rua com o número, ou, quando esse
+ * trecho cai em outro bairro, o da mesma rua no bairro do endereço (conferidos no ViaCEP em
+ * 30/09/2026).
+ */
+const ENDERECOS_DOS_CLIENTES: Record<string, { endereco: string; cep: string }> = {
+  // Até 815/816 (o ViaCEP chama o trecho de Sumarezinho, na Vila Madalena).
+  'Edifício Aurora': { endereco: 'Rua Harmonia, 410 · Vila Madalena', cep: '05435000' },
+  // 801/802 a 1699/1700.
+  'Condomínio Parque das Flores': { endereco: 'Av. Sumaré, 1100 · Perdizes', cep: '05016110' },
+  // 1512 a 2132, lado par.
+  'Clínica Vida': { endereco: 'Av. Paulista, 1578 · Bela Vista', cep: '01310200' },
+  // Lado ímpar.
+  'Residência Souza': { endereco: 'Rua Tupi, 221 · Santa Cecília', cep: '01233001' },
+  // O 3144 cai no Jardim Paulistano: vale o lado par no Itaim Bibi.
+  'Escritório Nunes & Lima': { endereco: 'Av. Faria Lima, 3144 · Itaim Bibi', cep: '04538132' },
+  // 1291 a 2113, lado ímpar.
+  'Residencial Monte Verde': { endereco: 'Rua Vergueiro, 2045 · Vila Mariana', cep: '04101000' },
+  // 700 a 1680, lado par.
+  'Academia Forma': { endereco: 'Rua Augusta, 1492 · Consolação', cep: '01304001' },
+  // 610 a 1290, lado par.
+  'Loja Casa Bela': { endereco: 'Rua Oscar Freire, 900 · Jardins', cep: '01426002' },
+  // Até 879, lado ímpar.
+  'Hotel Ipê': { endereco: 'Rua Frei Caneca, 569 · Consolação', cep: '01307001' },
+  // O 1500 cai no Sumaré: vale o trecho de Perdizes.
+  'Colégio Aprender': { endereco: 'Rua Apinajés, 1500 · Perdizes', cep: '05017000' },
+  // 658 a 1690, lado par.
+  'Padaria Pão Dourado': { endereco: 'Rua Cardeal Arcoverde, 820 · Pinheiros', cep: '05408001' },
+  // 808 a 1150, lado par.
+  'Residência Martins': { endereco: 'Rua Teodoro Sampaio, 1020 · Pinheiros', cep: '05406050' },
+  // 701 a 1459.
+  'Residência Alves': { endereco: 'Rua Cayowaá, 740 · Perdizes', cep: '05018001' },
+  // O mesmo endereço do Condomínio Parque das Flores no protótipo.
+  'Mercado Bom Preço': { endereco: 'Av. Sumaré, 1100 · Perdizes', cep: '05016110' },
+}
+
+/** Cliente fora do mapa: o endereço do primeiro acionamento, com o CEP da Praça da Sé. */
+const CEP_PADRAO = '01001000'
+
+/** "Rua Augusta, 1492 · Consolação" → logradouro, número e bairro separados. */
+function separarEndereco(endereco: string): { logradouro: string; numero: string; bairro: string } {
+  const [rua = endereco, bairro = ''] = endereco.split(' · ')
+  const virgula = rua.lastIndexOf(', ')
+  if (virgula === -1) return { logradouro: rua, numero: '', bairro }
+  return { logradouro: rua.slice(0, virgula), numero: rua.slice(virgula + 2), bairro }
+}
+
+/** Um assinante ativo por cliente distinto, na ordem em que aparecem, no endereço do cliente. */
+function mapearAssinantes(p: DadosPrototipo): Prisma.AssinanteCreateManyInput[] {
+  const assinantes: Prisma.AssinanteCreateManyInput[] = []
+  const vistos = new Set<string>()
+  for (const a of p.acs) {
+    if (vistos.has(a.client)) continue
+    vistos.add(a.client)
+    const { endereco, cep } = ENDERECOS_DOS_CLIENTES[a.client] ?? {
+      endereco: a.address,
+      cep: CEP_PADRAO,
+    }
+    const { logradouro, numero, bairro } = separarEndereco(endereco)
+    assinantes.push({
+      id: `a${assinantes.length + 1}`,
+      nome: a.client,
+      cep,
+      logradouro,
+      numero,
+      complemento: null,
+      bairro,
+      cidade: 'São Paulo',
+      status: 'ativo',
+    })
+  }
+  return assinantes
+}
+
 export function mapearDadosPrototipo(p: DadosPrototipo): DadosSeed {
   const dados: DadosSeed = {
-    tipos: p.types.map((t) => ({ id: t.id, nome: t.name, cor: t.color, checklist: t.checklist })),
+    tipos: p.types.map((t) => ({
+      id: t.id,
+      nome: t.name,
+      cor: t.color,
+      categoria: CATEGORIAS[t.name] ?? null,
+      checklist: t.checklist,
+    })),
     prestadores: p.pros.map((x) => ({
       dados: {
         id: x.id,
@@ -49,6 +194,8 @@ export function mapearDadosPrototipo(p: DadosPrototipo): DadosSeed {
         telefone: digitos(x.phone),
         email: x.email || null,
         regiao: x.region || null,
+        cep: CEPS_PRESTADORES[x.id] ?? null,
+        ...enderecoDoPrestador(x.id),
         status: x.status,
         credenciadoDesde: dataPura(x.since),
         cor: x.color,
@@ -67,6 +214,7 @@ export function mapearDadosPrototipo(p: DadosPrototipo): DadosSeed {
         comSenha: x.id === PRESTADOR_COM_LOGIN,
       })),
     ],
+    assinantes: mapearAssinantes(p),
     acionamentos: [],
     demandas: [],
     etapas: [],
@@ -74,11 +222,16 @@ export function mapearDadosPrototipo(p: DadosPrototipo): DadosSeed {
     revisoes: [],
     eventos: [],
   }
-  for (const a of p.acs) mapearAcionamento(a, dados)
+  const assinantePorCliente = new Map(dados.assinantes.map((a) => [a.nome, a.id!]))
+  for (const a of p.acs) mapearAcionamento(a, dados, assinantePorCliente)
   return dados
 }
 
-function mapearAcionamento(a: AcionamentoPrototipo, d: DadosSeed) {
+function mapearAcionamento(
+  a: AcionamentoPrototipo,
+  d: DadosSeed,
+  assinantePorCliente: Map<string, string>,
+) {
   const id = randomUUID()
   const autorPrestador = idUsuarioPrestador(a.pid)
 
@@ -117,6 +270,7 @@ function mapearAcionamento(a: AcionamentoPrototipo, d: DadosSeed) {
     titulo: a.title,
     cliente: a.client,
     endereco: a.address,
+    assinanteId: assinantePorCliente.get(a.client) ?? null,
     data: dataPura(a.date),
     inicio: a.start,
     fim: a.end,

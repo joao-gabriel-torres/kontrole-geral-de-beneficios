@@ -13,6 +13,7 @@ export function criarRouterDeTeste(): Router {
     routes: [
       { path: '/login', name: 'login', component: Vazio },
       { path: '/painel', name: 'painel', component: Vazio },
+      { path: '/painel/:id', name: 'painel-acionamento', component: Vazio },
       { path: '/acionamentos', name: 'acionamentos', component: Vazio },
       { path: '/acionamentos/:id', name: 'acionamento', component: Vazio },
       { path: '/aprovacoes', name: 'aprovacoes', component: Vazio },

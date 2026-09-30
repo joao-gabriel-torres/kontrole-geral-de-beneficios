@@ -51,6 +51,15 @@ describe('PaginaDetalhe', () => {
       )
     })
 
+    it('com a localização conferida no mapa, "Rota" leva às coordenadas', async () => {
+      const posicao = { latitude: -23.556789, longitude: -46.690123 }
+      const { wrapper } = await abrir(detalheExemplo(posicao))
+      expect(wrapper.find('.info a').attributes('href')).toBe(
+        urlMapa('Rua Bela Cintra, 1200 · Consolação', posicao),
+      )
+      expect(wrapper.find('.info a').attributes('href')).toContain('-23.556789,-46.690123')
+    })
+
     it('voltar retorna à tela anterior, ou às Demandas quando abriu direto', async () => {
       api.GET.mockResolvedValue(ok(detalheExemplo()))
       const { wrapper, router } = await montar(PaginaDetalhe, { rotaInicial: '/demandas/a1' })
@@ -410,6 +419,21 @@ describe('PaginaDetalhe', () => {
   })
 
   describe('marcar como inviável', () => {
+    it('com o painel aberto, o resto da tela fica inerte; ao cancelar, o foco volta ao link', async () => {
+      const { wrapper } = await abrir(detalheExemplo())
+      const inertes = () =>
+        ['.cabecalho', '.corpo', '.barra-acoes', '.painel'].filter((s) =>
+          Boolean(document.querySelector(s)?.hasAttribute('inert')),
+        )
+      const link = wrapper.find('.link-inviavel')
+      ;(link.element as HTMLElement).focus()
+      await link.trigger('click')
+      expect(inertes()).toEqual(['.cabecalho', '.corpo', '.barra-acoes'])
+      await wrapper.find('.painel .cancelar').trigger('click')
+      expect(inertes()).toEqual([])
+      expect(document.activeElement).toBe(link.element)
+    })
+
     it('envia motivo e fotos num único POST multipart, avisa e fecha o painel', async () => {
       URL.createObjectURL = vi.fn(() => 'blob:previa')
       URL.revokeObjectURL = vi.fn()

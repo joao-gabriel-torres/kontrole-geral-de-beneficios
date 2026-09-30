@@ -44,7 +44,7 @@ describe('schema', () => {
         telefone: '11987654321',
         cor: '#0069BD',
         credenciadoDesde: new Date('2024-03-12'),
-        especialidades: { connect: [{ id: tipo.id }] },
+        especialidades: { create: [{ tipoId: tipo.id, ordem: 0 }] },
       },
     })
     const base = {
@@ -62,5 +62,27 @@ describe('schema', () => {
     expect(segundo.numero).toBe(primeiro.numero + 1)
     expect(primeiro.status).toBe('aberto')
     expect(primeiro.inviavel).toBe(false)
+  })
+
+  it('documento só é único entre os prestadores não excluídos', async () => {
+    const dados = {
+      nome: 'Duplicado',
+      documento: '98765432100',
+      telefone: '11912345678',
+      cor: '#0069BD',
+      credenciadoDesde: new Date('2024-03-12'),
+    }
+    await prisma.prestador.create({ data: { ...dados, excluidoEm: new Date() } })
+    await prisma.prestador.create({ data: dados })
+    await expect(prisma.prestador.create({ data: dados })).rejects.toMatchObject({ code: 'P2002' })
+  })
+
+  it('nome de tipo só é único entre os tipos não excluídos', async () => {
+    const dados = { nome: 'Jardinagem', cor: '#1E9E6A', checklist: [] }
+    await prisma.tipoDemanda.create({ data: { ...dados, excluidoEm: new Date() } })
+    await prisma.tipoDemanda.create({ data: dados })
+    await expect(prisma.tipoDemanda.create({ data: dados })).rejects.toMatchObject({
+      code: 'P2002',
+    })
   })
 })

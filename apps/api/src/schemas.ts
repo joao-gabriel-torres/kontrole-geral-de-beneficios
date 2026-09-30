@@ -34,6 +34,14 @@ export const ResumoAcionamentoSchema = z
     tipos: z.array(z.object({ nome: z.string(), cor: z.string() })),
     etapas: z.object({ feitas: z.number().int(), total: z.number().int() }),
     ultimoEnvioEm: z.string().nullable(),
+    latitude: z
+      .number()
+      .nullable()
+      .openapi({ description: 'Posição conferida no mapa (graus decimais); null quando não há' }),
+    longitude: z
+      .number()
+      .nullable()
+      .openapi({ description: 'Posição conferida no mapa (graus decimais); null quando não há' }),
   })
   .openapi('ResumoAcionamento')
 
@@ -84,11 +92,23 @@ export const DetalheAcionamentoSchema = ResumoAcionamentoSchema.extend({
 }).openapi('DetalheAcionamento')
 
 export const TipoDemandaSchema = z
-  .object({ id: z.string(), nome: z.string(), cor: z.string(), checklist: z.array(z.string()) })
+  .object({
+    id: z.string(),
+    nome: z.string(),
+    cor: z.string(),
+    categoria: z.string().nullable().openapi({ description: 'Grupo maior; null vira "Outros"' }),
+    checklist: z.array(z.string()),
+  })
   .openapi('TipoDemanda')
 
 export const PrestadorOpcaoSchema = z
-  .object({ id: z.string(), nome: z.string(), regiao: z.string().nullable(), cor: z.string() })
+  .object({
+    id: z.string(),
+    nome: z.string(),
+    regiao: z.string().nullable(),
+    cep: z.string().nullable().openapi({ description: 'Só os 8 dígitos' }),
+    cor: z.string(),
+  })
   .openapi('PrestadorOpcao')
 
 export const FiltroListaSchema = z.object({
@@ -101,6 +121,28 @@ export const NovoAcionamentoSchema = z
     titulo: z.string().max(200),
     cliente: z.string().max(200),
     endereco: z.string().max(300),
+    assinanteId: z
+      .string()
+      .max(64)
+      .optional()
+      .openapi({ description: 'Assinante escolhido na busca (cliente e endereço são snapshots)' }),
+    cep: z
+      .string()
+      .max(20)
+      .optional()
+      .openapi({ description: 'CEP do atendimento: 8 dígitos, com ou sem hífen' }),
+    latitude: z.number().nullish().openapi({
+      description:
+        'Posição conferida no mapa, com a longitude (as duas ou nenhuma), no Brasil. No endereço do próprio assinante, também vai para o cadastro dele',
+    }),
+    longitude: z
+      .number()
+      .nullish()
+      .openapi({ description: 'Posição conferida no mapa, com a latitude' }),
+    posicaoSoNoAcionamento: z.boolean().optional().openapi({
+      description:
+        'Pino movido no mapa: a posição vale só para este acionamento e nunca vai para o cadastro do assinante',
+    }),
     data: z.iso.date(),
     inicio: z.string().regex(HORARIO),
     fim: z.string().regex(HORARIO),
@@ -140,7 +182,9 @@ export const InviavelFormSchema = z.object({
 
 export const InicioPrestadorSchema = z
   .object({
-    proximo: ResumoAcionamentoSchema.nullable(),
+    // `union` com null gera `anyOf: [$ref, null]`, que o openapi-typescript lê como `T | null`
+    // (o `.nullable()` gera `allOf` com `type: ["object","null"]` e vira uma interseção inútil).
+    proximo: z.union([ResumoAcionamentoSchema, z.null()]),
     hoje: z.array(ResumoAcionamentoSchema),
     metricas: z.object({
       hoje: z.number().int(),

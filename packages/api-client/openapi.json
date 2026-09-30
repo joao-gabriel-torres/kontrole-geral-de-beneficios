@@ -238,6 +238,20 @@
               "string",
               "null"
             ]
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Posição conferida no mapa (graus decimais); null quando não há"
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Posição conferida no mapa (graus decimais); null quando não há"
           }
         },
         "required": [
@@ -254,7 +268,9 @@
           "prestador",
           "tipos",
           "etapas",
-          "ultimoEnvioEm"
+          "ultimoEnvioEm",
+          "latitude",
+          "longitude"
         ]
       },
       "DetalheAcionamento": {
@@ -508,6 +524,34 @@
             "type": "string",
             "maxLength": 300
           },
+          "assinanteId": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "Assinante escolhido na busca (cliente e endereço são snapshots)"
+          },
+          "cep": {
+            "type": "string",
+            "maxLength": 20,
+            "description": "CEP do atendimento: 8 dígitos, com ou sem hífen"
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Posição conferida no mapa, com a longitude (as duas ou nenhuma), no Brasil. No endereço do próprio assinante, também vai para o cadastro dele"
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Posição conferida no mapa, com a latitude"
+          },
+          "posicaoSoNoAcionamento": {
+            "type": "boolean",
+            "description": "Pino movido no mapa: a posição vale só para este acionamento e nunca vai para o cadastro do assinante"
+          },
           "data": {
             "type": "string",
             "format": "date"
@@ -561,6 +605,167 @@
           "decisao"
         ]
       },
+      "Assinante": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "cep": {
+            "type": "string",
+            "description": "Só os 8 dígitos"
+          },
+          "logradouro": {
+            "type": "string"
+          },
+          "numero": {
+            "type": "string"
+          },
+          "complemento": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bairro": {
+            "type": "string"
+          },
+          "cidade": {
+            "type": "string"
+          },
+          "endereco": {
+            "type": "string",
+            "description": "Pronto para exibir: \"Logradouro, número · bairro\""
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Última posição conferida no mapa para este endereço; null quando não há"
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "cep",
+          "logradouro",
+          "numero",
+          "complemento",
+          "bairro",
+          "cidade",
+          "endereco",
+          "latitude",
+          "longitude"
+        ]
+      },
+      "EnderecoCep": {
+        "type": "object",
+        "properties": {
+          "cep": {
+            "type": "string",
+            "description": "Só os 8 dígitos"
+          },
+          "logradouro": {
+            "type": "string",
+            "description": "Vazio nos CEPs gerais de cidade"
+          },
+          "bairro": {
+            "type": "string"
+          },
+          "cidade": {
+            "type": "string"
+          },
+          "uf": {
+            "type": "string",
+            "description": "Sigla do estado, como \"SP\""
+          }
+        },
+        "required": [
+          "cep",
+          "logradouro",
+          "bairro",
+          "cidade",
+          "uf"
+        ]
+      },
+      "Localizacao": {
+        "type": "object",
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "description": "Graus decimais, 6 casas"
+          },
+          "longitude": {
+            "type": "number",
+            "description": "Graus decimais, 6 casas"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ]
+      },
+      "EnderecoDoPonto": {
+        "type": "object",
+        "properties": {
+          "cep": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Só os 8 dígitos; null quando não há"
+          },
+          "logradouro": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "numero": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bairro": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cidade": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "uf": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Sigla (\"SP\")"
+          }
+        },
+        "required": [
+          "cep",
+          "logradouro",
+          "numero",
+          "bairro",
+          "cidade",
+          "uf"
+        ]
+      },
       "TipoDemanda": {
         "type": "object",
         "properties": {
@@ -573,6 +778,13 @@
           "cor": {
             "type": "string"
           },
+          "categoria": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Grupo maior; null vira \"Outros\""
+          },
           "checklist": {
             "type": "array",
             "items": {
@@ -584,6 +796,7 @@
           "id",
           "nome",
           "cor",
+          "categoria",
           "checklist"
         ]
       },
@@ -602,6 +815,13 @@
               "null"
             ]
           },
+          "cep": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Só os 8 dígitos"
+          },
           "cor": {
             "type": "string"
           }
@@ -610,6 +830,7 @@
           "id",
           "nome",
           "regiao",
+          "cep",
           "cor"
         ]
       },
@@ -641,15 +862,12 @@
         "type": "object",
         "properties": {
           "proximo": {
-            "allOf": [
+            "anyOf": [
               {
                 "$ref": "#/components/schemas/ResumoAcionamento"
               },
               {
-                "type": [
-                  "object",
-                  "null"
-                ]
+                "type": "null"
               }
             ]
           },
@@ -709,6 +927,687 @@
           "hoje",
           "metricas",
           "rotaDoDia"
+        ]
+      },
+      "PainelGestor": {
+        "type": "object",
+        "properties": {
+          "hoje": {
+            "type": "string",
+            "example": "2026-09-29"
+          },
+          "periodo": {
+            "anyOf": [
+              {
+                "type": "number",
+                "enum": [
+                  7
+                ]
+              },
+              {
+                "type": "number",
+                "enum": [
+                  30
+                ]
+              }
+            ]
+          },
+          "emAberto": {
+            "type": "integer",
+            "description": "Aberto, em execução ou reprovado"
+          },
+          "paraHoje": {
+            "type": "integer",
+            "description": "Atendimentos de hoje não aprovados"
+          },
+          "aguardando": {
+            "type": "integer"
+          },
+          "aprovacao": {
+            "type": "object",
+            "properties": {
+              "aprovadas": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "aprovadas",
+              "total"
+            ]
+          },
+          "tempoMedioMin": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Média de (1º envio − início) em minutos, com fração; null sem dados",
+            "example": 106.15
+          },
+          "inviaveis": {
+            "type": "object",
+            "properties": {
+              "quantidade": {
+                "type": "integer"
+              },
+              "totalPeriodo": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "quantidade",
+              "totalPeriodo"
+            ]
+          },
+          "volume": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "string",
+                  "example": "2026-09-29"
+                },
+                "total": {
+                  "type": "integer"
+                },
+                "aprovados": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "data",
+                "total",
+                "aprovados"
+              ]
+            }
+          },
+          "reprovacoesPorTipo": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "tipoNome": {
+                  "type": "string"
+                },
+                "reprovacoes": {
+                  "type": "integer"
+                },
+                "demandas": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "tipoNome",
+                "reprovacoes",
+                "demandas"
+              ]
+            }
+          },
+          "ranking": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "prestador": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "nome": {
+                      "type": "string"
+                    },
+                    "cor": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "nome",
+                    "cor"
+                  ]
+                },
+                "concluidos": {
+                  "type": "integer"
+                },
+                "revisoes": {
+                  "type": "object",
+                  "properties": {
+                    "aprovadas": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "aprovadas",
+                    "total"
+                  ]
+                },
+                "tempoMedioMin": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "description": "Média de (1º envio − início) em minutos, com fração; null sem dados",
+                  "example": 106.15
+                }
+              },
+              "required": [
+                "prestador",
+                "concluidos",
+                "revisoes",
+                "tempoMedioMin"
+              ]
+            }
+          }
+        },
+        "required": [
+          "hoje",
+          "periodo",
+          "emAberto",
+          "paraHoje",
+          "aguardando",
+          "aprovacao",
+          "tempoMedioMin",
+          "inviaveis",
+          "volume",
+          "reprovacoesPorTipo",
+          "ranking"
+        ]
+      },
+      "NovoTipo": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "nome"
+        ]
+      },
+      "AtualizacaoTipo": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "categoria": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500,
+            "description": "Grupo maior da tela; null ou vazio limpa (vira \"Outros\")"
+          },
+          "checklist": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "maxItems": 100,
+            "description": "O checklist inteiro, na ordem (etapas vazias são descartadas)"
+          }
+        }
+      },
+      "PreviaPlanilha": {
+        "type": "object",
+        "properties": {
+          "linhas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "nome": {
+                  "type": "string",
+                  "description": "Como veio na planilha (vazio = sem nome)"
+                },
+                "documento": {
+                  "type": "string",
+                  "description": "Como veio na planilha"
+                },
+                "especialidades": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Nomes como vieram, inclusive os não reconhecidos"
+                },
+                "especialidadesIgnoradas": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "As de `especialidades` que não casam com nenhum tipo ativo (erro de digitação, tipo excluído): a importação as ignora. A API sempre manda."
+                },
+                "acao": {
+                  "type": "string",
+                  "enum": [
+                    "novo",
+                    "atualizar",
+                    "erro"
+                  ]
+                },
+                "selo": {
+                  "type": "string",
+                  "enum": [
+                    "Novo",
+                    "Atualizar",
+                    "Sem nome",
+                    "Documento inválido",
+                    "Duplicado na planilha",
+                    "Telefone inválido",
+                    "E-mail inválido",
+                    "E-mail em uso"
+                  ]
+                }
+              },
+              "required": [
+                "nome",
+                "documento",
+                "especialidades",
+                "acao",
+                "selo"
+              ]
+            }
+          },
+          "resumo": {
+            "type": "object",
+            "properties": {
+              "novos": {
+                "type": "integer"
+              },
+              "atualizados": {
+                "type": "integer"
+              },
+              "erros": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "novos",
+              "atualizados",
+              "erros"
+            ]
+          },
+          "ausentes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "nome": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "nome"
+              ]
+            },
+            "description": "Ativos cujo documento não está na planilha, na ordem de cadastro"
+          },
+          "novosComEmail": {
+            "type": "integer",
+            "description": "Linhas \"Novo\" com e-mail: a importação não manda convite, que sai pelo Editar de cada um. A API sempre manda."
+          }
+        },
+        "required": [
+          "linhas",
+          "resumo",
+          "ausentes"
+        ]
+      },
+      "ResultadoImportacao": {
+        "type": "object",
+        "properties": {
+          "novos": {
+            "type": "integer"
+          },
+          "atualizados": {
+            "type": "integer"
+          },
+          "desativados": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "novos",
+          "atualizados",
+          "desativados"
+        ]
+      },
+      "ConviteEnviado": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "E-mail que recebeu o convite e vira o login"
+          },
+          "expiraEm": {
+            "type": "string",
+            "description": "Validade do link (ISO 8601)"
+          }
+        },
+        "required": [
+          "email",
+          "expiraEm"
+        ]
+      },
+      "PrestadorCadastro": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "documento": {
+            "type": "string",
+            "description": "Só dígitos (11 ou 14)"
+          },
+          "telefone": {
+            "type": "string",
+            "description": "Só dígitos, com DDD"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "regiao": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cep": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Só os 8 dígitos"
+          },
+          "logradouro": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "numero": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "complemento": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bairro": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cidade": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "uf": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "2 letras maiúsculas"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ativo",
+              "inativo"
+            ]
+          },
+          "cor": {
+            "type": "string"
+          },
+          "credenciadoDesde": {
+            "type": "string",
+            "description": "AAAA-MM-DD"
+          },
+          "especialidades": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "nome": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "nome"
+              ]
+            },
+            "description": "Na ordem cadastrada, sem os tipos excluídos"
+          },
+          "emAberto": {
+            "type": "integer",
+            "description": "Acionamentos agendados, em execução, reprovados ou aguardando"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "acesso": {
+            "type": "string",
+            "enum": [
+              "sem_email",
+              "pendente",
+              "convidado",
+              "ativo"
+            ],
+            "description": "Acesso ao app: ativo (tem senha), convidado (convite válido), pendente (tem e-mail, sem convite válido nem senha) ou sem_email"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "documento",
+          "telefone",
+          "email",
+          "regiao",
+          "cep",
+          "logradouro",
+          "numero",
+          "complemento",
+          "bairro",
+          "cidade",
+          "uf",
+          "status",
+          "cor",
+          "credenciadoDesde",
+          "especialidades",
+          "emAberto",
+          "total",
+          "acesso"
+        ]
+      },
+      "PrestadorCredenciado": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PrestadorCadastro"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "convite": {
+                "type": "object",
+                "properties": {
+                  "situacao": {
+                    "type": "string",
+                    "enum": [
+                      "enviado",
+                      "falhou",
+                      "sem_email"
+                    ]
+                  },
+                  "email": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "mensagem": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Por que o convite não saiu (o cadastro vale mesmo assim)"
+                  }
+                },
+                "required": [
+                  "situacao",
+                  "email",
+                  "mensagem"
+                ]
+              }
+            },
+            "required": [
+              "convite"
+            ]
+          }
+        ]
+      },
+      "DadosPrestador": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "documento": {
+            "type": "string",
+            "maxLength": 40,
+            "description": "CPF ou CNPJ, com ou sem máscara"
+          },
+          "telefone": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 200
+          },
+          "regiao": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "cep": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 20,
+            "description": "8 dígitos, com ou sem hífen (422 cep_invalido)"
+          },
+          "logradouro": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 200
+          },
+          "numero": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 20
+          },
+          "complemento": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "bairro": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "cidade": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "uf": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 20,
+            "description": "2 letras; gravada em maiúsculas (422 uf_invalida)"
+          },
+          "especialidades": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "maxItems": 50,
+            "description": "Ids dos tipos, na ordem escolhida"
+          }
+        },
+        "required": [
+          "nome",
+          "documento",
+          "telefone",
+          "especialidades"
+        ]
+      },
+      "StatusPrestador": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ativo",
+              "inativo"
+            ]
+          }
+        },
+        "required": [
+          "status"
         ]
       }
     },
@@ -1082,6 +1981,338 @@
         }
       }
     },
+    "/api/assinantes": {
+      "get": {
+        "tags": [
+          "Assinantes"
+        ],
+        "summary": "Assinantes ativos por nome (a busca do Novo acionamento; no máximo 8)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "busca",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assinantes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Assinante"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cep/{cep}": {
+      "get": {
+        "tags": [
+          "Assinantes"
+        ],
+        "summary": "Endereço de um CEP (ViaCEP), para atendimento em outro endereço e para o cadastro de prestadores",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "8 dígitos, com ou sem hífen"
+            },
+            "required": true,
+            "description": "8 dígitos, com ou sem hífen",
+            "name": "cep",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Endereço",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnderecoCep"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CEP não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "CEP malformado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "O ViaCEP não respondeu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/geocodificacao": {
+      "get": {
+        "tags": [
+          "Acionamentos"
+        ],
+        "summary": "Posição de um endereço no mapa (Nominatim), para conferir no Novo acionamento",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "No formato do sistema (\"Rua Harmonia, 410 · Vila Madalena\", com \" · Osasco - SP\" no fim fora da capital); até 300 caracteres"
+            },
+            "required": false,
+            "description": "No formato do sistema (\"Rua Harmonia, 410 · Vila Madalena\", com \" · Osasco - SP\" no fim fora da capital); até 300 caracteres",
+            "name": "endereco",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Posição do primeiro resultado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Localizacao"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Endereço não encontrado no mapa (localizacao_nao_encontrada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Endereço vazio ou longo demais",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "O serviço de mapas não respondeu (geocodificacao_indisponivel)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/geocodificacao/reversa": {
+      "get": {
+        "tags": [
+          "Acionamentos"
+        ],
+        "summary": "Endereço de um ponto do mapa (Nominatim reverse), para o pino movido no Novo acionamento",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 40,
+              "description": "Latitude em graus decimais, com ponto (\"-23.557\")"
+            },
+            "required": false,
+            "description": "Latitude em graus decimais, com ponto (\"-23.557\")",
+            "name": "latitude",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 40,
+              "description": "Longitude em graus decimais, com ponto (\"-46.6905\")"
+            },
+            "required": false,
+            "description": "Longitude em graus decimais, com ponto (\"-46.6905\")",
+            "name": "longitude",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "O endereço mais próximo do ponto; null no que o mapa não sabe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnderecoDoPonto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nenhum endereço no ponto (localizacao_nao_encontrada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ponto ausente, que não é número ou fora do Brasil (localizacao_invalida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "O serviço de mapas não respondeu (geocodificacao_indisponivel)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tipos": {
       "get": {
         "tags": [
@@ -1118,6 +2349,79 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Cria um tipo de demanda (checklist vazio, cor pela paleta)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoTipo"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tipo de demanda",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipoDemanda"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Já existe um tipo com esse nome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/prestadores": {
@@ -1125,7 +2429,7 @@
         "tags": [
           "Catálogo"
         ],
-        "summary": "Prestadores ativos (seletor do Novo acionamento)",
+        "summary": "Prestadores ativos (seletor do Novo acionamento); com ?cep=, do mais próximo ao mais distante",
         "security": [
           {
             "Bearer": []
@@ -1141,6 +2445,16 @@
             },
             "required": false,
             "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "CEP de referência (8 dígitos, com ou sem hífen)"
+            },
+            "required": false,
+            "description": "CEP de referência (8 dígitos, com ou sem hífen)",
+            "name": "cep",
             "in": "query"
           }
         ],
@@ -1170,6 +2484,89 @@
           },
           "403": {
             "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "CEP malformado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Credencia um prestador (ativo, desde hoje) e, com e-mail, envia o convite de acesso",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DadosPrestador"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Credenciado, com o resultado do convite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrestadorCredenciado"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Documento já cadastrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dados inválidos",
             "content": {
               "application/json": {
                 "schema": {
@@ -1956,6 +3353,929 @@
           },
           "403": {
             "description": "Só o prestador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/painel": {
+      "get": {
+        "tags": [
+          "Painel"
+        ],
+        "summary": "KPIs, volume por dia, reprovações por tipo e ranking do período",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "7",
+                "30"
+              ],
+              "default": "7",
+              "description": "Últimos 7 ou 30 dias"
+            },
+            "required": false,
+            "description": "Últimos 7 ou 30 dias",
+            "name": "periodo",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Painel do gestor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PainelGestor"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Período inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tipos/{id}": {
+      "patch": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Renomeia o tipo e/ou grava o checklist inteiro",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AtualizacaoTipo"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tipo de demanda",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipoDemanda"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tipo não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Já existe um tipo com esse nome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Exclui o tipo (os acionamentos já criados não mudam)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Excluído",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tipo não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Último tipo ativo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/planilha/previa": {
+      "post": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Confere a planilha sem gravar: selo de cada linha, resumo e ausentes",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "arquivo": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": ".xlsx, .xls, .csv ou .tsv (inclusive UTF-16), até 5 MB"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Prévia da importação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviaPlanilha"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Planilha acima de 5 MB, ou .xlsx acima de 50 MB descompactado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Sem arquivo, ilegível, sem linhas ou acima de 2000 linhas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/planilha/importacao": {
+      "post": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Importa a planilha numa transação (recalcula a prévia) e grava a auditoria",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "arquivo": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": ".xlsx, .xls, .csv ou .tsv (inclusive UTF-16), até 5 MB"
+                  },
+                  "desativarAusentes": {
+                    "type": "string",
+                    "enum": [
+                      "true",
+                      "false"
+                    ],
+                    "description": "Desativa os ativos que não estão na planilha (padrão: false)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contagens aplicadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoImportacao"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Os cadastros mudaram durante a importação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Planilha acima de 5 MB, ou .xlsx acima de 50 MB descompactado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Sem arquivo, ilegível, sem linhas ou acima de 2000 linhas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/planilha": {
+      "get": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Exporta os prestadores não excluídos (credenciados-russo-DD-MM-AAAA.xlsx)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Planilha de credenciados",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/planilha/modelo": {
+      "get": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Modelo da planilha (modelo-credenciados-russo.xlsx)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Modelo com o cabeçalho e uma linha de exemplo",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/{id}/convite": {
+      "post": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Envia ou reenvia o convite de acesso do prestador por e-mail",
+        "description": "Cria ou atualiza o usuário do prestador (sem senha) e manda um link de uso único, válido por 7 dias, para ele criar a senha. Invalida os convites anteriores. Quem já tem senha recebe o mesmo convite, que funciona como redefinição.",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Convite enviado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConviteEnviado"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prestador não encontrado ou excluído",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Prestador sem e-mail, com e-mail inválido ou usado por outra conta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "O servidor de e-mail não aceitou a mensagem",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/cadastro": {
+      "get": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Prestadores não excluídos, por nome, com especialidades e carga",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cadastro",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PrestadorCadastro"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/{id}": {
+      "patch": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Edita o cadastro (status, cor e data de credenciamento não mudam); o login acompanha o e-mail, e sem e-mail o login é encerrado",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DadosPrestador"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cadastro do prestador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrestadorCadastro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prestador não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Documento já cadastrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Exclui (lógico) quem não tem acionamentos em aberto e derruba a sessão dele",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Excluído",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prestador não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Prestador com acionamentos em aberto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prestadores/{id}/status": {
+      "patch": {
+        "tags": [
+          "Prestadores"
+        ],
+        "summary": "Ativa ou desativa (o switch da lista e o \"Desativar\" da exclusão)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusPrestador"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cadastro do prestador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrestadorCadastro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sem sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Só para a gestão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prestador não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dados inválidos",
             "content": {
               "application/json": {
                 "schema": {

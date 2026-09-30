@@ -4,15 +4,17 @@ import { flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { montar } from '../../test/montar'
 
-const { sair, api } = vi.hoisted(() => ({
+const { sair, api, reiniciarAgenda } = vi.hoisted(() => ({
   sair: vi.fn(async () => {}),
   api: { GET: vi.fn() },
+  reiniciarAgenda: vi.fn(),
 }))
 vi.mock('../sessao', () => ({
   sessao: { usuario: { nome: 'Carlos Mendes' }, carregada: true, indisponivel: false },
   sair,
 }))
 vi.mock('../api', () => ({ api, baseApi: 'http://api' }))
+vi.mock('../agenda/usarAgenda', () => ({ reiniciarAgenda }))
 const { default: PaginaInicio } = await import('./PaginaInicio.vue')
 
 const hoje = dataISO(new Date())
@@ -31,24 +33,25 @@ const resumo = (id: string, extra: Partial<ResumoAcionamento> = {}): ResumoAcion
   tipos: [{ nome: 'Vazamento', cor: '#0069BD' }],
   etapas: { feitas: 0, total: 9 },
   ultimoEnvioEm: null,
+  latitude: null,
+  longitude: null,
   ...extra,
 })
-const inicio = (extra: Partial<InicioPrestador> = {}): InicioPrestador =>
-  ({
-    proximo: resumo('1063'),
-    hoje: [
-      resumo('1062', {
-        inicio: '07:30',
-        titulo: 'Limpeza de ar-condicionado',
-        status: 'aguardando',
-        cliente: 'Clínica Vida',
-      }),
-      resumo('1063'),
-    ],
-    metricas: { hoje: 2, noMes: 7, aprovacao: { taxa: 83, dePrimeira: null }, paraCorrigir: 1 },
-    rotaDoDia: ['Rua Bela Cintra, 1200 · Consolação', 'Av. Paulista, 900 · Bela Vista'],
-    ...extra,
-  }) as InicioPrestador
+const inicio = (extra: Partial<InicioPrestador> = {}): InicioPrestador => ({
+  proximo: resumo('1063'),
+  hoje: [
+    resumo('1062', {
+      inicio: '07:30',
+      titulo: 'Limpeza de ar-condicionado',
+      status: 'aguardando',
+      cliente: 'Clínica Vida',
+    }),
+    resumo('1063'),
+  ],
+  metricas: { hoje: 2, noMes: 7, aprovacao: { taxa: 83, dePrimeira: null }, paraCorrigir: 1 },
+  rotaDoDia: ['Rua Bela Cintra, 1200 · Consolação', 'Av. Paulista, 900 · Bela Vista'],
+  ...extra,
+})
 const ok = (data: unknown) => ({ data, response: new Response(null, { status: 200 }) })
 
 describe('PaginaInicio', () => {
@@ -72,6 +75,16 @@ describe('PaginaInicio', () => {
     expect(router.currentRoute.value.name).toBe('login')
   })
 
+  it('sair não deixa o cache nem a escolha da Agenda para o próximo login', async () => {
+    const { wrapper, cliente } = await montar(PaginaInicio)
+    cliente.setQueryData(['acionamentos'], ['lista da conta anterior'])
+    await wrapper.find('.gatilho').trigger('click')
+    await wrapper.find('[role="menuitem"]').trigger('click')
+    await flushPromises()
+    expect(cliente.getQueryData(['acionamentos'])).toBeUndefined()
+    expect(reiniciarAgenda).toHaveBeenCalled()
+  })
+
   it('mostra o próximo atendimento com rota e atalho para o checklist', async () => {
     const { wrapper, router } = await montar(PaginaInicio)
     expect(api.GET).toHaveBeenCalledWith('/api/prestador/inicio')
@@ -92,7 +105,7 @@ describe('PaginaInicio', () => {
   })
 
   it('sem próximo atendimento, avisa que a agenda está livre', async () => {
-    api.GET.mockResolvedValue(ok(inicio({ proximo: null as never })))
+    api.GET.mockResolvedValue(ok(inicio({ proximo: null })))
     const { wrapper } = await montar(PaginaInicio)
     expect(wrapper.find('.proximo').exists()).toBe(false)
     expect(wrapper.find('.sem-proximo').text()).toBe('Nenhum atendimento pendente na sua agenda.')
@@ -100,7 +113,7 @@ describe('PaginaInicio', () => {
 
   it('"Em execução agora" quando o próximo já começou', async () => {
     const emExecucao = resumo('1063', { status: 'em_andamento' })
-    api.GET.mockResolvedValue(ok(inicio({ proximo: emExecucao as InicioPrestador['proximo'] })))
+    api.GET.mockResolvedValue(ok(inicio({ proximo: emExecucao })))
     const { wrapper } = await montar(PaginaInicio)
     expect(wrapper.find('.proximo .selo').text()).toBe('Em execução agora')
   })
@@ -142,6 +155,36 @@ describe('PaginaInicio', () => {
     )
   })
 
+  it('"Rota" e "Rota do dia" usam a localização conferida no mapa quando o acionamento tem', async () => {
+    const posicao = { latitude: -23.556789, longitude: -46.690123 }
+    const conferido = resumo('1063', posicao)
+    api.GET.mockResolvedValue(
+      ok(
+        inicio({
+          proximo: conferido,
+          hoje: [
+            resumo('1062', { status: 'aguardando', latitude: -23.5, longitude: -46.6 }),
+            conferido,
+            resumo('1064', { endereco: 'Av. Paulista, 900 · Bela Vista', inicio: '14:00' }),
+          ],
+        }),
+      ),
+    )
+    const abrir = vi.spyOn(window, 'open').mockReturnValue(null)
+    const { wrapper } = await montar(PaginaInicio)
+    expect(wrapper.find('.proximo a.rota').attributes('href')).toBe(
+      urlMapa('Rua Bela Cintra, 1200 · Consolação', posicao),
+    )
+    await wrapper.findAll('.atalho')[0]!.trigger('click')
+    expect(abrir).toHaveBeenCalledWith(
+      urlRota([
+        { endereco: 'Rua Bela Cintra, 1200 · Consolação', ...posicao },
+        'Av. Paulista, 900 · Bela Vista',
+      ]),
+      '_blank',
+    )
+  })
+
   it('"Rota do dia" não faz nada sem endereços pendentes', async () => {
     api.GET.mockResolvedValue(ok(inicio({ rotaDoDia: [] })))
     const abrir = vi.spyOn(window, 'open').mockReturnValue(null)
@@ -169,6 +212,15 @@ describe('PaginaInicio', () => {
     await itens[0]!.trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.params.id).toBe('1062')
+  })
+
+  it('Espaço no item da agenda de hoje abre o detalhe, sem rolar a página', async () => {
+    const { wrapper, router } = await montar(PaginaInicio)
+    const espaco = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })
+    wrapper.findAll('.item-hoje')[1]!.element.dispatchEvent(espaco)
+    await flushPromises()
+    expect(espaco.defaultPrevented).toBe(true)
+    expect(router.currentRoute.value.params.id).toBe('1063')
   })
 
   it('sem nada hoje, diz "Nada agendado para hoje."', async () => {

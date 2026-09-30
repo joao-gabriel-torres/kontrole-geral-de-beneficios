@@ -52,8 +52,8 @@ describe('sessão do gestor', () => {
     expect(await entrar('r@x', 'errada')).toEqual({ ok: false, mensagem: MENSAGENS.credenciais })
   })
 
-  it('prestador desativado tentando o painel web lê que a conta é de prestador', async () => {
-    auth.signIn.email.mockResolvedValue({ error: { status: 403, code: 'PRESTADOR_INATIVO' } })
+  it('prestador excluído tentando o painel web lê que a conta é de prestador', async () => {
+    auth.signIn.email.mockResolvedValue({ error: { status: 403, code: 'PRESTADOR_EXCLUIDO' } })
     expect(await entrar('c@x', 'x')).toEqual({ ok: false, mensagem: MENSAGENS.papel })
   })
 

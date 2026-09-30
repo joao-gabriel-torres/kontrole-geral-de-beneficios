@@ -43,4 +43,41 @@ describe('links de mapa', () => {
       `https://www.google.com/maps/dir/${alvo('Rua A, 1, Centro')}/${alvo('Rua B, 2, Sé')}`,
     )
   })
+  it('endereço de outra cidade (termina com " - UF") não ganha ", São Paulo"', () => {
+    const osasco = encodeURIComponent('Rua X, 12, Centro, Osasco - SP')
+    expect(urlMapa('Rua X, 12 · Centro · Osasco - SP')).toBe(
+      `https://www.google.com/maps/search/?api=1&query=${osasco}`,
+    )
+    expect(urlRota(['Rua A, 1 · Centro', 'Rua X, 12 · Centro · Osasco - SP'])).toBe(
+      `https://www.google.com/maps/dir/${alvo('Rua A, 1, Centro')}/${osasco}`,
+    )
+  })
+  it('com a posição conferida no mapa, o destino é "lat,lng"', () => {
+    const posicao = { latitude: -23.556789, longitude: -46.690123 }
+    expect(urlMapa('Rua Harmonia, 410 · Vila Madalena', posicao)).toBe(
+      'https://www.google.com/maps/search/?api=1&query=-23.556789,-46.690123',
+    )
+    expect(
+      urlRota([
+        { endereco: 'Rua A, 1 · Centro', ...posicao },
+        { endereco: 'Rua B, 2 · Sé', latitude: null, longitude: null },
+        'Rua C, 3 · Sé',
+      ]),
+    ).toBe(
+      `https://www.google.com/maps/dir/-23.556789,-46.690123/${alvo('Rua B, 2, Sé')}/${alvo('Rua C, 3, Sé')}`,
+    )
+  })
+  it('sem as duas coordenadas (ou com valor inválido), vale o endereço', () => {
+    const doEndereco = urlMapa('Rua Harmonia, 410 · Vila Madalena')
+    for (const posicao of [
+      null,
+      undefined,
+      { latitude: null, longitude: null },
+      { latitude: -23.5, longitude: null },
+      { latitude: undefined, longitude: -46.6 },
+      { latitude: Number.NaN, longitude: -46.6 },
+    ]) {
+      expect(urlMapa('Rua Harmonia, 410 · Vila Madalena', posicao)).toBe(doEndereco)
+    }
+  })
 })
