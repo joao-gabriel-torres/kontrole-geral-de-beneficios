@@ -281,3 +281,64 @@ Depois da integração, o orquestrador:
 2. roda a verificação completa, o `pnpm visual` (com a passada do H3) e o `pnpm e2e`;
 3. faz uma revisão final independente;
 4. abre o PR `feat/telas-restantes` → `main`.
+
+## Novo acionamento inteligente (pedido do usuário, 30/09)
+
+O modal Novo acionamento deixa de seguir o protótipo nos campos da coluna esquerda (decisão do
+usuário). A prévia do checklist, o cabeçalho, os botões e o restante do sistema continuam pixel
+perfect; no comparador, os casos do modal mascaram a coluna de campos (`ocultarNoApp`).
+
+### Categorias de demanda
+
+- `TipoDemanda.categoria` (texto, opcional; sem categoria a tela mostra "Outros").
+- Seed: Vazamento → Hidráulica; Revisão elétrica, Ponto de luz e Troca de disjuntor → Elétrica;
+  Pintura e Reparo em gesso → Acabamento; Limpeza de ar-condicionado → Climatização;
+  Chaveiro → Segurança.
+- Checklists: o editor ganha o campo "Categoria" (texto com sugestões das categorias existentes,
+  salvo com o mesmo autosave). No comparador, o campo fica mascarado.
+
+### Busca de demandas no modal
+
+- Em vez dos chips com todos os tipos: um campo de busca com lista suspensa, agrupada por
+  categoria, que filtra por nome do tipo ou da categoria (sem acentos e sem maiúsculas).
+- Selecionar acrescenta um chip removível (mesmo visual dos chips atuais); a prévia do checklist
+  continua igual.
+- Teclado: ↓/↑ navegam, Enter seleciona, Esc fecha a lista.
+
+### Assinantes (clientes ativos)
+
+- Modelo novo `Assinante`: nome, cep (8 dígitos), logradouro, numero, complemento?, bairro,
+  cidade, status ativo/inativo, excluidoEm?. Endereço de exibição no formato do protótipo
+  ("Rua X, 410 · Bairro").
+- Seed: um assinante por cliente distinto dos acionamentos do protótipo, ativo, com CEP paulistano
+  plausível para o bairro do endereço; os acionamentos do seed apontam para eles (`assinanteId`).
+- `GET /api/assinantes?busca=` (só gestor): ativos, sem acentos, por nome; até 8 resultados.
+- No modal, o campo Cliente vira busca com lista suspensa. Selecionar preenche endereço e CEP.
+
+### Endereço por CEP
+
+- `GET /api/cep/{cep}` (só gestor): consulta o ViaCEP atrás da interface `BuscaCep`
+  (implementação real com fetch e timeout curto; falsa nos testes). Erros: `cep_invalido` (422,
+  "Informe um CEP com 8 dígitos") e `cep_nao_encontrado` (404, "CEP não encontrado").
+- Atendimento em outro endereço: o gestor digita outro CEP, o logradouro/bairro/cidade vêm
+  preenchidos (somente leitura) e o modal pede número e complemento (opcional).
+- Botão "Ver no mapa" (link, estilo dos links do gestor) abre o endereço montado no Google Maps
+  (`urlMapa` de @kgb/ui) para validar o local.
+- `Acionamento` ganha `assinanteId?` e `cep?`; `cliente` e `endereco` continuam snapshots de texto
+  ("Logradouro, número · bairro"), então as demais telas não mudam.
+
+### Prestador por proximidade
+
+- `Prestador.cep` (opcional). Seed: CEP plausível para a região de cada um. O modal de
+  Novo/Editar prestador ganha o campo CEP (mascarado no comparador). A planilha não importa CEP
+  por enquanto.
+- `GET /api/prestadores?cep=...`: os ativos ordenados pela distância numérica entre CEPs
+  (heurística sem geocodificação; empate por nome; sem CEP vai ao fim, por nome). A resposta
+  inclui `regiao` e `cep`.
+- No modal, a escolha do prestador vira busca com lista suspensa (por nome ou região), já ordenada
+  pela proximidade do CEP em uso; o primeiro (mais próximo) vem selecionado.
+
+### Verificação
+
+- TDD nos módulos novos; o comparador roda só nos casos afetados durante o desenvolvimento
+  (a rodada completa fica para o fechamento, junto com o `pnpm e2e` atualizado para o fluxo novo).
