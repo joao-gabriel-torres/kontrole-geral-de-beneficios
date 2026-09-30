@@ -17,6 +17,7 @@ import { rotasCatalogo } from './rotas/catalogo'
 import { rotasCep } from './rotas/cep'
 import { rotasConvites } from './rotas/convites'
 import { rotasExecucao } from './rotas/execucao'
+import { rotasGeocodificacao } from './rotas/geocodificacao'
 import { rotasPrestador } from './rotas/prestador'
 import { rotasMe } from './rotas/me'
 import { rotasPainel } from './rotas/painel'
@@ -79,6 +80,7 @@ export function criarApp() {
   app.route('/', rotasAcionamentos)
   app.route('/', rotasAssinantes)
   app.route('/', rotasCep)
+  app.route('/', rotasGeocodificacao)
   app.route('/', rotasCatalogo)
   app.route('/', rotasExecucao)
   app.route('/', rotasPrestador)
