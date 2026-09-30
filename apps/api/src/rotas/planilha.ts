@@ -33,6 +33,10 @@ export const PreviaPlanilhaSchema = z
         especialidades: z
           .array(z.string())
           .openapi({ description: 'Nomes como vieram, inclusive os não reconhecidos' }),
+        especialidadesIgnoradas: z.array(z.string()).optional().openapi({
+          description:
+            'As de `especialidades` que não casam com nenhum tipo ativo (erro de digitação, tipo excluído): a importação as ignora. A API sempre manda.',
+        }),
         acao: z.enum(['novo', 'atualizar', 'erro']),
         selo: z.enum(SELOS),
       }),
@@ -45,6 +49,10 @@ export const PreviaPlanilhaSchema = z
     ausentes: z
       .array(z.object({ id: z.string(), nome: z.string() }))
       .openapi({ description: 'Ativos cujo documento não está na planilha, na ordem de cadastro' }),
+    novosComEmail: z.number().int().optional().openapi({
+      description:
+        'Linhas "Novo" com e-mail: a importação não manda convite, que sai pelo Editar de cada um. A API sempre manda.',
+    }),
   })
   .openapi('PreviaPlanilha')
 
@@ -61,7 +69,11 @@ const ArquivoPlanilhaSchema = z.object({
   arquivo: z
     .any()
     .optional()
-    .openapi({ type: 'string', format: 'binary', description: '.xlsx, .xls, .csv ou .tsv (inclusive UTF-16), até 5 MB' }),
+    .openapi({
+      type: 'string',
+      format: 'binary',
+      description: '.xlsx, .xls, .csv ou .tsv (inclusive UTF-16), até 5 MB',
+    }),
 })
 const ImportacaoFormSchema = ArquivoPlanilhaSchema.extend({
   desativarAusentes: z

@@ -2570,6 +2570,8 @@ export interface components {
                 documento: string;
                 /** @description Nomes como vieram, inclusive os não reconhecidos */
                 especialidades: string[];
+                /** @description As de `especialidades` que não casam com nenhum tipo ativo (erro de digitação, tipo excluído): a importação as ignora. A API sempre manda. */
+                especialidadesIgnoradas?: string[];
                 /** @enum {string} */
                 acao: "novo" | "atualizar" | "erro";
                 /** @enum {string} */
@@ -2585,6 +2587,8 @@ export interface components {
                 id: string;
                 nome: string;
             }[];
+            /** @description Linhas "Novo" com e-mail: a importação não manda convite, que sai pelo Editar de cada um. A API sempre manda. */
+            novosComEmail?: number;
         };
         ResultadoImportacao: {
             novos: number;

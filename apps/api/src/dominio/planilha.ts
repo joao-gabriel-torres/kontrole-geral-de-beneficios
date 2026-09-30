@@ -189,7 +189,8 @@ export function mapearTabelaComColunas(tabela: readonly (readonly Celula[] | nul
     const linha = linhaVazia()
     for (const [i, campo] of colunas) {
       if (linha[campo]) continue
-      linha[campo] = campo === 'documento' ? textoDoDocumento(celulas[i]) : textoDaCelula(celulas[i])
+      linha[campo] =
+        campo === 'documento' ? textoDoDocumento(celulas[i]) : textoDaCelula(celulas[i])
     }
     if (Object.values(linha).some(Boolean)) linhas.push(linha)
   }
@@ -245,6 +246,8 @@ export interface LinhaPrevia {
   nome: string
   documento: string
   especialidades: string[]
+  /** As de `especialidades` que não casam com nenhum tipo ativo: a importação as ignora. */
+  especialidadesIgnoradas: string[]
   acao: AcaoLinha
   selo: Selo
 }
@@ -275,6 +278,8 @@ export interface Previa {
   resumo: { novos: number; atualizados: number; erros: number }
   /** Ativos cujo documento não está em nenhuma linha válida, na ordem de cadastro. */
   ausentes: { id: string; nome: string }[]
+  /** Linhas "Novo" com e-mail: a importação não manda convite, que sai pelo Editar de cada um. */
+  novosComEmail: number
   gravacoes: Gravacao[]
 }
 
@@ -296,6 +301,7 @@ export function montarPrevia(
   const documentosNaPlanilha = new Set<string>()
   const linhas: LinhaPrevia[] = []
   const gravacoes: Gravacao[] = []
+  let novosComEmail = 0
 
   for (const l of lidas) {
     const documento = soDigitos(l.documento)
@@ -322,20 +328,28 @@ export function montarPrevia(
                   ? 'Atualizar'
                   : 'Novo'
     const acao: AcaoLinha = selo === 'Novo' ? 'novo' : selo === 'Atualizar' ? 'atualizar' : 'erro'
-    linhas.push({ nome: l.nome, documento: l.documento, especialidades: nomes, acao, selo })
+    const ids = nomes.map((n) => tipoPorNome.get(normalizarTexto(n)))
+    linhas.push({
+      nome: l.nome,
+      documento: l.documento,
+      especialidades: nomes,
+      especialidadesIgnoradas: nomes.filter((_, i) => !ids[i]),
+      acao,
+      selo,
+    })
     if (acao === 'erro') continue
 
     vistos.add(documento)
-    const ids = nomes
-      .map((n) => tipoPorNome.get(normalizarTexto(n)))
-      .filter((id): id is string => !!id)
+    if (acao === 'novo' && l.email.trim()) novosComEmail++
     const dados: DadosImportados = {
       nome: l.nome,
       documento,
       telefone,
       ...(presentes.has('email') ? { email: l.email.trim() || null } : {}),
       ...(presentes.has('regiao') ? { regiao: l.regiao || null } : {}),
-      ...(presentes.has('especialidades') ? { especialidades: [...new Set(ids)] } : {}),
+      ...(presentes.has('especialidades')
+        ? { especialidades: [...new Set(ids.filter((id): id is string => !!id))] }
+        : {}),
       ...(presentes.has('status')
         ? { status: normalizarTexto(l.status).startsWith('inativ') ? 'inativo' : 'ativo' }
         : {}),
@@ -355,6 +369,7 @@ export function montarPrevia(
     ausentes: existentes
       .filter((p) => p.status === 'ativo' && !documentosNaPlanilha.has(p.documento))
       .map(({ id, nome }) => ({ id, nome })),
+    novosComEmail,
     gravacoes,
   }
 }

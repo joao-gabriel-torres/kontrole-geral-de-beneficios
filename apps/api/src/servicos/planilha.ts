@@ -128,8 +128,13 @@ export type PreviaPlanilha = Omit<Previa, 'gravacoes'>
 /** A conferência: lê o arquivo e calcula os selos, o resumo e os ausentes, sem gravar nada. */
 export async function previaDaPlanilha(arquivo: unknown): Promise<PreviaPlanilha> {
   const { linhas, presentes } = await lerArquivo(arquivo)
-  const { linhas: selos, resumo, ausentes } = await previaNoBanco(prisma, linhas, presentes)
-  return { linhas: selos, resumo, ausentes }
+  const {
+    linhas: selos,
+    resumo,
+    ausentes,
+    novosComEmail,
+  } = await previaNoBanco(prisma, linhas, presentes)
+  return { linhas: selos, resumo, ausentes, novosComEmail }
 }
 
 export interface ResultadoImportacao {
