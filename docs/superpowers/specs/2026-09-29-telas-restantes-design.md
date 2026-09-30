@@ -366,3 +366,14 @@ perfect; no comparador, os casos do modal mascaram a coluna de campos (`ocultarN
    - **Onde grava:** `Acionamento.latitude` e `Acionamento.longitude`, opcionais. Quando o endereço é o do próprio assinante, a posição confirmada também vai para `Assinante.latitude` e `Assinante.longitude`, e a próxima vez já abre nela.
    - **App do prestador:** o botão "Rota" (e a rota do dia) usa as coordenadas quando existem, com `urlMapa`/`urlRota` aceitando coordenadas.
 4. **Importação da planilha:** não envia convite em massa (confirmado).
+
+### Mover o pino = outro endereço (pedido do usuário, 30/09)
+
+- **Confirmar sem mover o pino:** valida o endereço de cadastro. A posição vai para o acionamento e, por ser o endereço do assinante, também para o assinante, como antes.
+- **Mover o pino (arrastar ou clicar em outro ponto) e confirmar:** o atendimento é em outro lugar.
+  - O modal marca "Atender em outro endereço" sozinho e preenche o endereço a partir do ponto, pela consulta reversa `GET /api/geocodificacao/reversa?latitude=&longitude=`.
+  - A consulta reversa usa o Nominatim `reverse` atrás da mesma interface `Geocodificador`, com as mesmas regras: só gestor, cache, 1 requisição por segundo, faixa do Brasil, 404/502. Ela devolve CEP, logradouro, número, bairro, cidade e UF, cada um quando existir.
+  - **Com CEP de 8 dígitos:** o fluxo normal do CEP (ViaCEP) completa rua, bairro e cidade. O número vem da consulta reversa, quando houver.
+  - **Sem CEP, ou com o ViaCEP fora:** os campos vêm da consulta reversa e ficam editáveis; o que faltar, a gestora completa.
+  - A posição exata do pino fica gravada **só no acionamento**. O cadastro do assinante (endereço e posição salva) não muda.
+  - Essa posição não é descartada pelo preenchimento automático. Ela só cai se a gestora trocar de cliente, voltar ao endereço de cadastro ou editar o CEP ou o número à mão.
