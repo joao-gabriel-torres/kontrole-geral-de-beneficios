@@ -155,6 +155,36 @@ describe('PaginaInicio', () => {
     )
   })
 
+  it('"Rota" e "Rota do dia" usam a localização conferida no mapa quando o acionamento tem', async () => {
+    const posicao = { latitude: -23.556789, longitude: -46.690123 }
+    const conferido = resumo('1063', posicao)
+    api.GET.mockResolvedValue(
+      ok(
+        inicio({
+          proximo: conferido,
+          hoje: [
+            resumo('1062', { status: 'aguardando', latitude: -23.5, longitude: -46.6 }),
+            conferido,
+            resumo('1064', { endereco: 'Av. Paulista, 900 · Bela Vista', inicio: '14:00' }),
+          ],
+        }),
+      ),
+    )
+    const abrir = vi.spyOn(window, 'open').mockReturnValue(null)
+    const { wrapper } = await montar(PaginaInicio)
+    expect(wrapper.find('.proximo a.rota').attributes('href')).toBe(
+      urlMapa('Rua Bela Cintra, 1200 · Consolação', posicao),
+    )
+    await wrapper.findAll('.atalho')[0]!.trigger('click')
+    expect(abrir).toHaveBeenCalledWith(
+      urlRota([
+        { endereco: 'Rua Bela Cintra, 1200 · Consolação', ...posicao },
+        'Av. Paulista, 900 · Bela Vista',
+      ]),
+      '_blank',
+    )
+  })
+
   it('"Rota do dia" não faz nada sem endereços pendentes', async () => {
     api.GET.mockResolvedValue(ok(inicio({ rotaDoDia: [] })))
     const abrir = vi.spyOn(window, 'open').mockReturnValue(null)
