@@ -9,6 +9,7 @@ import {
   expiracaoDoConvite,
   identificadorGravado,
   linkDoConvite,
+  loginAnonimo,
   MENSAGENS_CONVITE,
   momentoDoConvite,
   normalizarEmail,
@@ -67,10 +68,27 @@ const contaDoEmail = (tx: Prisma.TransactionClient, email: string) =>
   })
 
 /**
+ * Tira o login do ar: derruba as sessões, apaga os convites e a senha e troca o e-mail por um
+ * anônimo. O usuário fica (os eventos dos acionamentos apontam para ele). A senha cai porque o
+ * e-mail anônimo é previsível; o acesso só volta por um convite novo.
+ */
+export async function encerrarLogin(
+  tx: Prisma.TransactionClient,
+  usuarioId: string,
+  prestadorId: string,
+): Promise<void> {
+  await tx.session.deleteMany({ where: { userId: usuarioId } })
+  await tx.verification.deleteMany({ where: convitesDoUsuario(usuarioId) })
+  await tx.account.deleteMany({ where: { userId: usuarioId, providerId: 'credential' } })
+  await tx.user.update({ where: { id: usuarioId }, data: { email: loginAnonimo(prestadorId) } })
+}
+
+/**
  * Leva a troca do e-mail do cadastro ao login do usuário vinculado, com a mesma checagem de
- * conflito do convite. Os convites pendentes caem, porque o link foi para o endereço antigo. Sem
- * usuário vinculado, sem e-mail novo ou com o mesmo e-mail, o login fica como está.
- * Roda na transação da edição, com a linha do prestador travada.
+ * conflito do convite. Os convites pendentes caem, porque o link foi para o endereço antigo.
+ * Remover o e-mail encerra o login (`encerrarLogin`): o cadastro e o login andam juntos, e o
+ * acesso volta com um e-mail novo e um novo convite. Sem usuário vinculado ou com o mesmo e-mail,
+ * o login fica como está. Roda na transação da gravação, com a linha do prestador travada.
  */
 export async function sincronizarLogin(
   tx: Prisma.TransactionClient,
@@ -79,9 +97,10 @@ export async function sincronizarLogin(
   emailNovo: string | null,
 ): Promise<void> {
   const novo = normalizarEmail(emailNovo)
-  if (!novo || novo === normalizarEmail(emailAnterior)) return
+  if (novo === normalizarEmail(emailAnterior)) return
   const usuario = await tx.user.findUnique({ where: { prestadorId }, select: { id: true } })
   if (!usuario) return
+  if (!novo) return encerrarLogin(tx, usuario.id, prestadorId)
   const email = verificarConvite({
     prestadorId,
     email: novo,
