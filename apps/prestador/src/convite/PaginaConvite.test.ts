@@ -34,6 +34,17 @@ async function enviar(tela: VueWrapper) {
 
 const botao = (tela: VueWrapper) => tela.find('button[type="submit"]')
 const alerta = (tela: VueWrapper) => tela.find('p[role="alert"]')
+const campoSenha = (tela: VueWrapper) => tela.find('#convite-senha')
+const campoConfirmacao = (tela: VueWrapper) => tela.find('#convite-confirmacao')
+
+/** O que um leitor de tela sabe de cada campo: a descrição (id do erro) e se está inválido. */
+function acessibilidade(tela: VueWrapper) {
+  const campo = (c: ReturnType<typeof campoSenha>) => ({
+    descricao: c.attributes('aria-describedby'),
+    invalido: c.attributes('aria-invalid'),
+  })
+  return { senha: campo(campoSenha(tela)), confirmacao: campo(campoConfirmacao(tela)) }
+}
 
 describe('PaginaConvite', () => {
   beforeEach(() => {
@@ -127,6 +138,85 @@ describe('PaginaConvite', () => {
     await enviar(tela)
     await enviar(tela)
     expect(auth.resetPassword).toHaveBeenCalledTimes(1)
+  })
+
+  describe('a mensagem de erro ligada aos campos', () => {
+    it('sem erro, os campos não apontam para mensagem nenhuma nem estão inválidos', async () => {
+      const { wrapper: tela } = await abrir()
+      const semNada = { descricao: undefined, invalido: undefined }
+      expect(acessibilidade(tela)).toEqual({ senha: semNada, confirmacao: semNada })
+    })
+
+    it('senha curta: os dois campos descritos pelo erro, só a Nova senha inválida', async () => {
+      const { wrapper: tela } = await abrir()
+      await preencher(tela, '1234567', '1234567')
+      await enviar(tela)
+      const id = alerta(tela).attributes('id')
+      expect(id).toBeTruthy()
+      expect(acessibilidade(tela)).toEqual({
+        senha: { descricao: id, invalido: 'true' },
+        confirmacao: { descricao: id, invalido: undefined },
+      })
+    })
+
+    it('senhas diferentes: só a confirmação fica inválida', async () => {
+      const { wrapper: tela } = await abrir()
+      await preencher(tela, 'senha-nova-1', 'senha-nova-2')
+      await enviar(tela)
+      const id = alerta(tela).attributes('id')
+      expect(acessibilidade(tela)).toEqual({
+        senha: { descricao: id, invalido: undefined },
+        confirmacao: { descricao: id, invalido: 'true' },
+      })
+    })
+
+    it('senha curta recusada pela API também marca a Nova senha', async () => {
+      auth.resetPassword.mockResolvedValue({
+        data: null,
+        error: { status: 400, code: 'PASSWORD_TOO_SHORT' },
+      })
+      const { wrapper: tela } = await abrir()
+      await preencher(tela, 'senha-nova-1', 'senha-nova-1')
+      await enviar(tela)
+      expect(acessibilidade(tela).senha.invalido).toBe('true')
+    })
+
+    it('erro que não é das senhas (conexão) descreve os campos sem marcá-los inválidos', async () => {
+      auth.resetPassword.mockRejectedValue(new TypeError('Failed to fetch'))
+      const { wrapper: tela } = await abrir()
+      await preencher(tela, 'senha-nova-1', 'senha-nova-1')
+      await enviar(tela)
+      const id = alerta(tela).attributes('id')
+      expect(id).toBeTruthy()
+      expect(acessibilidade(tela)).toEqual({
+        senha: { descricao: id, invalido: undefined },
+        confirmacao: { descricao: id, invalido: undefined },
+      })
+    })
+  })
+
+  describe('com o convite inválido, os campos ficam desabilitados', () => {
+    const desabilitados = (tela: VueWrapper) => [
+      campoSenha(tela).attributes('disabled'),
+      campoConfirmacao(tela).attributes('disabled'),
+    ]
+
+    it('sem token no link', async () => {
+      const { wrapper: tela } = await abrir('')
+      expect(desabilitados(tela)).toEqual(['', ''])
+    })
+
+    it('com o token recusado pela API', async () => {
+      auth.resetPassword.mockResolvedValue({
+        data: null,
+        error: { status: 400, code: 'INVALID_TOKEN' },
+      })
+      const { wrapper: tela } = await abrir()
+      expect(desabilitados(tela)).toEqual([undefined, undefined])
+      await preencher(tela, 'senha-nova-1', 'senha-nova-1')
+      await enviar(tela)
+      expect(desabilitados(tela)).toEqual(['', ''])
+    })
   })
 
   it('com outra conta aberta no aparelho, sai dela antes de ir ao login', async () => {
