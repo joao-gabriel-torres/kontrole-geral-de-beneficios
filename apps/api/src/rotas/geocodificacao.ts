@@ -43,16 +43,13 @@ const rotaLocalizar = createRoute({
 })
 
 /** Geocodificação do "Ver no mapa" do Novo acionamento. */
-export const rotasGeocodificacao = new OpenAPIHono<Ambiente>().openapi(
-  rotaLocalizar,
-  async (c) => {
-    try {
-      return c.json(await localizarEndereco(c.req.valid('query').endereco), 200)
-    } catch (erro) {
-      if (erro instanceof GeocodificacaoIndisponivel) {
-        return c.json(corpoErro('geocodificacao_indisponivel', erro.message), 502)
-      }
-      throw erro
+export const rotasGeocodificacao = new OpenAPIHono<Ambiente>().openapi(rotaLocalizar, async (c) => {
+  try {
+    return c.json(await localizarEndereco(c.req.valid('query').endereco), 200)
+  } catch (erro) {
+    if (erro instanceof GeocodificacaoIndisponivel) {
+      return c.json(corpoErro('geocodificacao_indisponivel', erro.message), 502)
     }
-  },
-)
+    throw erro
+  }
+})

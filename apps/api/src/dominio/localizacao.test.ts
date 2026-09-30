@@ -209,22 +209,34 @@ describe('ehEnderecoDoAssinante', () => {
       ),
     ).toBe(true)
     expect(
-      ehEnderecoDoAssinante({ cep: '01426002', endereco: 'Rua Oscar Freire, 900 · Jardins' }, comApto),
+      ehEnderecoDoAssinante(
+        { cep: '01426002', endereco: 'Rua Oscar Freire, 900 · Jardins' },
+        comApto,
+      ),
     ).toBe(false)
   })
 
   it('outro CEP é outro endereço', () => {
     expect(
-      ehEnderecoDoAssinante({ cep: '01310200', endereco: 'Rua Oscar Freire, 900 · Jardins' }, assinante),
+      ehEnderecoDoAssinante(
+        { cep: '01310200', endereco: 'Rua Oscar Freire, 900 · Jardins' },
+        assinante,
+      ),
     ).toBe(false)
   })
 
   it('mesmo CEP, outro número: é outro endereço', () => {
     expect(
-      ehEnderecoDoAssinante({ cep: '01426002', endereco: 'Rua Oscar Freire, 902 · Jardins' }, assinante),
+      ehEnderecoDoAssinante(
+        { cep: '01426002', endereco: 'Rua Oscar Freire, 902 · Jardins' },
+        assinante,
+      ),
     ).toBe(false)
     expect(
-      ehEnderecoDoAssinante({ cep: '01426002', endereco: 'Rua Oscar Freire, 90 · Jardins' }, assinante),
+      ehEnderecoDoAssinante(
+        { cep: '01426002', endereco: 'Rua Oscar Freire, 90 · Jardins' },
+        assinante,
+      ),
     ).toBe(false)
   })
 })

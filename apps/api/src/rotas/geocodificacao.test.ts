@@ -222,7 +222,10 @@ describe('criarGeocodificadorNominatim', () => {
   })
 
   it('lista vazia é "não encontrado" (null)', async () => {
-    const g = criarGeocodificadorNominatim({ ...relogio(), executarFetch: async () => resposta([]) })
+    const g = criarGeocodificadorNominatim({
+      ...relogio(),
+      executarFetch: async () => resposta([]),
+    })
     expect(await g.localizar('Rua Nenhuma, 1, São Paulo')).toBeNull()
   })
 
