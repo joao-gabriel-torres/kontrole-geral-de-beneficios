@@ -1,3 +1,5 @@
+import type { CodigoErroAssinantes } from './erros-assinantes'
+import type { CodigoErroCep } from './erros-cep'
 import type { CodigoErroConvites } from './erros-convites'
 import type { CodigoErroPlanilha } from './erros-planilha'
 import type { CodigoErroPrestadores } from './erros-prestadores'
@@ -16,6 +18,8 @@ export type CodigoErroDominio =
   | CodigoErroPlanilha
   | CodigoErroTipos
   | CodigoErroConvites
+  | CodigoErroCep
+  | CodigoErroAssinantes
   | 'transicao_invalida'
   | 'fotos_insuficientes'
   | 'etapas_pendentes'
@@ -109,6 +113,10 @@ export interface DadosNovoAcionamento {
   titulo: string
   cliente: string
   endereco: string
+  /** Assinante escolhido na busca do modal; o cliente/endereço acima seguem como snapshot. */
+  assinanteId?: string
+  /** CEP do atendimento (8 dígitos, com ou sem hífen); o serviço normaliza e valida. */
+  cep?: string
   data: string
   inicio: string
   fim: string

@@ -12,6 +12,7 @@ export const PALETA_TIPOS = [
   '#47C272',
 ] as const
 export const LIMITE_NOME_TIPO = 60
+export const LIMITE_CATEGORIA = 60
 export const LIMITE_ETAPA = 200
 
 /** Cor do tipo novo: a paleta pela quantidade de tipos não excluídos (as cores podem repetir). */
@@ -30,6 +31,16 @@ export function normalizarNomeTipo(nome: string): string {
     throw new ErroDominio('texto_longo', `O nome pode ter até ${LIMITE_NOME_TIPO} caracteres`)
   }
   return aparado
+}
+
+/** A categoria como é gravada: com trim e até 60 caracteres; vazia vira null (tela: "Outros"). */
+export function normalizarCategoria(categoria: string | null): string | null {
+  const aparada = categoria?.trim()
+  if (!aparada) return null
+  if (aparada.length > LIMITE_CATEGORIA) {
+    throw new ErroDominio('texto_longo', `A categoria pode ter até ${LIMITE_CATEGORIA} caracteres`)
+  }
+  return aparada
 }
 
 /** O checklist como é gravado: etapas com trim, sem as vazias, cada uma com até 200 caracteres. */

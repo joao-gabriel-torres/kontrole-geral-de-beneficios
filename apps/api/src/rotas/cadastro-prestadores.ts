@@ -22,6 +22,7 @@ export const PrestadorCadastroSchema = z
     telefone: z.string().openapi({ description: 'Só dígitos, com DDD' }),
     email: z.string().nullable(),
     regiao: z.string().nullable(),
+    cep: z.string().nullable().openapi({ description: 'Só os 8 dígitos' }),
     status: z.enum(STATUS_PRESTADOR),
     cor: z.string(),
     credenciadoDesde: z.string().openapi({ description: 'AAAA-MM-DD' }),
@@ -58,6 +59,12 @@ export const DadosPrestadorSchema = z
     telefone: z.string().max(40),
     email: z.string().max(200).nullable().optional(),
     regiao: z.string().max(120).nullable().optional(),
+    cep: z
+      .string()
+      .max(20)
+      .nullable()
+      .optional()
+      .openapi({ description: '8 dígitos, com ou sem hífen' }),
     especialidades: z
       .array(z.string().max(64))
       .max(50)

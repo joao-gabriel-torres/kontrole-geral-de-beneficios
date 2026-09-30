@@ -19,6 +19,7 @@ interface Cadastro {
   telefone: string
   email: string | null
   regiao: string | null
+  cep: string | null
   status: 'ativo' | 'inativo'
   cor: string
   credenciadoDesde: string
@@ -119,6 +120,7 @@ describe('GET /api/prestadores/cadastro', () => {
       telefone: '11987342210',
       email: 'carlos.mendes@email.com',
       regiao: 'Zona Oeste',
+      cep: '05422001',
       status: 'ativo',
       cor: '#0069BD',
       credenciadoDesde: '2024-03-12',
@@ -179,6 +181,33 @@ describe('POST /api/prestadores', () => {
       total: 0,
     })
     expect((await listar()).map((p) => p.nome)).toContain('Pedro Lima')
+  })
+
+  it('sem cep no corpo, credencia com cep null', async () => {
+    const criado = await corpo<Cadastro>(
+      criar({ ...NOVO, nome: 'Sem Cep', documento: '987.654.321-00', email: '' }),
+    )
+    expect(criado.cep).toBeNull()
+  })
+
+  it('grava o cep só com os dígitos e devolve no cadastro', async () => {
+    const r = await criar({
+      ...NOVO,
+      nome: 'Com Cep',
+      documento: '123.456.789-09',
+      email: '',
+      cep: ' 04538-132 ',
+    })
+    expect(r.status).toBe(201)
+    expect((await corpo<Cadastro>(r)).cep).toBe('04538132')
+  })
+
+  it('recusa cep malformado (422 cep_invalido)', async () => {
+    const r = await criar({ ...NOVO, nome: 'Cep Errado', documento: '123.456.789-09', cep: '12' })
+    expect(r.status).toBe(422)
+    expect(await corpo<Erro>(r)).toMatchObject({
+      erro: { codigo: 'cep_invalido', mensagem: 'Informe um CEP com 8 dígitos' },
+    })
   })
 
   it('com e-mail, o cadastro já sai com o convite de acesso', async () => {
@@ -318,6 +347,13 @@ describe('PATCH /api/prestadores/{id}', () => {
       emAberto: 8,
       total: 20,
     })
+  })
+
+  it('troca o cep na edição; sem cep no corpo, limpa', async () => {
+    const editado = await corpo<Cadastro>(editar('p1', { ...DADOS_CARLOS, cep: '01310-200' }))
+    expect(editado.cep).toBe('01310200')
+    const limpo = await corpo<Cadastro>(editar('p1', DADOS_CARLOS))
+    expect(limpo.cep).toBeNull()
   })
 
   it('a edição não muda o status de um inativo', async () => {

@@ -42,6 +42,7 @@ describe('normalizarPrestador', () => {
       telefone: '11912345678',
       email: null,
       regiao: 'Centro',
+      cep: null,
       especialidades: ['t2', 't1'],
     })
   })
@@ -49,6 +50,17 @@ describe('normalizarPrestador', () => {
   it('e-mail e região ausentes viram null', () => {
     const p = normalizarPrestador({ ...VALIDO, email: undefined, regiao: null })
     expect([p.email, p.regiao]).toEqual([null, null])
+  })
+
+  it('cep fica só com os 8 dígitos; vazio vira null; malformado é recusado', () => {
+    expect(normalizarPrestador({ ...VALIDO, cep: ' 01310-200 ' }).cep).toBe('01310200')
+    expect(normalizarPrestador({ ...VALIDO, cep: '  ' }).cep).toBeNull()
+    expect(normalizarPrestador({ ...VALIDO, cep: null }).cep).toBeNull()
+    expect(erroDe(() => normalizarPrestador({ ...VALIDO, cep: '123' }))).toMatchObject({
+      codigo: 'cep_invalido',
+      message: 'Informe um CEP com 8 dígitos',
+      status: 422,
+    })
   })
 })
 

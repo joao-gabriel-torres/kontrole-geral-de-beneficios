@@ -84,11 +84,23 @@ export const DetalheAcionamentoSchema = ResumoAcionamentoSchema.extend({
 }).openapi('DetalheAcionamento')
 
 export const TipoDemandaSchema = z
-  .object({ id: z.string(), nome: z.string(), cor: z.string(), checklist: z.array(z.string()) })
+  .object({
+    id: z.string(),
+    nome: z.string(),
+    cor: z.string(),
+    categoria: z.string().nullable().openapi({ description: 'Grupo maior; null vira "Outros"' }),
+    checklist: z.array(z.string()),
+  })
   .openapi('TipoDemanda')
 
 export const PrestadorOpcaoSchema = z
-  .object({ id: z.string(), nome: z.string(), regiao: z.string().nullable(), cor: z.string() })
+  .object({
+    id: z.string(),
+    nome: z.string(),
+    regiao: z.string().nullable(),
+    cep: z.string().nullable().openapi({ description: 'Só os 8 dígitos' }),
+    cor: z.string(),
+  })
   .openapi('PrestadorOpcao')
 
 export const FiltroListaSchema = z.object({
@@ -101,6 +113,16 @@ export const NovoAcionamentoSchema = z
     titulo: z.string().max(200),
     cliente: z.string().max(200),
     endereco: z.string().max(300),
+    assinanteId: z
+      .string()
+      .max(64)
+      .optional()
+      .openapi({ description: 'Assinante escolhido na busca (cliente e endereço são snapshots)' }),
+    cep: z
+      .string()
+      .max(20)
+      .optional()
+      .openapi({ description: 'CEP do atendimento: 8 dígitos, com ou sem hífen' }),
     data: z.iso.date(),
     inicio: z.string().regex(HORARIO),
     fim: z.string().regex(HORARIO),

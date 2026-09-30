@@ -44,6 +44,7 @@ function paraCadastro(
     telefone: p.telefone,
     email: p.email,
     regiao: p.regiao,
+    cep: p.cep,
     status: p.status,
     cor: p.cor,
     credenciadoDesde: p.credenciadoDesde.toISOString().slice(0, 10),
@@ -163,6 +164,7 @@ export async function criarPrestador(
         telefone: p.telefone,
         email: p.email,
         regiao: p.regiao,
+        cep: p.cep,
         status: 'ativo',
         // A cor segue a posição do cadastro, contando os excluídos (PCOL[d.pros.length % 8]).
         cor: corDoPrestador(await prisma.prestador.count()),
@@ -207,6 +209,7 @@ export async function atualizarPrestador(
           telefone: p.telefone,
           email: p.email,
           regiao: p.regiao,
+          cep: p.cep,
         },
       })
       await tx.prestadorEspecialidade.deleteMany({ where: { prestadorId: id } })

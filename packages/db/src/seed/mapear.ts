@@ -25,6 +25,7 @@ export interface DadosSeed {
   tipos: Prisma.TipoDemandaCreateManyInput[]
   prestadores: { dados: Prisma.PrestadorCreateManyInput; especialidades: string[] }[]
   usuarios: UsuarioSeed[]
+  assinantes: Prisma.AssinanteCreateManyInput[]
   acionamentos: Prisma.AcionamentoCreateManyInput[]
   demandas: Prisma.DemandaCreateManyInput[]
   etapas: Prisma.EtapaCreateManyInput[]
@@ -38,9 +39,84 @@ const dataPura = (iso: string) => new Date(`${iso}T00:00:00Z`)
 const instante = (data: string, hora: string) => new Date(`${data}T${hora}:00${FUSO}`)
 const idUsuarioPrestador = (prestadorId: string) => `u-${prestadorId}`
 
+/** Categorias dos tipos do protótipo (spec "Novo acionamento inteligente"). */
+const CATEGORIAS: Record<string, string> = {
+  Vazamento: 'Hidráulica',
+  'Revisão elétrica': 'Elétrica',
+  'Ponto de luz': 'Elétrica',
+  'Troca de disjuntor': 'Elétrica',
+  Pintura: 'Acabamento',
+  'Reparo em gesso': 'Acabamento',
+  'Limpeza de ar-condicionado': 'Climatização',
+  Chaveiro: 'Segurança',
+}
+
+/** CEP plausível para a região de cada prestador (conferidos no ViaCEP em 30/09/2026). */
+const CEPS_PRESTADORES: Record<string, string> = {
+  p1: '05422001', // Zona Oeste — Rua dos Pinheiros, Pinheiros
+  p2: '04010000', // Zona Sul — Rua Domingos de Morais, Vila Mariana
+  p3: '01001000', // Centro — Praça da Sé
+  p4: '05018000', // Zona Oeste — Rua Cayowaá, Perdizes
+  p5: '02011000', // Zona Norte — Rua Voluntários da Pátria, Santana
+  p6: '03071000', // Zona Leste — Rua Cesário Galero, Tatuapé
+}
+
+/** CEPs reais dos logradouros dos endereços do protótipo (conferidos no ViaCEP em 30/09/2026). */
+const CEPS_POR_LOGRADOURO: Record<string, string> = {
+  'Rua Augusta': '01304001', // Consolação, 700–1680 lado par
+  'Rua Apinajés': '05017000', // Perdizes
+  'Av. Faria Lima': '04538132', // Itaim Bibi
+  'Rua Tupi': '01233001', // Santa Cecília, lado ímpar
+  'Rua Bela Cintra': '01415002', // Consolação, 588–1240 lado par
+  'Rua Frei Caneca': '01307001', // Consolação, até 879 lado ímpar
+  'Rua Oscar Freire': '01426002', // Cerqueira César/Jardins, 610–1290 lado par
+  'Rua Teodoro Sampaio': '05406050', // Pinheiros, 808–1150 lado par
+  'Rua Cayowaá': '05018001', // Perdizes, 701–1459
+}
+
+/** CEP de recuo para logradouro fora do mapa (Praça da Sé, conferido). */
+const CEP_PADRAO = '01001000'
+
+/** "Rua Augusta, 1492 · Consolação" → logradouro, número e bairro separados. */
+function separarEndereco(endereco: string): { logradouro: string; numero: string; bairro: string } {
+  const [rua = endereco, bairro = ''] = endereco.split(' · ')
+  const virgula = rua.lastIndexOf(', ')
+  if (virgula === -1) return { logradouro: rua, numero: '', bairro }
+  return { logradouro: rua.slice(0, virgula), numero: rua.slice(virgula + 2), bairro }
+}
+
+/** Um assinante ativo por cliente distinto, com o endereço do primeiro acionamento dele. */
+function mapearAssinantes(p: DadosPrototipo): Prisma.AssinanteCreateManyInput[] {
+  const assinantes: Prisma.AssinanteCreateManyInput[] = []
+  const vistos = new Set<string>()
+  for (const a of p.acs) {
+    if (vistos.has(a.client)) continue
+    vistos.add(a.client)
+    const { logradouro, numero, bairro } = separarEndereco(a.address)
+    assinantes.push({
+      id: `a${assinantes.length + 1}`,
+      nome: a.client,
+      cep: CEPS_POR_LOGRADOURO[logradouro] ?? CEP_PADRAO,
+      logradouro,
+      numero,
+      complemento: null,
+      bairro,
+      cidade: 'São Paulo',
+      status: 'ativo',
+    })
+  }
+  return assinantes
+}
+
 export function mapearDadosPrototipo(p: DadosPrototipo): DadosSeed {
   const dados: DadosSeed = {
-    tipos: p.types.map((t) => ({ id: t.id, nome: t.name, cor: t.color, checklist: t.checklist })),
+    tipos: p.types.map((t) => ({
+      id: t.id,
+      nome: t.name,
+      cor: t.color,
+      categoria: CATEGORIAS[t.name] ?? null,
+      checklist: t.checklist,
+    })),
     prestadores: p.pros.map((x) => ({
       dados: {
         id: x.id,
@@ -49,6 +125,7 @@ export function mapearDadosPrototipo(p: DadosPrototipo): DadosSeed {
         telefone: digitos(x.phone),
         email: x.email || null,
         regiao: x.region || null,
+        cep: CEPS_PRESTADORES[x.id] ?? null,
         status: x.status,
         credenciadoDesde: dataPura(x.since),
         cor: x.color,
@@ -67,6 +144,7 @@ export function mapearDadosPrototipo(p: DadosPrototipo): DadosSeed {
         comSenha: x.id === PRESTADOR_COM_LOGIN,
       })),
     ],
+    assinantes: mapearAssinantes(p),
     acionamentos: [],
     demandas: [],
     etapas: [],
@@ -74,11 +152,16 @@ export function mapearDadosPrototipo(p: DadosPrototipo): DadosSeed {
     revisoes: [],
     eventos: [],
   }
-  for (const a of p.acs) mapearAcionamento(a, dados)
+  const assinantePorCliente = new Map(dados.assinantes.map((a) => [a.nome, a.id!]))
+  for (const a of p.acs) mapearAcionamento(a, dados, assinantePorCliente)
   return dados
 }
 
-function mapearAcionamento(a: AcionamentoPrototipo, d: DadosSeed) {
+function mapearAcionamento(
+  a: AcionamentoPrototipo,
+  d: DadosSeed,
+  assinantePorCliente: Map<string, string>,
+) {
   const id = randomUUID()
   const autorPrestador = idUsuarioPrestador(a.pid)
 
@@ -117,6 +200,7 @@ function mapearAcionamento(a: AcionamentoPrototipo, d: DadosSeed) {
     titulo: a.title,
     cliente: a.client,
     endereco: a.address,
+    assinanteId: assinantePorCliente.get(a.client) ?? null,
     data: dataPura(a.date),
     inicio: a.start,
     fim: a.end,

@@ -16,8 +16,10 @@ import {
   type Regras,
   type StatusAcionamento,
 } from '../dominio/acionamento'
+import { normalizarCepOpcional } from '../dominio/cep'
 import { dataSP } from '../dominio/datas'
 import { calcularInicio } from '../dominio/inicio-prestador'
+import { ordenarPorProximidade } from '../dominio/proximidade'
 import { ErroHttp, naoEncontrado } from '../erros'
 import {
   incluirDetalhe,
@@ -84,16 +86,18 @@ export async function listarTipos() {
   return prisma.tipoDemanda.findMany({
     where: { excluidoEm: null },
     orderBy: [{ criadoEm: 'asc' }, { id: 'asc' }],
-    select: { id: true, nome: true, cor: true, checklist: true },
+    select: { id: true, nome: true, cor: true, categoria: true, checklist: true },
   })
 }
 
-export async function listarPrestadoresAtivos() {
-  return prisma.prestador.findMany({
+/** Ativos na ordem do cadastro; com um CEP de referência, do mais próximo para o mais distante. */
+export async function listarPrestadoresAtivos(cepDeReferencia?: string) {
+  const ativos = await prisma.prestador.findMany({
     where: { status: 'ativo', excluidoEm: null },
     orderBy: [{ criadoEm: 'asc' }, { id: 'asc' }],
-    select: { id: true, nome: true, regiao: true, cor: true },
+    select: { id: true, nome: true, regiao: true, cep: true, cor: true },
   })
+  return cepDeReferencia ? ordenarPorProximidade(ativos, cepDeReferencia) : ativos
 }
 
 export interface LinhaTravada {
@@ -131,12 +135,21 @@ export async function removerArquivos(chaves: readonly string[]): Promise<void> 
 
 export async function criarAcionamento(u: UsuarioSessao, dados: DadosNovoAcionamento) {
   const d = normalizarNovoAcionamento(dados)
+  const cep = normalizarCepOpcional(d.cep)
+  const assinanteId = d.assinanteId?.trim() || null
   const id = await prisma.$transaction(async (tx) => {
     const prestador = await tx.prestador.findFirst({
       where: { id: d.prestadorId, status: 'ativo', excluidoEm: null },
       select: { id: true },
     })
     if (!prestador) throw new ErroDominio('prestador_inativo', 'Escolha um prestador ativo')
+    if (assinanteId) {
+      const assinante = await tx.assinante.findFirst({
+        where: { id: assinanteId, status: 'ativo', excluidoEm: null },
+        select: { id: true },
+      })
+      if (!assinante) throw new ErroDominio('assinante_invalido', 'Escolha um assinante ativo')
+    }
     const tipos = await tx.tipoDemanda.findMany({
       where: { id: { in: d.tipoIds }, excluidoEm: null },
     })
@@ -148,6 +161,8 @@ export async function criarAcionamento(u: UsuarioSessao, dados: DadosNovoAcionam
         titulo: d.titulo,
         cliente: d.cliente,
         endereco: d.endereco,
+        assinanteId,
+        cep,
         data: new Date(`${d.data}T00:00:00Z`),
         inicio: d.inicio,
         fim: d.fim,

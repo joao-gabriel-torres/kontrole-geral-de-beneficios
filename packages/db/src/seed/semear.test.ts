@@ -33,6 +33,16 @@ describe('semear', () => {
     expect(especialidades.map((e) => e.tipoId)).toEqual(['t6', 't5'])
   })
 
+  it('grava os assinantes e liga os acionamentos a eles', async () => {
+    expect(await prisma.assinante.count()).toBe(14)
+    const acionamento = await prisma.acionamento.findFirstOrThrow({
+      where: { cliente: 'Loja Casa Bela' },
+      include: { assinante: true },
+    })
+    expect(acionamento.assinante?.nome).toBe('Loja Casa Bela')
+    expect(acionamento.assinante?.cep).toBe('01304001')
+  })
+
   it('cria a conta do prestador de dev com a senha documentada', async () => {
     const usuario = await prisma.user.findUniqueOrThrow({
       where: { email: EMAIL_PRESTADOR_DEV },

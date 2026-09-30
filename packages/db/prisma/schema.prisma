@@ -116,6 +116,7 @@ model TipoDemanda {
   id             String                   @id @default(cuid())
   nome           String
   cor            String
+  categoria      String? // grupo maior da tela ("Elétrica", "Hidráulica"…); null aparece como "Outros"
   checklist      String[]
   excluidoEm     DateTime?
   criadoEm       DateTime                 @default(now())
@@ -135,6 +136,7 @@ model Prestador {
   telefone         String
   email            String?
   regiao           String?
+  cep              String? // 8 dígitos; base da ordenação por proximidade
   status           StatusPrestador          @default(ativo)
   credenciadoDesde DateTime                 @db.Date
   excluidoEm       DateTime?
@@ -163,12 +165,39 @@ model PrestadorEspecialidade {
   @@map("prestador_especialidade")
 }
 
+enum StatusAssinante {
+  ativo
+  inativo
+}
+
+/// Cliente da base de assinaturas: a busca do Novo acionamento preenche endereço e CEP com ele.
+model Assinante {
+  id           String          @id @default(cuid())
+  nome         String
+  cep          String // 8 dígitos
+  logradouro   String
+  numero       String
+  complemento  String?
+  bairro       String
+  cidade       String
+  status       StatusAssinante @default(ativo)
+  excluidoEm   DateTime?
+  criadoEm     DateTime        @default(now())
+  atualizadoEm DateTime        @updatedAt
+  acionamentos Acionamento[]
+
+  @@map("assinante")
+}
+
 model Acionamento {
   id                      String              @id @default(cuid())
   numero                  Int                 @unique @default(autoincrement())
   titulo                  String
   cliente                 String
   endereco                String
+  assinanteId             String?
+  assinante               Assinante?          @relation(fields: [assinanteId], references: [id], onDelete: SetNull)
+  cep                     String? // 8 dígitos; o atendimento pode ser noutro endereço que o do assinante
   data                    DateTime            @db.Date
   inicio                  String // HH:MM, fuso America/Sao_Paulo
   fim                     String // HH:MM, maior que inicio
@@ -189,6 +218,7 @@ model Acionamento {
 
   @@index([prestadorId, data])
   @@index([status])
+  @@index([assinanteId])
   @@map("acionamento")
 }
 

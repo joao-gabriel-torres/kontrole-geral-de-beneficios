@@ -4,6 +4,7 @@ import {
   corDoNovoTipo,
   exigirNomeLivre,
   exigirOutroTipoAtivo,
+  normalizarCategoria,
   normalizarChecklist,
   normalizarNomeTipo,
 } from './tipos'
@@ -96,6 +97,23 @@ describe('exigirNomeLivre', () => {
 
   it('nome diferente passa', () => {
     expect(() => exigirNomeLivre('Pintura externa', existentes)).not.toThrow()
+  })
+})
+
+describe('normalizarCategoria', () => {
+  it('apara os espaços; vazio e null viram null (a tela mostra "Outros")', () => {
+    expect(normalizarCategoria(' Elétrica ')).toBe('Elétrica')
+    expect(normalizarCategoria('   ')).toBeNull()
+    expect(normalizarCategoria(null)).toBeNull()
+  })
+
+  it('recusa categoria com mais de 60 caracteres (422)', () => {
+    expect(erroDe(() => normalizarCategoria('a'.repeat(61)))).toMatchObject({
+      codigo: 'texto_longo',
+      message: 'A categoria pode ter até 60 caracteres',
+      status: 422,
+    })
+    expect(() => normalizarCategoria('a'.repeat(60))).not.toThrow()
   })
 })
 

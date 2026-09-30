@@ -4,12 +4,13 @@ import {
   corDoNovoTipo,
   exigirNomeLivre,
   exigirOutroTipoAtivo,
+  normalizarCategoria,
   normalizarChecklist,
   normalizarNomeTipo,
 } from '../dominio/tipos'
 import { naoEncontrado } from '../erros'
 
-const CAMPOS = { id: true, nome: true, cor: true, checklist: true } as const
+const CAMPOS = { id: true, nome: true, cor: true, categoria: true, checklist: true } as const
 
 /**
  * Põe em fila as escritas nos tipos até o fim da transação e devolve os tipos não excluídos. Assim
@@ -34,14 +35,22 @@ export async function criarTipo(dados: { nome: string }) {
 }
 
 /** `checklist` é a lista inteira: editar, subir, remover e adicionar etapas são todos este PATCH. */
-export async function atualizarTipo(id: string, dados: { nome?: string; checklist?: string[] }) {
+export async function atualizarTipo(
+  id: string,
+  dados: { nome?: string; categoria?: string | null; checklist?: string[] },
+) {
   const nome = dados.nome === undefined ? undefined : normalizarNomeTipo(dados.nome)
+  const categoria = dados.categoria === undefined ? undefined : normalizarCategoria(dados.categoria)
   const checklist = dados.checklist === undefined ? undefined : normalizarChecklist(dados.checklist)
   return prisma.$transaction(async (tx) => {
     const ativos = await travarTipos(tx)
     if (!ativos.some((t) => t.id === id)) throw naoEncontrado('Tipo de demanda')
     if (nome !== undefined) exigirNomeLivre(nome, ativos, id)
-    return tx.tipoDemanda.update({ where: { id }, data: { nome, checklist }, select: CAMPOS })
+    return tx.tipoDemanda.update({
+      where: { id },
+      data: { nome, categoria, checklist },
+      select: CAMPOS,
+    })
   })
 }
 
