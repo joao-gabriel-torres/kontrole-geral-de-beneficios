@@ -44,7 +44,22 @@ watch(buscaCliente, (texto) => {
   else esperaCliente = setTimeout(() => (termoCliente.value = texto), 250)
 })
 onBeforeUnmount(() => clearTimeout(esperaCliente))
-const { data: assinantes, isFetching: buscandoClientes } = usarAssinantes(termoCliente)
+const {
+  data: assinantes,
+  isPending: semClientes,
+  isPlaceholderData: clientesDeOutraBusca,
+} = usarAssinantes(termoCliente)
+/**
+ * A lista ainda não é a do texto digitado: a espera de 250 ms não acabou, ou a busca saiu e a
+ * lista mostrada é a da busca anterior. Nesse estado, o Enter não escolhe ("Martins" + Enter não
+ * pode levar o primeiro da lista de antes).
+ */
+const buscandoClientes = computed(
+  () =>
+    buscaCliente.value.trim() !== termoCliente.value.trim() ||
+    clientesDeOutraBusca.value ||
+    semClientes.value,
+)
 const opcoesClientes = computed<OpcaoBusca[]>(() =>
   (assinantes.value ?? []).map((a) => ({ id: a.id, titulo: a.nome, detalhe: a.endereco })),
 )

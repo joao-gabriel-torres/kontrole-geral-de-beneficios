@@ -278,6 +278,45 @@ describe('ModalNovoAcionamento', () => {
       expect(tela.get('.busca .vazio').text()).toBe('Nenhum assinante encontrado')
     })
 
+    it('Enter não escolhe enquanto a lista não é a do texto digitado', async () => {
+      let liberar!: () => void
+      const espera = new Promise<void>((ok) => (liberar = ok))
+      simulada = simularApi(api, {
+        ...rotas(),
+        'GET /api/assinantes': async (o: OpcoesChamada) => {
+          if (o.params?.query?.busca) await espera
+          return buscarAssinantes(o)
+        },
+      })
+      const { tela } = await abrir(true)
+      const entrada = campo(tela, 'novo-cliente')
+      const endereco = () => tela.get<HTMLInputElement>('#novo-endereco').element.value
+      entrada.element.focus()
+      // Na espera de 250 ms, a lista em destaque ainda é a de antes (todos os assinantes).
+      await entrada.setValue('hotel')
+      expect(titulos(tela, 'novo-cliente')[0]).toBe('Clínica Vida')
+      await entrada.trigger('keydown', tecla('Enter'))
+      expect(entrada.attributes('aria-expanded')).toBe('true')
+      expect(entrada.element.value).toBe('hotel')
+      expect(endereco()).toBe('')
+      // A busca saiu, mas a resposta não chegou: a lista mostrada continua a anterior.
+      await esperarBusca()
+      expect(simulada.chamadas('GET', '/api/assinantes').at(-1)!.params?.query?.busca).toBe(
+        'hotel',
+      )
+      expect(titulos(tela, 'novo-cliente')[0]).toBe('Clínica Vida')
+      await entrada.trigger('keydown', tecla('Enter'))
+      expect(entrada.attributes('aria-expanded')).toBe('true')
+      expect(endereco()).toBe('')
+      // Com a lista do termo digitado, o Enter escolhe.
+      liberar()
+      await aguardar()
+      expect(titulos(tela, 'novo-cliente')).toEqual(['Hotel Ipê'])
+      await entrada.trigger('keydown', tecla('Enter'))
+      expect(entrada.element.value).toBe('Hotel Ipê')
+      expect(endereco()).toBe('Rua Frei Caneca, 569 · Consolação')
+    })
+
     it('escolher pelo teclado preenche o endereço, o mapa e o prestador mais próximo', async () => {
       const { tela } = await abrir(true)
       const entrada = campo(tela, 'novo-cliente')

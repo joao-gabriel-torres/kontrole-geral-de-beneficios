@@ -5,8 +5,9 @@ import type { OpcaoBusca } from './formulario'
 
 /**
  * Busca com lista suspensa de escolha única (combobox com listbox, padrão da APG): o foco fica no
- * campo e ↓/↑ andam pelas opções (aria-activedescendant), Enter escolhe e Esc fecha a lista.
- * Fora da edição o campo mostra o escolhido (`valor`); o que é digitado vira `buscar`.
+ * campo e ↓/↑ andam pelas opções (aria-activedescendant), Enter escolhe (menos enquanto
+ * `carregando`) e Esc fecha a lista. Fora da edição o campo mostra o escolhido (`valor`); o que é
+ * digitado vira `buscar`.
  */
 const props = withDefaults(
   defineProps<{
@@ -16,6 +17,10 @@ const props = withDefaults(
     selecionadoId?: string | null
     placeholder?: string
     vazio: string
+    /**
+     * As opções ainda não são as do texto digitado (a busca está a caminho): a lista mostra a busca
+     * anterior, e o Enter não escolhe dela.
+     */
     carregando?: boolean
     /** A lista abre para cima (campo no fim do modal). */
     paraCima?: boolean
@@ -101,7 +106,7 @@ function teclar(evento: KeyboardEvent) {
     case 'Enter':
       if (aberto.value && idAtivo.value) {
         evento.preventDefault()
-        escolher(ativo.value)
+        if (!props.carregando) escolher(ativo.value)
       }
       break
     case 'Escape':
