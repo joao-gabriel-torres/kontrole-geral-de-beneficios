@@ -22,6 +22,7 @@ const SELOS = [
   'Duplicado na planilha',
   'Telefone inválido',
   'E-mail inválido',
+  'E-mail em uso',
 ] as const
 
 export const PreviaPlanilhaSchema = z

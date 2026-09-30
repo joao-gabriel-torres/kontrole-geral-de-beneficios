@@ -1083,7 +1083,8 @@
                     "Documento inválido",
                     "Duplicado na planilha",
                     "Telefone inválido",
-                    "E-mail inválido"
+                    "E-mail inválido",
+                    "E-mail em uso"
                   ]
                 }
               },
@@ -3633,7 +3634,7 @@
         "tags": [
           "Prestadores"
         ],
-        "summary": "Edita o cadastro (status, cor e data de credenciamento não mudam)",
+        "summary": "Edita o cadastro (status, cor e data de credenciamento não mudam); o login acompanha o e-mail, e sem e-mail o login é encerrado",
         "security": [
           {
             "Bearer": []

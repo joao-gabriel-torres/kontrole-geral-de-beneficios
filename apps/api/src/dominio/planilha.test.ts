@@ -36,13 +36,58 @@ const TIPOS = [
   { id: 't8', nome: 'Chaveiro' },
 ]
 
-/** Na ordem de cadastro, como o serviço entrega. */
+/** Na ordem de cadastro, como o serviço entrega. Roberto não tem login. */
 const EXISTENTES: PrestadorExistente[] = [
-  { id: 'p1', nome: 'Carlos Mendes', documento: '31840211750', status: 'ativo' },
-  { id: 'p2', nome: 'Ana Ribeiro', documento: '27415903000144', status: 'ativo' },
-  { id: 'p5', nome: 'Roberto Alves', documento: '21977438012', status: 'inativo' },
-  { id: 'p6', nome: 'Luciana Prado', documento: '41206557000190', status: 'ativo' },
+  {
+    id: 'p1',
+    nome: 'Carlos Mendes',
+    documento: '31840211750',
+    status: 'ativo',
+    email: 'carlos.mendes@email.com',
+    comLogin: true,
+  },
+  {
+    id: 'p2',
+    nome: 'Ana Ribeiro',
+    documento: '27415903000144',
+    status: 'ativo',
+    email: 'ana@ribeiroreparos.com.br',
+    comLogin: true,
+  },
+  {
+    id: 'p5',
+    nome: 'Roberto Alves',
+    documento: '21977438012',
+    status: 'inativo',
+    email: 'roberto.alves@email.com',
+    comLogin: false,
+  },
+  {
+    id: 'p6',
+    nome: 'Luciana Prado',
+    documento: '41206557000190',
+    status: 'ativo',
+    email: null,
+    comLogin: true,
+  },
 ]
+
+/** Os logins pelo e-mail normalizado, com o prestador de cada um (null: a conta da gestão). */
+const CONTAS = new Map<string, string | null>([
+  ['renata@russo.dev', null],
+  ['carlos@russo.dev', 'p1'],
+  ['ana@ribeiroreparos.com.br', 'p2'],
+])
+const TODAS_AS_COLUNAS = new Set<keyof LinhaLida>([
+  'nome',
+  'documento',
+  'telefone',
+  'email',
+  'regiao',
+  'especialidades',
+  'status',
+  'credenciadoDesde',
+])
 
 const lida = (d: Partial<LinhaLida>): LinhaLida => ({
   nome: '',
@@ -58,6 +103,8 @@ const lida = (d: Partial<LinhaLida>): LinhaLida => ({
 const previa = (...linhas: Partial<LinhaLida>[]) =>
   montarPrevia(linhas.map(lida), EXISTENTES, TIPOS)
 const selos = (...linhas: Partial<LinhaLida>[]) => previa(...linhas).linhas.map((l) => l.selo)
+const previaComContas = (...linhas: Partial<LinhaLida>[]) =>
+  montarPrevia(linhas.map(lida), EXISTENTES, TIPOS, TODAS_AS_COLUNAS, CONTAS)
 
 describe('normalizarTexto (o norm do protótipo)', () => {
   it('tira acentos, maiúsculas e tudo o que não é letra', () => {
@@ -325,6 +372,52 @@ describe('montarPrevia', () => {
         { nome: 'Pedro', documento: '529.982.247-25' },
       ),
     ).toEqual(['Telefone inválido', 'Novo', 'Duplicado na planilha'])
+  })
+
+  it('"E-mail em uso": Atualizar que leva o login do prestador a um e-mail de outra conta', () => {
+    const p = previaComContas(
+      // O da gestão, sem ligar para maiúsculas e espaços.
+      { nome: 'Ana', documento: '27415903000144', email: ' Renata@Russo.dev ' },
+      // O próprio login do Carlos (diferente do e-mail do cadastro) não é de outra conta.
+      { nome: 'Carlos', documento: '31840211750', email: 'carlos@russo.dev' },
+      // Luciana tem login e está sem e-mail: ganhar o da Ana levaria o login à conta dela.
+      { nome: 'Luciana', documento: '41206557000190', email: 'ana@ribeiroreparos.com.br' },
+      // Sem login vinculado, como no Editar, o e-mail do cadastro troca sem conferir contas.
+      { nome: 'Roberto', documento: '21977438012', email: 'renata@russo.dev' },
+      // A importação não cria login para os novos: o convite sai depois, pelo Editar.
+      { nome: 'Pedro', documento: '52998224725', email: 'renata@russo.dev' },
+    )
+    expect(p.linhas.map((l) => [l.selo, l.acao])).toEqual([
+      ['E-mail em uso', 'erro'],
+      ['Atualizar', 'atualizar'],
+      ['E-mail em uso', 'erro'],
+      ['Atualizar', 'atualizar'],
+      ['Novo', 'novo'],
+    ])
+    expect(p.resumo).toEqual({ novos: 1, atualizados: 2, erros: 2 })
+    expect(p.gravacoes.map((g) => g.dados.nome)).toEqual(['Carlos', 'Roberto', 'Pedro'])
+  })
+
+  it('"E-mail em uso" também entre linhas: dois logins não vão ao mesmo e-mail', () => {
+    const p = previaComContas(
+      { nome: 'Ana', documento: '27415903000144', email: 'mesmo@email.com' },
+      { nome: 'Luciana', documento: '41206557000190', email: 'MESMO@email.com' },
+    )
+    expect(p.linhas.map((l) => l.selo)).toEqual(['Atualizar', 'E-mail em uso'])
+  })
+
+  it('"E-mail em uso" só quando o e-mail muda: o mesmo, o vazio e a coluna ausente não conferem', () => {
+    const contas = new Map([...CONTAS, ['carlos.mendes@email.com', 'p9']])
+    const semEmail = new Set([...TODAS_AS_COLUNAS].filter((c) => c !== 'email'))
+    const linhas = [
+      lida({ nome: 'Carlos', documento: '31840211750', email: 'Carlos.Mendes@email.com' }),
+      lida({ nome: 'Ana', documento: '27415903000144', email: '' }),
+    ]
+    const com = montarPrevia(linhas, EXISTENTES, TIPOS, TODAS_AS_COLUNAS, contas)
+    expect(com.linhas.map((l) => l.selo)).toEqual(['Atualizar', 'Atualizar'])
+    const colunaAusente = [lida({ nome: 'Ana', documento: '27415903000144' })]
+    const sem = montarPrevia(colunaAusente, EXISTENTES, TIPOS, semEmail, contas)
+    expect(sem.linhas.map((l) => l.selo)).toEqual(['Atualizar'])
   })
 
   it('inativo também casa como Atualizar', () => {
