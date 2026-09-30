@@ -1,3 +1,4 @@
+import { nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { erroApi, simularApi, type OpcoesChamada, type RespostaFalsa } from '../../test/api-falsa'
 import { aguardar, montar } from '../../test/montar'
@@ -327,6 +328,26 @@ describe('PaginaPrestadores', () => {
       )
     const consultas = () =>
       simulada.chamadas('GET', '/api/cep/{cep}').map((c) => c.params?.path?.cep)
+    // Especialidades: a busca de tipos do Novo acionamento.
+    const campoEspecialidades = (tela: Tela) =>
+      modal(tela).get<HTMLInputElement>('#prestador-especialidades')
+    const listaEspecialidades = (tela: Tela) => modal(tela).get('#prestador-especialidades-lista')
+    const opcoes = (tela: Tela) =>
+      modal(tela).findAll('#prestador-especialidades-lista button.opcao')
+    const opcao = (tela: Tela, nome: string) => opcoes(tela).find((b) => b.text() === nome)!
+    const chips = (tela: Tela) =>
+      modal(tela)
+        .findAll('.chip')
+        .map((c) => c.text())
+    /** Clique de mouse de verdade (detail 1); o `trigger` do test-utils manda detail 0. */
+    async function clicarComMouse(alvo: { element: Element }) {
+      alvo.element.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))
+      await nextTick()
+    }
+    async function escolherEspecialidade(tela: Tela, nome: string) {
+      await campoEspecialidades(tela).trigger('click')
+      await clicarComMouse(opcao(tela, nome))
+    }
     async function preencherDados(tela: Tela) {
       await campo(tela, 'Nome').setValue('Pedro Lima')
       await campo(tela, '000.000.000-00').setValue('529.982.247-25')
@@ -341,11 +362,50 @@ describe('PaginaPrestadores', () => {
       await salvarBotao(tela).trigger('click')
       await aguardar()
       expect(simulada.chamadas('POST', '/api/prestadores')).toHaveLength(0)
+      // As especialidades são escolhidas na busca de tipos: nenhuma ainda.
+      expect(campoEspecialidades(tela).attributes('role')).toBe('combobox')
+      expect(chips(tela)).toEqual([])
+    })
+
+    it('especialidades pela busca de tipos: por nome ou categoria, com chips removíveis na ordem da escolha', async () => {
+      const { tela } = await abrirNovo()
+      const busca = campoEspecialidades(tela)
+      await busca.trigger('click')
+      expect(listaEspecialidades(tela).isVisible()).toBe(true)
+      // A lista abre para cima: o corpo do modal rola por dentro e o fim dele é o fim do modal.
+      expect(modal(tela).find('.busca-tipos.para-cima').exists()).toBe(true)
       expect(
         modal(tela)
-          .findAll('.especialidade')
-          .map((b) => b.text()),
-      ).toEqual(TIPOS_SEED.map((t) => t.nome))
+          .findAll('#prestador-especialidades-lista .grupo')
+          .map((g) => g.text()),
+      ).toEqual(['Acabamento', 'Climatização', 'Elétrica', 'Hidráulica', 'Segurança'])
+      await busca.setValue('eletr')
+      expect(opcoes(tela).map((b) => b.text())).toEqual([
+        'Ponto de luz',
+        'Revisão elétrica',
+        'Troca de disjuntor',
+      ])
+      // Enter liga o primeiro que casa pelo nome.
+      await busca.trigger('keydown', { key: 'Enter' })
+      expect(chips(tela)).toEqual(['Revisão elétrica'])
+      await busca.setValue('gesso')
+      await clicarComMouse(opcao(tela, 'Reparo em gesso'))
+      await escolherEspecialidade(tela, 'Chaveiro')
+      expect(chips(tela)).toEqual(['Revisão elétrica', 'Reparo em gesso', 'Chaveiro'])
+      await modal(tela).get('button[aria-label="Remover Revisão elétrica"]').trigger('click')
+      expect(chips(tela)).toEqual(['Reparo em gesso', 'Chaveiro'])
+
+      // Esc fecha só a lista; com ela fechada, fecha o modal.
+      await busca.trigger('keydown', { key: 'Escape' })
+      expect(listaEspecialidades(tela).isVisible()).toBe(false)
+      expect(modal(tela).exists()).toBe(true)
+
+      await preencherDados(tela)
+      await salvarBotao(tela).trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('POST', '/api/prestadores')[0]!.body).toMatchObject({
+        especialidades: ['t6', 't8'],
+      })
     })
 
     it('o CEP é o primeiro campo; depois vêm o endereço, nome, documento, telefone, e-mail e região', async () => {
@@ -531,8 +591,8 @@ describe('PaginaPrestadores', () => {
       await aguardar()
       await campo(tela, 'Ex.: 410').setValue('111')
       await campo(tela, 'Opcional').setValue('conj. 1203')
-      await botao(modal(tela), 'Pintura').trigger('click')
-      await botao(modal(tela), 'Vazamento').trigger('click')
+      await escolherEspecialidade(tela, 'Pintura')
+      await escolherEspecialidade(tela, 'Vazamento')
       expect(salvarBotao(tela).classes()).not.toContain('inativo')
       await salvarBotao(tela).trigger('click')
       await salvarBotao(tela).trigger('click')
@@ -624,7 +684,7 @@ describe('PaginaPrestadores', () => {
       expect(modal(tela).find('.erro').exists()).toBe(false)
     })
 
-    it('Editar abre formatado, com as especialidades marcadas, e salva com PATCH', async () => {
+    it('Editar abre formatado, com as especialidades na ordem gravada, e salva com PATCH', async () => {
       salvar = () => ({ data: prestador() })
       const { tela } = await abrir()
       await linhaDe(tela, 'Carlos Mendes').find('.nome').trigger('click')
@@ -638,12 +698,12 @@ describe('PaginaPrestadores', () => {
         '(11) 98734-2210',
       )
       expect((campo(tela, '00000-000').element as HTMLInputElement).value).toBe('05422-001')
-      expect(
-        m
-          .findAll('.especialidade')
-          .filter((b) => b.attributes('aria-pressed') === 'true')
-          .map((b) => b.text()),
-      ).toEqual(['Vazamento', 'Revisão elétrica', 'Ponto de luz', 'Troca de disjuntor'])
+      expect(chips(tela)).toEqual([
+        'Vazamento',
+        'Revisão elétrica',
+        'Ponto de luz',
+        'Troca de disjuntor',
+      ])
       expect(m.find('.erro').exists()).toBe(false)
       await salvarBotao(tela).trigger('click')
       await aguardar()

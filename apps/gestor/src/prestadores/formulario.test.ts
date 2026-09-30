@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  alternarEspecialidade,
   camposDoCep,
   cidadeComUf,
   consultarCepAoAbrir,
@@ -117,11 +116,6 @@ describe('formulário', () => {
     expect(cidadeComUf('São Paulo', 'SP')).toBe('São Paulo - SP')
     expect(cidadeComUf('Osasco', '')).toBe('Osasco')
     expect(cidadeComUf('', '')).toBe('')
-  })
-
-  it('especialidades ligam e desligam na ordem dos cliques', () => {
-    expect(alternarEspecialidade(['t1'], 't5')).toEqual(['t1', 't5'])
-    expect(alternarEspecialidade(['t1', 't5'], 't1')).toEqual(['t5'])
   })
 
   it('o corpo vai como digitado, com o endereço (a API normaliza)', () => {

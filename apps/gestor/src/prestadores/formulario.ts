@@ -130,9 +130,6 @@ export function erroDoFormulario(
 export const mostrarErro = (f: FormularioPrestador, erro: string): boolean =>
   !!erro && (!!(f.nome || f.documento || f.telefone) || f.cepInexistente)
 
-export const alternarEspecialidade = (ids: readonly string[], id: string): string[] =>
-  ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]
-
 export const corpoDoFormulario = (f: FormularioPrestador): DadosPrestador => ({
   nome: f.nome,
   documento: f.documento,

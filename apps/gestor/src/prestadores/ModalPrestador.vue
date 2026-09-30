@@ -3,6 +3,7 @@ import type { TipoDemanda } from '@kgb/api-client'
 import { RussoIcone } from '@kgb/ui'
 import { computed, onBeforeUnmount, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useDisplay } from 'vuetify'
+import BuscaTipos from '../componentes/BuscaTipos.vue'
 import { digitosCep } from '../componentes/cep'
 import { usarConsultaCep } from '../componentes/consultaCep'
 import EntradaCep from '../componentes/EntradaCep.vue'
@@ -11,7 +12,6 @@ import { usarModalAberto } from '../modais'
 import { toastGestor } from '../toast'
 import { usarEnviarConvite, usarSalvarPrestador } from './dados'
 import {
-  alternarEspecialidade,
   avisoAoCredenciar,
   camposDoCep,
   cidadeComUf,
@@ -243,21 +243,15 @@ onUnmounted(() => focoAnterior?.focus())
             <input v-model="form.regiao" class="entrada" placeholder="Zona Oeste" />
           </label>
         </div>
+        <!-- A mesma busca de tipos do Novo acionamento (pedido do usuário, 30/09). -->
         <div class="grupo">
-          <div id="prestador-especialidades" class="rotulo">Especialidades</div>
-          <div class="especialidades" role="group" aria-labelledby="prestador-especialidades">
-            <button
-              v-for="t in tipos"
-              :key="t.id"
-              type="button"
-              class="especialidade"
-              :class="{ escolhida: form.especialidades.includes(t.id) }"
-              :aria-pressed="form.especialidades.includes(t.id)"
-              @click="form.especialidades = alternarEspecialidade(form.especialidades, t.id)"
-            >
-              <span class="bolinha" :style="{ background: t.cor }" />{{ t.nome }}
-            </button>
-          </div>
+          <label for="prestador-especialidades" class="rotulo">Especialidades</label>
+          <BuscaTipos
+            id="prestador-especialidades"
+            v-model="form.especialidades"
+            :tipos="tipos"
+            para-cima
+          />
         </div>
       </div>
       <div v-if="linhaDeErro" class="erro" role="alert">{{ linhaDeErro }}</div>
@@ -434,34 +428,6 @@ onUnmounted(() => focoAnterior?.focus())
   font-size: 13px;
   font-weight: 600;
   color: var(--kgb-texto);
-}
-.especialidades {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.especialidade {
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--kgb-divisor);
-  border-radius: 999px;
-  background: var(--kgb-branco);
-  color: var(--kgb-texto);
-  font-size: 13px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.especialidade.escolhida {
-  border-color: var(--kgb-primaria);
-  background: var(--kgb-primaria-tint);
-  color: var(--kgb-primaria-escura);
-}
-.bolinha {
-  width: 8px;
-  height: 8px;
-  border-radius: 4px;
 }
 .erro {
   font-size: 13px;
