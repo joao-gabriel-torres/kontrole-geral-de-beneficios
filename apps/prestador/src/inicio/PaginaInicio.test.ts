@@ -72,6 +72,16 @@ describe('PaginaInicio', () => {
     expect(router.currentRoute.value.name).toBe('login')
   })
 
+  it('sair limpa o cache: nada do prestador anterior sobra para a próxima conta', async () => {
+    const { wrapper, cliente } = await montar(PaginaInicio)
+    cliente.setQueryData(['acionamentos'], [{ id: 'x' }])
+    await wrapper.find('.gatilho').trigger('click')
+    await wrapper.find('[role="menuitem"]').trigger('click')
+    await flushPromises()
+    expect(cliente.getQueryData(['acionamentos'])).toBeUndefined()
+    expect(cliente.getQueryData(['inicio'])).toBeUndefined()
+  })
+
   it('mostra o próximo atendimento com rota e atalho para o checklist', async () => {
     const { wrapper, router } = await montar(PaginaInicio)
     expect(api.GET).toHaveBeenCalledWith('/api/prestador/inicio')

@@ -13,6 +13,7 @@ import {
 } from '@kgb/ui'
 import { computed } from 'vue'
 import { useRouter, type RouteLocationRaw } from 'vue-router'
+import { useQueryClient } from '@tanstack/vue-query'
 import { mensagemDeErro } from '../consultas'
 import { sair, sessao } from '../sessao'
 import CartaoProximo from './CartaoProximo.vue'
@@ -56,8 +57,11 @@ function abrirRotaDoDia() {
 function abrir(id: string) {
   void router.push({ name: 'detalhe', params: { id } })
 }
+const consultas = useQueryClient()
 async function encerrarSessao() {
   await sair()
+  // Nada do prestador anterior pode sobrar no cache para a próxima conta (aparelho compartilhado).
+  consultas.clear()
   await router.replace({ name: 'login' })
 }
 </script>
