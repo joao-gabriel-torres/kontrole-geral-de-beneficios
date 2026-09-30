@@ -20,6 +20,7 @@ import {
   formatarCep,
   formularioInicial,
   formularioValido,
+  prestadorMaisProximo,
   prestadorPadrao,
   type OpcaoBusca,
   previaChecklist,
@@ -100,7 +101,8 @@ const erroCep = computed(() => {
 const mapa = computed(() => enderecoDoMapa(form))
 
 // Prestador: a lista vem do mais próximo ao mais distante do CEP em uso, e o mais próximo já vem
-// escolhido (uma vez por CEP: a escolha da gestora vale até o CEP mudar).
+// escolhido (uma vez por CEP: a escolha da gestora vale até o CEP mudar). Sem nenhum prestador com
+// CEP, a lista vem por nome: nada é trocado nem rotulado.
 const cepPrestadores = computed(() => cepDeReferencia(form))
 const {
   data: prestadores,
@@ -114,8 +116,9 @@ watch(
   (resposta) => {
     if (!resposta) return
     const { cep, lista } = resposta
-    if (cep && cep !== cepDaEscolha && lista[0]) {
-      form.prestadorId = lista[0].id
+    const proximo = prestadorMaisProximo(cep, lista)
+    if (proximo && cep !== cepDaEscolha) {
+      form.prestadorId = proximo
       cepDaEscolha = cep
     } else if (!lista.some((p) => p.id === form.prestadorId)) {
       form.prestadorId = prestadorPadrao(lista)
@@ -130,7 +133,12 @@ const semPrestadores = computed(() => erroPrestadores.value && !prestadores.valu
 const buscaPrestador = ref('')
 const listaPrestadores = computed(() => prestadores.value?.lista ?? [])
 const opcoesPrestadores = computed<OpcaoBusca[]>(() => {
-  const proximo = cepPrestadores.value ? listaPrestadores.value[0]?.id : undefined
+  // Só com a lista do CEP em uso (não a do CEP anterior, enquanto a nova não chega).
+  const resposta = prestadores.value
+  const proximo =
+    resposta?.cep === cepPrestadores.value
+      ? prestadorMaisProximo(resposta.cep, resposta.lista)
+      : undefined
   return filtrarPrestadores(listaPrestadores.value, buscaPrestador.value).map((p) => ({
     id: p.id,
     titulo: p.nome,

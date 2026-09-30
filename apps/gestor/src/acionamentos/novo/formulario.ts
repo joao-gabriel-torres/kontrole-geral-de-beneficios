@@ -243,6 +243,18 @@ export function gruposDeTipos(tipos: readonly TipoDemanda[], busca: string): Gru
     }))
 }
 
+/**
+ * O mais próximo do CEP da lista: o primeiro, que a API ordena pela distância. Só quando ele tem CEP:
+ * sem nenhum prestador com CEP, a lista vem por nome e ninguém é o mais próximo.
+ */
+export function prestadorMaisProximo(
+  cep: string,
+  prestadores: readonly PrestadorOpcao[],
+): string | undefined {
+  const primeiro = prestadores[0]
+  return cep && primeiro?.cep ? primeiro.id : undefined
+}
+
 /** Busca de prestadores por nome ou região, mantendo a ordem da API (proximidade). */
 export function filtrarPrestadores(
   prestadores: readonly PrestadorOpcao[],

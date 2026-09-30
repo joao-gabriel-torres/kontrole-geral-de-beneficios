@@ -15,6 +15,7 @@ import {
   formularioValido,
   gruposDeTipos,
   montarEndereco,
+  prestadorMaisProximo,
   prestadorPadrao,
   previaChecklist,
   rotuloContagem,
@@ -171,6 +172,14 @@ describe('busca de prestadores', () => {
     expect(filtrarPrestadores(PRESTADORES, 'oeste').map((p) => p.id)).toEqual(['p1'])
     expect(filtrarPrestadores(PRESTADORES, 'LIMA').map((p) => p.id)).toEqual(['p7'])
     expect(filtrarPrestadores(PRESTADORES, 'xyz')).toEqual([])
+  })
+
+  it('o mais próximo é o primeiro da lista do CEP, só quando ele tem CEP', () => {
+    expect(prestadorMaisProximo('01310200', PRESTADORES)).toBe('p2')
+    expect(prestadorMaisProximo('', PRESTADORES)).toBeUndefined()
+    const semCep = PRESTADORES.map((p) => ({ ...p, cep: null }))
+    expect(prestadorMaisProximo('01310200', semCep)).toBeUndefined()
+    expect(prestadorMaisProximo('01310200', [])).toBeUndefined()
   })
 })
 

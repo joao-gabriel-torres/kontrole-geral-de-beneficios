@@ -387,6 +387,24 @@ describe('ModalNovoAcionamento', () => {
       })
     })
 
+    it('sem nenhum prestador com CEP, a lista fica por nome: nada é trocado nem rotulado', async () => {
+      // Como a API: sem CEP, todos vão ao fim, por nome.
+      const semCep = PRESTADORES.map((p) => ({ ...p, cep: null })).sort((a, b) =>
+        a.nome.localeCompare(b.nome, 'pt-BR'),
+      )
+      simulada = simularApi(api, { ...rotas(), 'GET /api/prestadores': semCep })
+      const { tela } = await abrir()
+      await escolherCliente(tela, 'Clínica Vida')
+      expect(simulada.chamadas('GET', '/api/prestadores').at(-1)!.params?.query).toEqual({
+        status: 'ativo',
+        cep: '01310200',
+      })
+      expect(campo(tela, 'novo-prestador').element.value).toBe('Carlos Mendes · Zona Oeste')
+      await campo(tela, 'novo-prestador').trigger('click')
+      expect(opcoes(tela, 'novo-prestador')[0]!.get('.detalhe').text()).toBe('Zona Sul')
+      expect(tela.text()).not.toContain('mais próximo')
+    })
+
     it('a escolha da gestora vale até o CEP mudar', async () => {
       const { tela } = await abrir()
       await escolherCliente(tela, 'Clínica Vida')
