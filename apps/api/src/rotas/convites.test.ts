@@ -2,7 +2,7 @@ import { mkdtemp, readdir, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { EMAIL_PRESTADOR_DEV, GESTORA_DEV, SENHA_DEV, semear } from '@kgb/db/seed'
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { entrar } from '../../test/sessao'
 import { criarApp } from '../app'
 import {
@@ -195,6 +195,26 @@ describe('convite ponta a ponta', () => {
     expect(curta.status).toBe(400)
     expect(await curta.json()).toMatchObject({ code: 'PASSWORD_TOO_SHORT' })
     expect((await criarSenha(token, '12345678')).status).toBe(200)
+  })
+
+  it('reenvio com o e-mail fora do ar: 502 envio_email_falhou e o link anterior continua valendo', async () => {
+    await convidar('p4')
+    const anterior = tokenDoLink(caixa.enviados[0].texto)
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    trocarCorreio({ enviar: () => Promise.reject(new Error('421 servidor indisponível')) })
+
+    const r = await convidar('p4')
+    vi.restoreAllMocks()
+
+    expect(r.status).toBe(502)
+    expect(await r.json()).toEqual({
+      erro: {
+        codigo: 'envio_email_falhou',
+        mensagem: 'Não foi possível enviar o e-mail do convite. Tente de novo.',
+      },
+    })
+    expect((await criarSenha(anterior, 'senha-da-marina')).status).toBe(200)
+    expect((await tentarEntrar('contato@marinacosta.com.br', 'senha-da-marina')).status).toBe(200)
   })
 
   it('o link anterior deixa de valer depois do reenvio', async () => {

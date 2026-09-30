@@ -5,6 +5,7 @@ import {
   emailDoConvite,
   expiracaoDoConvite,
   linkDoConvite,
+  momentoDoConvite,
   normalizarEmail,
   situacaoDoAcesso,
   verificarConvite,
@@ -26,6 +27,22 @@ describe('expiracaoDoConvite', () => {
   it('vale por 7 dias a partir de agora', () => {
     expect(expiracaoDoConvite(new Date('2026-09-29T12:00:00Z')).toISOString()).toBe(
       '2026-10-06T12:00:00.000Z',
+    )
+  })
+})
+
+describe('momentoDoConvite', () => {
+  const agora = new Date('2026-09-30T12:00:00.000Z')
+
+  it('é agora quando não há convite anterior ou o anterior é mais antigo', () => {
+    expect(momentoDoConvite(null, agora)).toEqual(agora)
+    expect(momentoDoConvite(new Date('2026-09-30T11:59:59.999Z'), agora)).toEqual(agora)
+  })
+
+  it('fica 1 ms depois do anterior no mesmo milissegundo ou à frente: a ordem nunca empata', () => {
+    expect(momentoDoConvite(agora, agora).toISOString()).toBe('2026-09-30T12:00:00.001Z')
+    expect(momentoDoConvite(new Date('2026-09-30T12:00:05.000Z'), agora).toISOString()).toBe(
+      '2026-09-30T12:00:05.001Z',
     )
   })
 })

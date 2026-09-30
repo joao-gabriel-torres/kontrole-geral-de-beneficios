@@ -203,9 +203,61 @@ describe('enviarConvite', () => {
     expect(erro).toBeInstanceOf(ErroEnvioConvite)
     expect(erro).toMatchObject({
       status: 502,
+      codigo: 'envio_email_falhou',
       message: 'Não foi possível enviar o e-mail do convite. Tente de novo.',
     })
     expect((await acessosDosPrestadores(['p-conv-falha'])).get('p-conv-falha')).toBe('pendente')
+    vi.restoreAllMocks()
+  })
+
+  it('reenvio que falha no envio mantém o convite anterior, que ainda vale', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await novoPrestador('p-conv-reenvio')
+    await enviarConvite('p-conv-reenvio', GESTOR)
+    const usuario = await prisma.user.findUniqueOrThrow({
+      where: { prestadorId: 'p-conv-reenvio' },
+    })
+    const anteriores = await convitesDoUsuario(usuario.id)
+    expect(anteriores).toHaveLength(1)
+
+    trocarCorreio({ enviar: () => Promise.reject(new Error('421 servidor indisponível')) })
+    await expect(enviarConvite('p-conv-reenvio', GESTOR)).rejects.toBeInstanceOf(ErroEnvioConvite)
+
+    expect(await convitesDoUsuario(usuario.id)).toEqual(anteriores)
+    expect((await acessosDosPrestadores(['p-conv-reenvio'])).get('p-conv-reenvio')).toBe(
+      'convidado',
+    )
+    vi.restoreAllMocks()
+  })
+
+  it('convites simultâneos com falhas no meio: sobra um só, de um e-mail que saiu', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await novoPrestador('p-conv-mistura')
+    await enviarConvite('p-conv-mistura', GESTOR)
+    const saiu: string[] = []
+    let chamadas = 0
+    trocarCorreio({
+      enviar: async (mensagem) => {
+        const chamada = ++chamadas
+        // Falha em chamadas alternadas e responde fora de ordem.
+        await new Promise((r) => setTimeout(r, (chamada * 7) % 30))
+        if (chamada % 2 === 0) throw new Error('421 servidor indisponível')
+        saiu.push(mensagem.texto)
+      },
+    })
+
+    const resultados = await Promise.allSettled(
+      Array.from({ length: 8 }, () => enviarConvite('p-conv-mistura', GESTOR)),
+    )
+
+    expect(resultados.filter((r) => r.status === 'rejected')).toHaveLength(4)
+    const usuario = await prisma.user.findUniqueOrThrow({
+      where: { prestadorId: 'p-conv-mistura' },
+    })
+    const convites = await convitesDoUsuario(usuario.id)
+    expect(convites).toHaveLength(1)
+    const tokensQueSairam = saiu.map((texto) => `reset-password:${tokenDoEmail(texto)}`)
+    expect(tokensQueSairam).toContain(convites[0].identifier)
     vi.restoreAllMocks()
   })
   it('servidor de e-mail que não responde: 502 dentro do limite e o token sai', async () => {

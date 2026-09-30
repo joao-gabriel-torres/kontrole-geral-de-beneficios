@@ -1,6 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto'
 import { Prisma } from '@kgb/db'
-import { HTTPException } from 'hono/http-exception'
 import type { UsuarioSessao } from '../contexto'
 import { correio } from '../correio'
 import { prisma } from '../db'
@@ -10,6 +9,7 @@ import {
   expiracaoDoConvite,
   linkDoConvite,
   MENSAGENS_CONVITE,
+  momentoDoConvite,
   normalizarEmail,
   PREFIXO_CONVITE,
   situacaoDoAcesso,
@@ -29,12 +29,10 @@ export interface ConviteEnviado {
 }
 
 /** O servidor de e-mail recusou ou não respondeu: 502 com uma mensagem para a gestão. */
-export class ErroEnvioConvite extends HTTPException {
+export class ErroEnvioConvite extends ErroHttp {
   constructor(causa: unknown) {
-    super(502, {
-      message: 'Não foi possível enviar o e-mail do convite. Tente de novo.',
-      cause: causa,
-    })
+    super(502, 'envio_email_falhou', MENSAGENS_CONVITE.envioFalhou, { cause: causa })
+    this.name = 'ErroEnvioConvite'
   }
 }
 
@@ -90,9 +88,12 @@ interface PrestadorTravado {
 }
 
 /**
- * Envia (ou reenvia) o convite de acesso: cria ou atualiza o usuário do prestador, troca o token
- * de redefinição do Better Auth por um novo de 7 dias e manda o e-mail. Quem já tem senha recebe
- * o mesmo convite, que funciona como redefinição. Só a gestão convida.
+ * Envia (ou reenvia) o convite de acesso: cria ou atualiza o usuário do prestador, grava um token
+ * de redefinição do Better Auth de 7 dias e manda o e-mail. Quem já tem senha recebe o mesmo
+ * convite, que funciona como redefinição. Só a gestão convida.
+ *
+ * Os convites anteriores só caem depois que o e-mail sai: um reenvio que falha no servidor de
+ * e-mail deixa valendo o link que o prestador já recebeu.
  */
 export async function enviarConvite(
   prestadorId: string,
@@ -106,9 +107,10 @@ export async function enviarConvite(
   const identificador = `${PREFIXO_CONVITE}${token}`
   const expiraEm = expiracaoDoConvite(agora)
 
-  const { nome, email } = await prisma
+  const { nome, email, usuarioId, criadoEm } = await prisma
     .$transaction(async (tx) => {
-      // Convites simultâneos do mesmo prestador ficam em fila: só o último token sobrevive.
+      // Convites simultâneos do mesmo prestador nascem em fila, cada um depois do anterior
+      // (momentoDoConvite). No fim sobra só o mais novo entre os que saíram.
       const [prestador] = await tx.$queryRaw<PrestadorTravado[]>`
         SELECT nome, email, "excluidoEm" FROM prestador WHERE id = ${prestadorId} FOR UPDATE`
       if (!prestador || prestador.excluidoEm) throw naoEncontrado('Prestador')
@@ -131,7 +133,12 @@ export async function enviarConvite(
             select: { id: true },
           })
 
-      await tx.verification.deleteMany({ where: convitesDoUsuario(usuario.id) })
+      const ultimo = await tx.verification.findFirst({
+        where: convitesDoUsuario(usuario.id),
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      })
+      const criadoEm = momentoDoConvite(ultimo?.createdAt ?? null, agora)
       // O mesmo registro que o internalAdapter do Better Auth grava (identificador em texto puro,
       // sem verification.storeIdentifier), mas nesta transação: usa a conexão que segura a trava
       // do prestador, em vez de pedir outra ao pool, e some junto se a transação falhar.
@@ -141,9 +148,10 @@ export async function enviarConvite(
           identifier: identificador,
           value: usuario.id,
           expiresAt: expiraEm,
+          createdAt: criadoEm,
         },
       })
-      return { nome: prestador.nome, email }
+      return { nome: prestador.nome, email, usuarioId: usuario.id, criadoEm }
     })
     .catch(recusarEmailDuplicado)
 
@@ -155,11 +163,15 @@ export async function enviarConvite(
   try {
     await correio().enviar({ para: email, ...mensagem })
   } catch (erro) {
-    // Sem e-mail, o link nunca chega: o token sai para o prestador não parecer convidado.
+    // Sem e-mail, o link nunca chega: só este token sai, e o convite anterior continua valendo.
     await prisma.verification.deleteMany({ where: { identifier: identificador } })
     console.error(`[correio] falha ao enviar o convite para ${email}`, erro)
     throw new ErroEnvioConvite(erro)
   }
+  // O e-mail saiu: os convites anteriores a este deixam de valer. Um mais novo, se houver, fica.
+  await prisma.verification.deleteMany({
+    where: { ...convitesDoUsuario(usuarioId), createdAt: { lt: criadoEm } },
+  })
   return { email, expiraEm: expiraEm.toISOString() }
 }
 

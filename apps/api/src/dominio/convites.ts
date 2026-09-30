@@ -12,6 +12,7 @@ export const MENSAGENS_CONVITE = {
   semEmail: 'Cadastre um e-mail para enviar o convite',
   emailInvalido: 'O e-mail do cadastro não é válido',
   emailEmUso: 'Este e-mail já é usado por outra conta',
+  envioFalhou: 'Não foi possível enviar o e-mail do convite. Tente de novo.',
 } as const
 
 /**
@@ -46,6 +47,15 @@ export function emailValido(email: string): boolean {
 
 export function expiracaoDoConvite(agora: Date): Date {
   return new Date(agora.getTime() + VALIDADE_CONVITE_DIAS * 24 * 60 * 60 * 1000)
+}
+
+/**
+ * Momento gravado no convite novo: agora, ou 1 ms depois do último convite do usuário quando o
+ * relógio não andou. Os convites do mesmo usuário nascem em fila (trava do prestador), e a ordem
+ * estrita decide quem sobra: o envio que dá certo apaga só os anteriores a ele.
+ */
+export function momentoDoConvite(anterior: Date | null, agora: Date): Date {
+  return anterior && anterior >= agora ? new Date(anterior.getTime() + 1) : agora
 }
 
 export function linkDoConvite(urlApp: string, token: string): string {
