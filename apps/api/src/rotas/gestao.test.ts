@@ -70,6 +70,70 @@ describe('POST /api/acionamentos', () => {
     expect(d.eventos.map((e: { tipo: string }) => e.tipo)).toEqual(['criado'])
   })
 
+  it('grava o assinante e o CEP (só dígitos) quando informados', async () => {
+    const id = await criarAcionamento(app, gestora, { assinanteId: 'a1', cep: '01304-001' })
+    const gravado = await prisma.acionamento.findUniqueOrThrow({ where: { id } })
+    expect(gravado).toMatchObject({ assinanteId: 'a1', cep: '01304001' })
+  })
+
+  it('sem assinante e sem CEP, grava null nos dois', async () => {
+    const id = await criarAcionamento(app, gestora)
+    const gravado = await prisma.acionamento.findUniqueOrThrow({ where: { id } })
+    expect(gravado).toMatchObject({ assinanteId: null, cep: null })
+  })
+
+  it('recusa assinante inexistente ou inativo (422 assinante_invalido)', async () => {
+    const inexistente = await post('/api/acionamentos', gestora, {
+      titulo: 'X',
+      cliente: 'C',
+      endereco: 'Rua A, 1 · Centro',
+      data: '2026-10-01',
+      inicio: '09:00',
+      fim: '10:00',
+      tipoIds: ['t1'],
+      prestadorId: 'p1',
+      assinanteId: 'nao-existe',
+    })
+    expect(inexistente.status).toBe(422)
+    expect(await inexistente.json()).toMatchObject({
+      erro: { codigo: 'assinante_invalido', mensagem: 'Escolha um assinante ativo' },
+    })
+
+    await prisma.assinante.update({ where: { id: 'a2' }, data: { status: 'inativo' } })
+    try {
+      const inativo = await post('/api/acionamentos', gestora, {
+        titulo: 'X',
+        cliente: 'C',
+        endereco: 'Rua A, 1 · Centro',
+        data: '2026-10-01',
+        inicio: '09:00',
+        fim: '10:00',
+        tipoIds: ['t1'],
+        prestadorId: 'p1',
+        assinanteId: 'a2',
+      })
+      expect(inativo.status).toBe(422)
+    } finally {
+      await prisma.assinante.update({ where: { id: 'a2' }, data: { status: 'ativo' } })
+    }
+  })
+
+  it('recusa CEP malformado (422 cep_invalido)', async () => {
+    const r = await post('/api/acionamentos', gestora, {
+      titulo: 'X',
+      cliente: 'C',
+      endereco: 'Rua A, 1 · Centro',
+      data: '2026-10-01',
+      inicio: '09:00',
+      fim: '10:00',
+      tipoIds: ['t1'],
+      prestadorId: 'p1',
+      cep: '12',
+    })
+    expect(r.status).toBe(422)
+    expect(await r.json()).toMatchObject({ erro: { codigo: 'cep_invalido' } })
+  })
+
   it('editar o checklist do tipo depois não muda o acionamento já criado', async () => {
     const id = await criarAcionamento(app, gestora, { tipoIds: ['t8'] })
     const original = await prisma.tipoDemanda.findUniqueOrThrow({ where: { id: 't8' } })

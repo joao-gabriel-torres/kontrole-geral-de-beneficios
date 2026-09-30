@@ -113,6 +113,16 @@ export const NovoAcionamentoSchema = z
     titulo: z.string().max(200),
     cliente: z.string().max(200),
     endereco: z.string().max(300),
+    assinanteId: z
+      .string()
+      .max(64)
+      .optional()
+      .openapi({ description: 'Assinante escolhido na busca (cliente e endereço são snapshots)' }),
+    cep: z
+      .string()
+      .max(20)
+      .optional()
+      .openapi({ description: 'CEP do atendimento: 8 dígitos, com ou sem hífen' }),
     data: z.iso.date(),
     inicio: z.string().regex(HORARIO),
     fim: z.string().regex(HORARIO),
