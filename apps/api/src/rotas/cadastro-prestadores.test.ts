@@ -538,7 +538,10 @@ describe('PATCH /api/prestadores/{id}: e-mail e login', () => {
     const senha = await app.request('/api/auth/reset-password', {
       method: 'POST',
       headers: { 'content-type': 'application/json', origin: 'http://localhost:5174' },
-      body: JSON.stringify({ newPassword: 'senha-nova-do-carlos', token: decodeURIComponent(token) }),
+      body: JSON.stringify({
+        newPassword: 'senha-nova-do-carlos',
+        token: decodeURIComponent(token),
+      }),
     })
     expect(senha.status).toBe(200)
     const novoLogin = await entrar(app, 'carlos.volta@email.com', 'senha-nova-do-carlos')
