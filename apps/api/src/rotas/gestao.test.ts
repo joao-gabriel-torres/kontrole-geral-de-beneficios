@@ -236,6 +236,20 @@ describe('POST /api/acionamentos', () => {
       })
     })
 
+    it('pino movido (posicaoSoNoAcionamento): mesmo caindo no endereço dele, o assinante não muda', async () => {
+      const antes = await localizacaoDoAssinante()
+      const id = await criarAcionamento(app, gestora, {
+        ...NO_ASSINANTE,
+        ...OSCAR_FREIRE,
+        posicaoSoNoAcionamento: true,
+      })
+      expect(await localizacaoDoAssinante()).toEqual(antes)
+      expect(await prisma.acionamento.findUnique({ where: { id } })).toMatchObject({
+        latitude: -23.567149,
+        longitude: -46.664407,
+      })
+    })
+
     it('sem CEP no corpo, o endereço do assinante também conta como dele', async () => {
       await criarAcionamento(app, gestora, {
         ...NO_ASSINANTE,

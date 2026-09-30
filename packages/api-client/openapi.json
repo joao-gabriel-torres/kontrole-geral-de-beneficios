@@ -548,6 +548,10 @@
             ],
             "description": "Posição conferida no mapa, com a latitude"
           },
+          "posicaoSoNoAcionamento": {
+            "type": "boolean",
+            "description": "Pino movido no mapa: a posição vale só para este acionamento e nunca vai para o cadastro do assinante"
+          },
           "data": {
             "type": "string",
             "format": "date"

@@ -122,6 +122,8 @@ export interface DadosNovoAcionamento {
   /** Posição conferida no mapa (as duas ou nenhuma); o serviço valida com `normalizarCoordenadas`. */
   latitude?: number | null
   longitude?: number | null
+  /** Pino movido no mapa: a posição é só deste acionamento, nunca vai para o assinante. */
+  posicaoSoNoAcionamento?: boolean
   data: string
   inicio: string
   fim: string

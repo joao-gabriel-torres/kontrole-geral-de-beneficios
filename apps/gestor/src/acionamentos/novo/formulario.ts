@@ -391,6 +391,8 @@ export function corpoDoFormulario(f: FormularioAcionamento): NovoAcionamento {
     ...(f.localizacao
       ? { latitude: f.localizacao.latitude, longitude: f.localizacao.longitude }
       : {}),
+    // Pino movido: a posição é só deste acionamento, nunca do cadastro do cliente.
+    ...(f.localizacao && f.pinoMovido ? { posicaoSoNoAcionamento: true } : {}),
     data: f.data,
     inicio: f.inicio,
     fim: f.fim,

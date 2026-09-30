@@ -2609,6 +2609,8 @@ export interface components {
             latitude?: number | null;
             /** @description Posição conferida no mapa, com a latitude */
             longitude?: number | null;
+            /** @description Pino movido no mapa: a posição vale só para este acionamento e nunca vai para o cadastro do assinante */
+            posicaoSoNoAcionamento?: boolean;
             /** Format: date */
             data: string;
             inicio: string;

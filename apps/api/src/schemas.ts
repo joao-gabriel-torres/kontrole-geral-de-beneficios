@@ -139,6 +139,10 @@ export const NovoAcionamentoSchema = z
       .number()
       .nullish()
       .openapi({ description: 'Posição conferida no mapa, com a latitude' }),
+    posicaoSoNoAcionamento: z.boolean().optional().openapi({
+      description:
+        'Pino movido no mapa: a posição vale só para este acionamento e nunca vai para o cadastro do assinante',
+    }),
     data: z.iso.date(),
     inicio: z.string().regex(HORARIO),
     fim: z.string().regex(HORARIO),

@@ -163,7 +163,11 @@ export async function criarAcionamento(u: UsuarioSessao, dados: DadosNovoAcionam
       if (!assinante) throw new ErroDominio('assinante_invalido', 'Escolha um assinante ativo')
       // A posição conferida no endereço do próprio assinante fica no cadastro dele: o mapa do
       // próximo acionamento já abre nela. Em outro endereço, fica só no acionamento.
-      if (localizacao && ehEnderecoDoAssinante({ cep, endereco: d.endereco }, assinante)) {
+      if (
+        localizacao &&
+        !d.posicaoSoNoAcionamento &&
+        ehEnderecoDoAssinante({ cep, endereco: d.endereco }, assinante)
+      ) {
         await tx.assinante.update({ where: { id: assinante.id }, data: localizacao })
       }
     }

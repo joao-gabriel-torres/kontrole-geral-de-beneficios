@@ -907,6 +907,8 @@ describe('ModalNovoAcionamento', () => {
         cep: '01310200',
         latitude: MOVIDA.latitude,
         longitude: MOVIDA.longitude,
+        // A posição do pino movido é só deste acionamento: o cadastro do cliente não muda.
+        posicaoSoNoAcionamento: true,
       })
     })
 
