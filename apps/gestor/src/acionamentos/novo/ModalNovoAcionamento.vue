@@ -121,6 +121,11 @@ const opcoesPrestadores = computed<OpcaoBusca[]>(() => {
     detalhe: [p.regiao, p.id === proximo ? 'mais próximo' : ''].filter(Boolean).join(' · '),
   }))
 })
+/** A escolha da gestora vale para o CEP em uso, mesmo que a lista dele ainda não tenha chegado. */
+function escolherPrestador(id: string) {
+  form.prestadorId = id
+  cepDaEscolha = cepPrestadores.value
+}
 const rotuloDoPrestador = computed(() => {
   const escolhido = listaPrestadores.value.find((p) => p.id === form.prestadorId)
   return escolhido ? rotuloPrestador(escolhido) : ''
@@ -332,7 +337,7 @@ onUnmounted(() => focoAnterior?.focus())
               vazio="Nenhum prestador encontrado"
               para-cima
               @buscar="buscaPrestador = $event"
-              @escolher="form.prestadorId = $event"
+              @escolher="escolherPrestador"
             />
           </div>
         </div>

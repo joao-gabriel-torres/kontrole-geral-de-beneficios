@@ -330,6 +330,27 @@ describe('ModalNovoAcionamento', () => {
       expect(campo(tela, 'novo-prestador').element.value).toBe('Carlos Mendes · Zona Oeste')
     })
 
+    it('a escolha feita antes de chegar a lista do novo CEP não é trocada pelo mais próximo', async () => {
+      let liberar!: () => void
+      const espera = new Promise<void>((ok) => (liberar = ok))
+      simulada = simularApi(api, {
+        ...rotas(),
+        'GET /api/prestadores': async (o: OpcoesChamada) => {
+          if (o.params?.query?.cep) await espera
+          return prestadoresPorCep(o)
+        },
+      })
+      const { tela } = await abrir()
+      await escolherCliente(tela, 'Clínica Vida')
+      await campo(tela, 'novo-prestador').trigger('click')
+      await opcoes(tela, 'novo-prestador')
+        .find((o) => o.get('.titulo').text() === 'Pedro Lima')!
+        .trigger('click')
+      liberar()
+      await aguardar()
+      expect(campo(tela, 'novo-prestador').element.value).toBe('Pedro Lima')
+    })
+
     it('Esc fecha só a lista, e o campo volta a mostrar o escolhido', async () => {
       const { tela } = await abrir(true)
       await escolherCliente(tela, 'Hotel Ipê')
