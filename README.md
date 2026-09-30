@@ -137,6 +137,57 @@ pnpm --filter @kgb/prestador nativo:android   # abre no Android Studio (requer S
 - No Android, o WebView roda em `https://localhost`, então chamar uma API `http://` exige HTTPS na API ou liberar mixed content.
 - As origens dos apps nativos já estão em `CORS_ORIGINS`.
 
+## Deploy (Cloudflare Pages)
+
+O gestor e o prestador web são sites estáticos no Cloudflare Pages, um projeto para cada, ligados a este repositório (Workers & Pages › Create › Pages › Connect to Git). A API (Node + PostgreSQL + pasta de fotos) vai num host Node à parte, a escolher: o Pages só serve os arquivos do build. Os exemplos usam `seu-dominio.com.br`.
+
+| Configuração do projeto | Gestor                                                              | Prestador                                                              |
+| ----------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Nome sugerido           | `kgb-gestor`                                                        | `kgb-prestador`                                                        |
+| Framework preset        | None                                                                | None                                                                   |
+| Diretório raiz          | vazio (a raiz do repositório, por causa do workspace pnpm)          | vazio                                                                  |
+| Comando de build        | `pnpm install --frozen-lockfile && pnpm --filter @kgb/gestor build` | `pnpm install --frozen-lockfile && pnpm --filter @kgb/prestador build` |
+| Pasta de saída          | `apps/gestor/dist`                                                  | `apps/prestador/dist`                                                  |
+| Domínio personalizado   | `gestor.seu-dominio.com.br`                                         | `prestador.seu-dominio.com.br`                                         |
+
+Variáveis de ambiente dos dois projetos (em Production e em Preview):
+
+| Variável                  | Valor                            | Para quê                                                                                      |
+| ------------------------- | -------------------------------- | --------------------------------------------------------------------------------------------- |
+| `VITE_API_URL`            | `https://api.seu-dominio.com.br` | Endereço da API, gravado no build. É o único ajuste dos apps; mudou, faça um deploy novo      |
+| `NODE_VERSION`            | `24`                             | O repositório exige Node 24+ (a imagem do Pages vem com o 22)                                 |
+| `PNPM_VERSION`            | `10.32.1`                        | A mesma do `packageManager` do `package.json`                                                 |
+| `SKIP_DEPENDENCY_INSTALL` | `1`                              | O comando de build já instala com `--frozen-lockfile`; sem ela, o Pages instalaria duas vezes |
+
+O build não usa `.env` nem banco (o `postinstall` roda o `prisma generate`, que não conecta). O `public/` de cada app vai para o `dist` com dois arquivos do Pages:
+
+- `_headers`: cache de um ano, imutável, em `/assets/*` (nomes com hash); `no-cache` no resto (o `index.html` e as rotas do SPA), para o deploy novo chegar na hora; `nosniff`, `X-Frame-Options`, `Referrer-Policy` e `Permissions-Policy` (câmera só no prestador).
+- `_redirects`: sem regras. Sem um `404.html` na raiz, o Pages já serve o `index.html` em qualquer caminho (rotas do SPA e o link do convite). Não crie um `404.html` em `public/`, e não use `/* /index.html 200`: o Pages a ignora como laço infinito.
+
+### Ajustes na API
+
+A API roda com `NODE_ENV=production` e estas variáveis, além do banco, do `BETTER_AUTH_SECRET` e do e-mail (ver [Convite por e-mail](#convite-por-e-mail); o provedor ainda está a definir):
+
+| Variável            | Valor                                                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_URL`   | `https://api.seu-dominio.com.br`, o mesmo do `VITE_API_URL`                                                      |
+| `CORS_ORIGINS`      | `https://gestor.seu-dominio.com.br,https://prestador.seu-dominio.com.br,capacitor://localhost,https://localhost` |
+| `URL_APP_PRESTADOR` | `https://prestador.seu-dominio.com.br`: o link do convite abre `/convite?token=…` no app do Pages                |
+
+`CORS_ORIGINS` leva as origens exatas, sem barra nem caminho no fim: o navegador manda a origem assim, e o CORS e o Better Auth comparam o texto. A API não sobe com uma origem escrita de outro jeito e diz como corrigir. As prévias do Pages (`<branch>.kgb-prestador.pages.dev`) só falam com a API se a origem delas estiver na lista.
+
+**Cookie do gestor entre subdomínios.** O gestor entra com cookie de sessão (o prestador usa token Bearer e não depende disto). O Better Auth grava o cookie no host da API (`api.seu-dominio.com.br`), com `HttpOnly`, `Secure` e `SameSite=Lax`, e o navegador o manda nas chamadas do gestor porque `gestor.` e `api.` são o mesmo site (o mesmo domínio registrável). Por isso não é preciso `advanced.crossSubDomainCookies`: ele espalharia o cookie por `.seu-dominio.com.br`, e o navegador passaria a mandá-lo também para o Pages. Em outro site o cookie não vai: com o gestor em `kgb-gestor.pages.dev` e a API em `api.seu-dominio.com.br`, o login responde 200, mas a sessão não fica. O gestor precisa do domínio personalizado no mesmo domínio da API.
+
+### Checagem depois do deploy
+
+1. `curl -sI https://gestor.seu-dominio.com.br/acionamentos` responde 200 com `cache-control: no-cache`, e um arquivo de `/assets/` (veja o nome no `index.html`) responde com `cache-control: public, max-age=31536000, immutable`.
+2. `curl -sI -H 'Origin: https://gestor.seu-dominio.com.br' https://api.seu-dominio.com.br/api/health` traz `access-control-allow-origin: https://gestor.seu-dominio.com.br` e `access-control-allow-credentials: true`. Repita com a origem do prestador.
+3. No gestor: entre, abra um acionamento e recarregue a página. Continuar logado confirma o cookie (em DevTools › Network, as chamadas à API levam o `__Secure-better-auth.session_token`).
+4. No prestador: `https://prestador.seu-dominio.com.br/convite?token=teste` abre a tela do convite (não um 404). Entre com um prestador e anexe uma foto numa etapa.
+5. Reenvie um convite de teste: o link do e-mail aponta para `https://prestador.seu-dominio.com.br/convite?token=…`.
+
+O app nativo (Capacitor) não passa pelo Pages: continua com `VITE_API_URL` no build (`nativo:sync`), agora com `https://api.seu-dominio.com.br`. As fotos ficam no disco do host da API (`ARQUIVOS_DIR`, que precisa ser persistente); o próximo passo natural é o Cloudflare R2, como outra implementação da interface `Armazenamento`, sem mudar os apps.
+
 ## Documentação
 
 - [Especificação funcional e protótipo](docs/design/README.md)

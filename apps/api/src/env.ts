@@ -15,6 +15,28 @@ const SEGREDO_DE_EXEMPLO = 'troque-por-um-segredo-com-32-caracteres-ou-mais'
 const opcional = <T extends z.ZodType>(esquema: T) =>
   z.preprocess((valor) => (valor === '' ? undefined : valor), esquema.optional())
 
+/** A origem que o navegador mandaria para este endereço (sem caminho nem barra), ou null. */
+function origemDe(endereco: string): string | null {
+  if (!URL.canParse(endereco)) return null
+  const url = new URL(endereco)
+  // `localhost:5173` também é uma URL (esquema "localhost:"), mas sem host não é origem.
+  return url.host ? `${url.protocol}//${url.host}` : null
+}
+
+/**
+ * Uma origem de CORS_ORIGINS. O navegador manda a origem sem barra nem caminho, e o CORS e o
+ * Better Auth comparam o texto exato: `https://gestor.dominio/` (copiada da barra de endereços)
+ * barraria o gestor sem erro nenhum na subida.
+ */
+const Origem = z.string().refine((origem) => origemDe(origem) === origem, {
+  error: ({ input }) => {
+    const certa = typeof input === 'string' ? origemDe(input) : null
+    return certa
+      ? `"${String(input)}" não é uma origem: use "${certa}" (sem barra nem caminho no fim)`
+      : `"${String(input)}" não é uma origem (ex.: https://gestor.seu-dominio.com.br)`
+  },
+})
+
 /** Endereço do app do prestador no dev; em produção, `URL_APP_PRESTADOR` é obrigatória. */
 export const URL_APP_PRESTADOR_DEV = 'http://localhost:5174'
 
@@ -30,6 +52,7 @@ export const EsquemaEnv = z
         message: 'Troque o BETTER_AUTH_SECRET de exemplo (openssl rand -base64 32)',
       }),
     BETTER_AUTH_URL: z.url(),
+    /** Origens dos apps (gestor, prestador web e nativo), liberadas no CORS e no Better Auth. */
     CORS_ORIGINS: z
       .string()
       .default('')
@@ -38,7 +61,8 @@ export const EsquemaEnv = z
           .split(',')
           .map((origem) => origem.trim())
           .filter(Boolean),
-      ),
+      )
+      .pipe(z.array(Origem)),
     PORT: z.coerce.number().int().positive().default(3000),
     /** Pasta das fotos no dev; caminho relativo é resolvido a partir da raiz do repositório. */
     ARQUIVOS_DIR: z
