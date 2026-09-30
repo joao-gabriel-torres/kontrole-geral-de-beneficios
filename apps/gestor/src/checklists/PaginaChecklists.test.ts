@@ -34,8 +34,9 @@ function servidorFalso(extra: Record<string, unknown> = {}) {
     'GET /api/tipos': () => ({ data: structuredClone(tipos) }),
     'PATCH /api/tipos/{id}': (o: OpcoesChamada) => {
       const tipo = achar(o)
-      const corpo = o.body as { nome?: string; checklist?: string[] }
+      const corpo = o.body as { nome?: string; categoria?: string | null; checklist?: string[] }
       if (corpo.nome !== undefined) tipo.nome = corpo.nome.trim()
+      if (corpo.categoria !== undefined) tipo.categoria = corpo.categoria?.trim() || null
       if (corpo.checklist !== undefined) {
         tipo.checklist = corpo.checklist.map((e) => e.trim()).filter(Boolean)
       }
@@ -152,6 +153,43 @@ describe('PaginaChecklists', () => {
     expect(toastGestor.mensagem.value).toBe('Já existe um tipo com esse nome')
     expect(campoNome(tela).element.value).toBe('vistoria')
     await campoNome(tela).trigger('blur')
+    expect(campoNome(tela).element.value).toBe('Vazamento')
+  })
+
+  it('categoria: mostra a do tipo, sugere as existentes e salva 600 ms depois; vazia vira "Outros"', async () => {
+    const api = servidorFalso()
+    const tela = await abrir()
+    const categoria = () => tela.get<HTMLInputElement>('input[aria-label="Categoria"]')
+    expect(categoria().element.value).toBe('Hidráulica')
+    expect(categoria().attributes('placeholder')).toBe('Outros')
+    const sugestoes = () =>
+      tela
+        .get(`datalist#${categoria().attributes('list')}`)
+        .findAll('option')
+        .map((o) => o.attributes('value'))
+    expect(sugestoes()).toEqual(['Acabamento', 'Elétrica', 'Hidráulica'])
+
+    await categoria().setValue(' Hidráulica predial ')
+    await vi.advanceTimersByTimeAsync(599)
+    expect(api.chamadas('PATCH', '/api/tipos/{id}')).toHaveLength(0)
+    await vi.advanceTimersByTimeAsync(1)
+    await aguardar()
+    expect(api.chamadas('PATCH', '/api/tipos/{id}')).toEqual([
+      { params: { path: { id: 't1' } }, body: { categoria: ' Hidráulica predial ' } },
+    ])
+    // Enquanto o campo tem o foco, fica o digitado; ao sair, o salvo (com trim).
+    expect(categoria().element.value).toBe(' Hidráulica predial ')
+    await categoria().trigger('blur')
+    expect(categoria().element.value).toBe('Hidráulica predial')
+    expect(sugestoes()).toEqual(['Acabamento', 'Elétrica', 'Hidráulica predial'])
+
+    await categoria().setValue('')
+    await vi.advanceTimersByTimeAsync(600)
+    await aguardar()
+    expect(api.chamadas('PATCH', '/api/tipos/{id}').at(-1)!.body).toEqual({ categoria: '' })
+    await categoria().trigger('blur')
+    expect(categoria().element.value).toBe('')
+    // O nome continua o salvo: a categoria corre na própria fila.
     expect(campoNome(tela).element.value).toBe('Vazamento')
   })
 

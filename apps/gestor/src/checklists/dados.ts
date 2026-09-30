@@ -25,8 +25,8 @@ export function usarTiposDemanda() {
 }
 
 /**
- * Salva o nome e/ou o checklist de um tipo. Na resposta, só o campo enviado entra no cache: os
- * envios do nome e do checklist correm em filas separadas, e um não desfaz o outro.
+ * Salva o nome, a categoria e/ou o checklist de um tipo. Na resposta, só o campo enviado entra no
+ * cache: os envios de cada campo correm em filas separadas, e um não desfaz o outro.
  */
 export function usarSalvarTipo(): (id: string, corpo: AtualizacaoTipo) => Promise<TipoDemanda> {
   const consultas = useQueryClient()
@@ -41,6 +41,7 @@ export function usarSalvarTipo(): (id: string, corpo: AtualizacaoTipo) => Promis
             : {
                 ...t,
                 ...(corpo.nome !== undefined ? { nome: salvo.nome } : {}),
+                ...(corpo.categoria !== undefined ? { categoria: salvo.categoria } : {}),
                 ...(corpo.checklist !== undefined ? { checklist: salvo.checklist } : {}),
               },
         ),
