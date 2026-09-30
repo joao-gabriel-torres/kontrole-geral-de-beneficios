@@ -209,6 +209,13 @@ describe('POST /api/prestadores/planilha/importacao', () => {
       email: 'carlos@novo.com',
       regiao: 'Zona Sul',
       cor: '#0069BD',
+      // A planilha não tem as colunas de CEP e endereço: os gravados ficam como estão.
+      cep: '05422001',
+      logradouro: 'Rua dos Pinheiros',
+      numero: '812',
+      bairro: 'Pinheiros',
+      cidade: 'São Paulo',
+      uf: 'SP',
     })
     expect(dataIso(carlosAtualizado.credenciadoDesde)).toBe('2024-02-01')
     expect(carlosAtualizado.especialidades.map((e) => e.tipoId)).toEqual(['t1', 't2', 't3'])

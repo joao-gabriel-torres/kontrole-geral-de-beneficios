@@ -8,6 +8,8 @@ export interface EnderecoCep {
   logradouro: string
   bairro: string
   cidade: string
+  /** Sigla do estado ("SP"). */
+  uf: string
 }
 
 /** Consulta de CEP atrás de interface: a real vai ao ViaCEP, os testes injetam uma falsa. */
@@ -32,6 +34,7 @@ interface RespostaViaCep {
   logradouro?: string
   bairro?: string
   localidade?: string
+  uf?: string
 }
 
 /** Implementação real: https://viacep.com.br, com timeout curto. */
@@ -54,6 +57,7 @@ export function criarBuscaViaCep(executarFetch: typeof fetch = fetch): BuscaCep 
         logradouro: dados.logradouro ?? '',
         bairro: dados.bairro ?? '',
         cidade: dados.localidade ?? '',
+        uf: dados.uf ?? '',
       }
     },
   }

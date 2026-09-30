@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  alternarEspecialidade,
+  camposDoCep,
+  cidadeComUf,
+  consultarCepAoAbrir,
   corpoDoFormulario,
   erroDoFormulario,
   ERROS_DO_FORMULARIO,
@@ -26,43 +28,112 @@ describe('formulário', () => {
   it('Novo começa vazio', () => {
     expect(formularioVazio()).toEqual({
       id: null,
+      cep: '',
+      cepInexistente: false,
+      logradouro: '',
+      numero: '',
+      complemento: '',
+      bairro: '',
+      cidade: '',
+      uf: '',
       nome: '',
       documento: '',
       telefone: '',
       email: '',
       regiao: '',
-      cep: '',
       especialidades: [],
     })
   })
 
-  it('Editar abre com documento e telefone formatados e as especialidades na ordem', () => {
+  it('Editar abre com o endereço salvo, documento e telefone formatados e as especialidades na ordem', () => {
     expect(formularioDe(prestador())).toEqual({
       id: 'p1',
+      cep: '05422-001',
+      cepInexistente: false,
+      logradouro: 'Rua dos Pinheiros',
+      numero: '812',
+      complemento: '',
+      bairro: 'Pinheiros',
+      cidade: 'São Paulo',
+      uf: 'SP',
       nome: 'Carlos Mendes',
       documento: '318.402.117-50',
       telefone: '(11) 98734-2210',
       email: 'carlos.mendes@email.com',
       regiao: 'Zona Oeste',
-      cep: '05422-001',
       especialidades: ['t1', 't2', 't3', 't4'],
     })
-    expect(formularioDe(prestador({ email: null, regiao: null, cep: null }))).toMatchObject({
+    const semEndereco = prestador({
+      email: null,
+      regiao: null,
+      cep: null,
+      logradouro: null,
+      numero: null,
+      bairro: null,
+      cidade: null,
+      uf: null,
+    })
+    expect(formularioDe(semEndereco)).toMatchObject({
       email: '',
       regiao: '',
       cep: '',
+      logradouro: '',
+      numero: '',
+      bairro: '',
+      cidade: '',
+      uf: '',
     })
   })
 
-  it('especialidades ligam e desligam na ordem dos cliques', () => {
-    expect(alternarEspecialidade(['t1'], 't5')).toEqual(['t1', 't5'])
-    expect(alternarEspecialidade(['t1', 't5'], 't1')).toEqual(['t5'])
+  it('o CEP é consultado ao abrir só sem endereço salvo (o Novo, ou um CEP sem rua, bairro e cidade)', () => {
+    expect(consultarCepAoAbrir(formularioVazio())).toBe(true)
+    expect(consultarCepAoAbrir(formularioDe(prestador()))).toBe(false)
+    const soCep = prestador({
+      logradouro: null,
+      numero: '12',
+      bairro: null,
+      cidade: null,
+      uf: null,
+    })
+    expect(consultarCepAoAbrir(formularioDe(soCep))).toBe(true)
+    expect(consultarCepAoAbrir(formularioDe(prestador({ logradouro: null })))).toBe(false)
   })
 
-  it('o corpo vai como digitado (a API normaliza)', () => {
+  it('rua, bairro, cidade e UF vêm do CEP; sem ele, ficam vazios', () => {
+    expect(
+      camposDoCep({
+        cep: '01001000',
+        logradouro: 'Praça da Sé',
+        bairro: 'Sé',
+        cidade: 'São Paulo',
+        uf: 'SP',
+      }),
+    ).toEqual({ logradouro: 'Praça da Sé', bairro: 'Sé', cidade: 'São Paulo', uf: 'SP' })
+    expect(camposDoCep(undefined)).toEqual({ logradouro: '', bairro: '', cidade: '', uf: '' })
+  })
+
+  it('a cidade aparece com a UF', () => {
+    expect(cidadeComUf('São Paulo', 'SP')).toBe('São Paulo - SP')
+    expect(cidadeComUf('Osasco', '')).toBe('Osasco')
+    expect(cidadeComUf('', '')).toBe('')
+  })
+
+  it('o corpo vai como digitado, com o endereço (a API normaliza)', () => {
     expect(
       corpoDoFormulario(
-        valido({ id: 'p9', email: ' a@b.c ', cep: ' 05422-001 ', especialidades: ['t2'] }),
+        valido({
+          id: 'p9',
+          email: ' a@b.c ',
+          cep: '05422-001',
+          cepInexistente: false,
+          logradouro: 'Rua dos Pinheiros',
+          numero: ' 812 ',
+          complemento: 'fundos',
+          bairro: 'Pinheiros',
+          cidade: 'São Paulo',
+          uf: 'SP',
+          especialidades: ['t2'],
+        }),
       ),
     ).toEqual({
       nome: 'Pedro Lima',
@@ -70,7 +141,13 @@ describe('formulário', () => {
       telefone: '(11) 91234-5678',
       email: ' a@b.c ',
       regiao: '',
-      cep: ' 05422-001 ',
+      cep: '05422-001',
+      logradouro: 'Rua dos Pinheiros',
+      numero: ' 812 ',
+      complemento: 'fundos',
+      bairro: 'Pinheiros',
+      cidade: 'São Paulo',
+      uf: 'SP',
       especialidades: ['t2'],
     })
   })
@@ -99,6 +176,10 @@ describe('erroDoFormulario (ordem do protótipo)', () => {
     expect(erro({ cep: '05422-00' })).toBe('Informe um CEP com 8 dígitos')
     expect(erro({ cep: '05.422-001' })).toBe('Informe um CEP com 8 dígitos')
   })
+  it('CEP que não existe', () =>
+    expect(erro({ cep: '99999-999', cepInexistente: true })).toBe('CEP não encontrado'))
+  it('o CEP, primeiro campo, vem antes dos outros erros', () =>
+    expect(erro({ cep: '0542', nome: '', documento: '' })).toBe('Informe um CEP com 8 dígitos'))
   it('um prestador do seed abre sem erro no Editar', () => {
     for (const p of SEED_PRESTADORES)
       expect(erroDoFormulario(formularioDe(p), SEED_PRESTADORES)).toBe('')
@@ -114,6 +195,12 @@ describe('mostrarErro', () => {
     const soNome = { ...vazio, nome: 'Ana' }
     expect(mostrarErro(soNome, erroDoFormulario(soNome, []))).toBe(true)
   })
+  it('um CEP incompleto espera os outros campos; o CEP que não existe aparece na hora', () => {
+    const incompleto = { ...formularioVazio(), cep: '0542' }
+    expect(mostrarErro(incompleto, erroDoFormulario(incompleto, []))).toBe(false)
+    const inexistente = { ...formularioVazio(), cep: '99999-999', cepInexistente: true }
+    expect(mostrarErro(inexistente, erroDoFormulario(inexistente, []))).toBe(true)
+  })
 })
 
 it('os erros de validação da API vão para a linha de erro do formulário', () => {
@@ -122,6 +209,7 @@ it('os erros de validação da API vão para a linha de erro do formulário', ()
     'documento_invalido',
     'telefone_invalido',
     'cep_invalido',
+    'uf_invalida',
   ])
     expect(ERROS_DO_FORMULARIO.has(codigo)).toBe(true)
   expect(ERROS_DO_FORMULARIO.has('nao_encontrado')).toBe(false)

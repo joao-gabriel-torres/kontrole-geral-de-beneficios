@@ -31,6 +31,21 @@ const especialidades = (...ids: string[]) =>
     return { id: t.id, nome: t.nome }
   })
 
+/** O endereço do seed, na rua do CEP de cada prestador (em São Paulo). */
+const endereco = (
+  logradouro: string,
+  numero: string,
+  complemento: string | null,
+  bairro: string,
+) => ({
+  logradouro,
+  numero,
+  complemento,
+  bairro,
+  cidade: 'São Paulo',
+  uf: 'SP',
+})
+
 export function prestador(dados: Partial<PrestadorCadastro> = {}): PrestadorCadastro {
   return {
     id: 'p1',
@@ -40,6 +55,12 @@ export function prestador(dados: Partial<PrestadorCadastro> = {}): PrestadorCada
     email: 'carlos.mendes@email.com',
     regiao: 'Zona Oeste',
     cep: '05422001',
+    logradouro: 'Rua dos Pinheiros',
+    numero: '812',
+    complemento: null,
+    bairro: 'Pinheiros',
+    cidade: 'São Paulo',
+    uf: 'SP',
     status: 'ativo',
     cor: '#0069BD',
     credenciadoDesde: '2024-03-12',
@@ -61,6 +82,7 @@ export const SEED_PRESTADORES: PrestadorCadastro[] = [
     email: 'ana@ribeiroreparos.com.br',
     regiao: 'Zona Sul',
     cep: '04010000',
+    ...endereco('Rua Domingos de Morais', '348', 'sala 12', 'Vila Mariana'),
     cor: '#FC7608',
     credenciadoDesde: '2024-06-03',
     especialidades: especialidades('t5', 't6', 't7'),
@@ -76,6 +98,7 @@ export const SEED_PRESTADORES: PrestadorCadastro[] = [
     email: 'joao.pires@email.com',
     regiao: 'Centro',
     cep: '01001000',
+    ...endereco('Praça da Sé', '111', 'conj. 1203', 'Sé'),
     cor: '#5D627D',
     credenciadoDesde: '2024-09-20',
     especialidades: especialidades('t1', 't2', 't4', 't8'),
@@ -90,6 +113,7 @@ export const SEED_PRESTADORES: PrestadorCadastro[] = [
     email: 'luciana.prado@email.com',
     regiao: 'Zona Leste',
     cep: '03071000',
+    ...endereco('Rua Cesário Galero', '430', 'casa 2', 'Tatuapé'),
     cor: '#E0A100',
     credenciadoDesde: '2026-08-27',
     especialidades: especialidades('t6', 't5'),
@@ -104,6 +128,7 @@ export const SEED_PRESTADORES: PrestadorCadastro[] = [
     email: 'contato@marinacosta.com.br',
     regiao: 'Zona Oeste',
     cep: '05018000',
+    ...endereco('Rua Cayowaá', '214', null, 'Perdizes'),
     cor: '#F47B50',
     credenciadoDesde: '2025-01-15',
     especialidades: especialidades('t2', 't3', 't7'),
@@ -118,6 +143,7 @@ export const SEED_PRESTADORES: PrestadorCadastro[] = [
     email: 'roberto.alves@email.com',
     regiao: 'Zona Norte',
     cep: '02011000',
+    ...endereco('Rua Voluntários da Pátria', '657', null, 'Santana'),
     status: 'inativo',
     cor: '#004E8F',
     credenciadoDesde: '2024-05-08',

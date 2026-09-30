@@ -12,30 +12,25 @@ import {
   watch,
 } from 'vue'
 import { useRouter } from 'vue-router'
-import { ErroApi, mensagemDeErro } from '../../erros'
+import BuscaTipos from '../../componentes/BuscaTipos.vue'
+import { digitosCep, erroDoCep } from '../../componentes/cep'
+import { usarConsultaCep } from '../../componentes/consultaCep'
+import EntradaCep from '../../componentes/EntradaCep.vue'
+import { mensagemDeErro } from '../../erros'
 import { toastGestor } from '../../toast'
 import { usarCriarAcionamento, usarTipos } from '../dados'
 import { reiniciarLista } from '../estadoLista'
-import BuscaTipos from './BuscaTipos.vue'
 import CampoBusca from './CampoBusca.vue'
-import {
-  usarAssinantes,
-  usarEnderecoDoCep,
-  usarEnderecoDoPonto,
-  usarPrestadoresProximos,
-} from './dados'
+import { usarAssinantes, usarEnderecoDoPonto, usarPrestadoresProximos } from './dados'
 import {
   camposDoPonto,
   cepDeReferencia,
   chaveDaLocalizacao,
   localizacaoDoAssinante,
   corpoDoFormulario,
-  digitosCep,
   enderecoDoFormulario,
   enderecoDoMapa,
-  erroDoCep,
   filtrarPrestadores,
-  formatarCep,
   formularioInicial,
   formularioValido,
   posicaoConhecida,
@@ -116,32 +111,21 @@ const doPino = computed(() => (form.pinoMovido ? enderecoDoPino.value : null))
 // Outro endereço: com os 8 dígitos, rua, bairro e cidade vêm da consulta do CEP.
 const cepTocado = ref(false)
 const cepConsultado = computed(() => (form.outroEndereco ? digitosCep(form.cep) : ''))
-const {
-  data: enderecoCep,
-  error: falhaCep,
-  isFetching: consultandoCep,
-} = usarEnderecoDoCep(cepConsultado)
-const enderecoDoCep = computed(() =>
-  cepConsultado.value.length === 8 ? enderecoCep.value : undefined,
-)
+const consultaCep = usarConsultaCep(cepConsultado)
 /** Rua, bairro e cidade do CEP; o que ele não traz (ou sem ele), do ponto do pino movido. */
 function preencherPeloCep() {
-  const e = enderecoDoCep.value
+  const e = consultaCep.endereco.value
   const ponto = doPino.value
   form.logradouro = e?.logradouro || ponto?.logradouro || ''
   form.bairro = e?.bairro || ponto?.bairro || ''
   form.cidade = e?.cidade || ponto?.cidade || ''
 }
-watch([cepConsultado, enderecoCep], preencherPeloCep)
+watch([cepConsultado, consultaCep.endereco], preencherPeloCep)
 // O CEP que não existe (404) bloqueia o envio; o ViaCEP que não responde (502, tempo esgotado ou
 // falha de rede) deixa a gestora digitar rua e bairro.
-watch(
-  falhaCep,
-  (erro) => {
-    form.cepInexistente = erro instanceof ErroApi && erro.codigo === 'cep_nao_encontrado'
-  },
-  { immediate: true },
-)
+watch(consultaCep.inexistente, (inexistente) => (form.cepInexistente = inexistente), {
+  immediate: true,
+})
 // O CEP que veio do ponto e o ViaCEP não conhece sai: o endereço fica com os campos do ponto, para
 // a gestora completar o CEP sem perder a posição do pino.
 watch(
@@ -153,32 +137,20 @@ watch(
     form.cep = ''
   },
 )
-const cepSemResposta = computed(() => !!falhaCep.value && !form.cepInexistente)
 /**
- * Rua e bairro vêm do CEP, só para leitura. São digitados num CEP geral de cidade (que vem sem eles),
- * quando o ViaCEP não responde e no ponto do pino movido sem CEP; sem CEP, na consulta e num CEP que
- * não existe, não.
+ * Rua e bairro seguem as regras da consulta do CEP (`usarConsultaCep`); no ponto do pino movido sem
+ * CEP, também são digitados.
  */
 const livres = computed(() => {
-  if (cepSemResposta.value) return { logradouro: true, bairro: true }
   if (doPino.value && cepConsultado.value.length !== 8) return { logradouro: true, bairro: true }
-  const e = enderecoDoCep.value
-  return { logradouro: !!e && !e.logradouro, bairro: !!e && !e.bairro }
+  return consultaCep.livres.value
 })
-function digitarCep(evento: Event) {
-  const campo = evento.target as HTMLInputElement
-  form.cep = formatarCep(campo.value)
-  campo.value = form.cep
-  editarAMao('cep')
-}
-const placeholderRua = computed(() => {
-  if (consultandoPino.value) return 'Buscando o endereço do ponto…'
-  return consultandoCep.value ? 'Buscando o CEP…' : 'Preenchida pelo CEP'
-})
+const placeholderRua = computed(() =>
+  consultandoPino.value ? 'Buscando o endereço do ponto…' : consultaCep.placeholderRua.value,
+)
 const erroCep = computed(() => {
   if (!form.outroEndereco) return ''
-  if (cepConsultado.value.length === 8) return falhaCep.value ? mensagemDeErro(falhaCep.value) : ''
-  return cepTocado.value ? erroDoCep(form.cep) : ''
+  return consultaCep.mensagem.value || (cepTocado.value ? erroDoCep(form.cep) : '')
 })
 const mapa = computed(() => enderecoDoMapa(form))
 
@@ -467,15 +439,13 @@ onUnmounted(() => focoAnterior?.focus())
               <div class="linha">
                 <label class="campo cep"
                   >CEP
-                  <input
+                  <EntradaCep
                     id="novo-cep"
+                    v-model="form.cep"
                     class="entrada"
-                    inputmode="numeric"
-                    placeholder="00000-000"
-                    :value="form.cep"
                     :aria-invalid="!!erroCep || undefined"
                     aria-describedby="novo-cep-erro"
-                    @input="digitarCep"
+                    @digitar="editarAMao('cep')"
                     @blur="cepTocado = true"
                   />
                 </label>

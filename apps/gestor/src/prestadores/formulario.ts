@@ -1,50 +1,97 @@
 import type { components } from '@kgb/api-client'
 import { formatarDocumento, formatarTelefone } from '@kgb/ui'
+import { formatarCep, MENSAGEM_CEP, type EnderecoCep } from '../componentes/cep'
 import type { PrestadorCadastro } from './lista'
 
 export type DadosPrestador = components['schemas']['DadosPrestador']
 export type AcessoPrestador = PrestadorCadastro['acesso']
 export type ConviteAoCredenciar = components['schemas']['PrestadorCredenciado']['convite']
 
-/** O modal Novo/Editar. Os campos são texto puro, sem máscara, como no protótipo. */
+/**
+ * O modal Novo/Editar. Os campos do protótipo são texto puro, sem máscara; o endereço (fora do
+ * protótipo, pedido do usuário em 30/09) vem primeiro, com o CEP na máscara "00000-000".
+ */
 export interface FormularioPrestador {
   id: string | null
+  /** Opcional: preenche o endereço e ordena os prestadores por proximidade no Novo acionamento. */
+  cep: string
+  /** A consulta disse que o CEP não existe (404): o Salvar fica bloqueado até corrigir. */
+  cepInexistente: boolean
+  /** Rua, bairro, cidade e UF vêm do CEP; número e complemento são digitados. */
+  logradouro: string
+  numero: string
+  complemento: string
+  bairro: string
+  cidade: string
+  uf: string
   nome: string
   documento: string
   telefone: string
   email: string
   regiao: string
-  /** Opcional: ordena os prestadores por proximidade no Novo acionamento. */
-  cep: string
   especialidades: string[]
 }
 
 export const formularioVazio = (): FormularioPrestador => ({
   id: null,
+  cep: '',
+  cepInexistente: false,
+  logradouro: '',
+  numero: '',
+  complemento: '',
+  bairro: '',
+  cidade: '',
+  uf: '',
   nome: '',
   documento: '',
   telefone: '',
   email: '',
   regiao: '',
-  cep: '',
   especialidades: [],
 })
 
-/** "05422001" → "05422-001" (o banco guarda só os dígitos). */
-const formatarCep = (cep: string | null): string =>
-  cep?.length === 8 ? `${cep.slice(0, 5)}-${cep.slice(5)}` : (cep ?? '')
-
-/** O Editar abre com documento, telefone e CEP formatados (o banco guarda só os dígitos). */
+/**
+ * O Editar abre com o endereço salvo e com documento, telefone e CEP formatados (o banco guarda só
+ * os dígitos).
+ */
 export const formularioDe = (p: PrestadorCadastro): FormularioPrestador => ({
   id: p.id,
+  cep: formatarCep(p.cep ?? ''),
+  cepInexistente: false,
+  logradouro: p.logradouro ?? '',
+  numero: p.numero ?? '',
+  complemento: p.complemento ?? '',
+  bairro: p.bairro ?? '',
+  cidade: p.cidade ?? '',
+  uf: p.uf ?? '',
   nome: p.nome,
   documento: formatarDocumento(p.documento),
   telefone: formatarTelefone(p.telefone),
   email: p.email ?? '',
   regiao: p.regiao ?? '',
-  cep: formatarCep(p.cep),
   especialidades: p.especialidades.map((e) => e.id),
 })
+
+/**
+ * O CEP é consultado ao abrir só quando não há endereço salvo (o Novo, ou um CEP salvo sem rua,
+ * bairro e cidade). Com o endereço salvo, o Editar só consulta quando o CEP muda.
+ */
+export const consultarCepAoAbrir = (f: FormularioPrestador): boolean =>
+  !f.logradouro && !f.bairro && !f.cidade
+
+type CamposDoCep = Pick<FormularioPrestador, 'logradouro' | 'bairro' | 'cidade' | 'uf'>
+
+/** Rua, bairro, cidade e UF do CEP consultado; sem ele (incompleto, na consulta ou com falha), vazios. */
+export const camposDoCep = (e: EnderecoCep | undefined): CamposDoCep => ({
+  logradouro: e?.logradouro ?? '',
+  bairro: e?.bairro ?? '',
+  cidade: e?.cidade ?? '',
+  uf: e?.uf ?? '',
+})
+
+/** "São Paulo - SP": a cidade do endereço, com a UF quando há. */
+export const cidadeComUf = (cidade: string, uf: string): string =>
+  [cidade, uf].filter(Boolean).join(' - ')
 
 const digitos = (texto: string) => texto.replace(/\D/g, '')
 const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/
@@ -52,13 +99,17 @@ const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/
 const CEP = /^\d{5}-?\d{3}$/
 
 /**
- * O primeiro erro, na ordem do protótipo. Os dígitos verificadores ficam com a API (só para
- * documento novo ou alterado): o erro dela aparece na mesma linha ao salvar.
+ * O primeiro erro, na ordem do formulário: o CEP, que vem primeiro, e depois os campos na ordem do
+ * protótipo. Os dígitos verificadores ficam com a API (só para documento novo ou alterado): o erro
+ * dela aparece na mesma linha ao salvar.
  */
 export function erroDoFormulario(
   f: FormularioPrestador,
   lista: readonly PrestadorCadastro[],
 ): string {
+  const cep = f.cep.trim()
+  if (cep && !CEP.test(cep)) return MENSAGEM_CEP
+  if (f.cepInexistente) return 'CEP não encontrado'
   const documento = digitos(f.documento)
   if (!f.nome.trim()) return 'Informe o nome'
   if (documento.length !== 11 && documento.length !== 14) return 'CPF ou CNPJ inválido'
@@ -69,17 +120,15 @@ export function erroDoFormulario(
   // O e-mail vira o login do convite; a API confere de novo com o critério do Better Auth.
   const email = f.email.trim()
   if (email && !EMAIL.test(email)) return 'Informe um e-mail válido'
-  const cep = f.cep.trim()
-  if (cep && !CEP.test(cep)) return 'Informe um CEP com 8 dígitos'
   return ''
 }
 
-/** Com o formulário vazio (ou só e-mail e região) o erro não aparece, mas o Salvar fica claro. */
+/**
+ * Com o formulário vazio (ou só endereço, e-mail e região) o erro não aparece, mas o Salvar fica
+ * claro. O CEP que não existe aparece na hora, mesmo sozinho.
+ */
 export const mostrarErro = (f: FormularioPrestador, erro: string): boolean =>
-  !!erro && !!(f.nome || f.documento || f.telefone)
-
-export const alternarEspecialidade = (ids: readonly string[], id: string): string[] =>
-  ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]
+  !!erro && (!!(f.nome || f.documento || f.telefone) || f.cepInexistente)
 
 export const corpoDoFormulario = (f: FormularioPrestador): DadosPrestador => ({
   nome: f.nome,
@@ -88,6 +137,12 @@ export const corpoDoFormulario = (f: FormularioPrestador): DadosPrestador => ({
   email: f.email,
   regiao: f.regiao,
   cep: f.cep,
+  logradouro: f.logradouro,
+  numero: f.numero,
+  complemento: f.complemento,
+  bairro: f.bairro,
+  cidade: f.cidade,
+  uf: f.uf,
   especialidades: [...f.especialidades],
 })
 
@@ -99,6 +154,7 @@ export const ERROS_DO_FORMULARIO: ReadonlySet<string> = new Set([
   'telefone_invalido',
   'email_invalido',
   'cep_invalido',
+  'uf_invalida',
   'tipo_invalido',
   'validacao',
 ])

@@ -1,8 +1,9 @@
 import type { components, PrestadorOpcao, TipoDemanda } from '@kgb/api-client'
+import { normalizarBusca } from '../../componentes/buscaTipos'
+import { digitosCep, formatarCep } from '../../componentes/cep'
 import type { NovoAcionamento } from '../dados'
 
 export type Assinante = components['schemas']['Assinante']
-export type EnderecoCep = components['schemas']['EnderecoCep']
 /** Uma posição no mapa, em graus decimais. */
 export type Localizacao = components['schemas']['Localizacao']
 /** O endereço de um ponto do mapa (consulta reversa), com null no que o mapa não sabe. */
@@ -78,23 +79,6 @@ export function formularioInicial(
     localizacao: null,
     pinoMovido: false,
   }
-}
-
-/** Só os dígitos do CEP, no máximo 8. */
-export const digitosCep = (texto: string): string => texto.replace(/\D/g, '').slice(0, 8)
-
-/** "01310200" → "01310-200", enquanto é digitado. */
-export function formatarCep(texto: string): string {
-  const d = digitosCep(texto)
-  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d
-}
-
-export const MENSAGEM_CEP = 'Informe um CEP com 8 dígitos'
-
-/** O erro local do campo CEP: só para um CEP começado e incompleto. */
-export function erroDoCep(texto: string): string {
-  const n = digitosCep(texto).length
-  return n > 0 && n < 8 ? MENSAGEM_CEP : ''
 }
 
 /**
@@ -275,60 +259,6 @@ export function formularioValido(f: FormularioAcionamento): boolean {
     f.inicio < f.fim &&
     f.prestadorId,
   )
-}
-
-export function alternarTipo(tipoIds: readonly string[], id: string): string[] {
-  return tipoIds.includes(id) ? tipoIds.filter((t) => t !== id) : [...tipoIds, id]
-}
-
-/** Texto para comparar nas buscas: sem acentos, sem maiúsculas e sem espaços nas pontas. */
-export const normalizarBusca = (texto: string): string =>
-  texto
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .trim()
-
-/** A categoria dos tipos sem categoria. */
-export const SEM_CATEGORIA = 'Outros'
-
-export interface GrupoTipos {
-  categoria: string
-  tipos: TipoDemanda[]
-}
-
-const porNome = (a: string, b: string) => a.localeCompare(b, 'pt-BR')
-
-/**
- * A lista suspensa da busca de tipos: agrupada por categoria (em ordem alfabética, "Outros" no
- * fim), com os tipos por nome. Filtra pelo nome do tipo ou da categoria.
- */
-export function gruposDeTipos(tipos: readonly TipoDemanda[], busca: string): GrupoTipos[] {
-  const termo = normalizarBusca(busca)
-  const grupos = new Map<string, TipoDemanda[]>()
-  for (const t of tipos) {
-    const categoria = t.categoria?.trim() || SEM_CATEGORIA
-    const casa = [t.nome, categoria].some((texto) => normalizarBusca(texto).includes(termo))
-    if (termo && !casa) continue
-    grupos.set(categoria, [...(grupos.get(categoria) ?? []), t])
-  }
-  return [...grupos.entries()]
-    .sort(([a], [b]) => (a === SEM_CATEGORIA ? 1 : b === SEM_CATEGORIA ? -1 : porNome(a, b)))
-    .map(([categoria, lista]) => ({
-      categoria,
-      tipos: [...lista].sort((a, b) => porNome(a.nome, b.nome)),
-    }))
-}
-
-/**
- * O tipo que o Enter liga na busca: o primeiro da lista (na ordem mostrada) cujo nome casa com a
- * busca; sem nenhum pelo nome, o primeiro que casa só pela categoria ("eletr" liga "Revisão
- * elétrica", não "Ponto de luz", que só é da categoria Elétrica).
- */
-export function tipoDoEnter(grupos: readonly GrupoTipos[], busca: string): TipoDemanda | undefined {
-  const termo = normalizarBusca(busca)
-  const lista = grupos.flatMap((g) => g.tipos)
-  return lista.find((t) => normalizarBusca(t.nome).includes(termo)) ?? lista[0]
 }
 
 /**

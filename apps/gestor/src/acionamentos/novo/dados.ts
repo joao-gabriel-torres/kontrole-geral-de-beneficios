@@ -26,22 +26,6 @@ export function usarAssinantes(busca: MaybeRefOrGetter<string>) {
   })
 }
 
-/** Rua, bairro e cidade de um CEP (ViaCEP pela API). Só consulta com os 8 dígitos. */
-export function usarEnderecoDoCep(cep: MaybeRefOrGetter<string>) {
-  return useQuery({
-    queryKey: computed(() => ['cep', toValue(cep)] as const),
-    queryFn: ({ queryKey, signal }) =>
-      exigir(
-        comLimite(
-          (s) => api.GET('/api/cep/{cep}', { params: { path: { cep: queryKey[1] } }, signal: s }),
-          signal,
-        ),
-      ),
-    enabled: computed(() => toValue(cep).length === 8),
-    staleTime: Infinity,
-  })
-}
-
 /**
  * Prestadores ativos; com um CEP, do mais próximo ao mais distante. A resposta leva o CEP da
  * consulta: o modal só escolhe o mais próximo com a lista daquele CEP. A chave começa com

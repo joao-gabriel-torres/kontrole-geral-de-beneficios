@@ -3,13 +3,19 @@ import type { TipoDemanda } from '@kgb/api-client'
 import { RussoIcone } from '@kgb/ui'
 import { computed, onBeforeUnmount, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useDisplay } from 'vuetify'
+import BuscaTipos from '../componentes/BuscaTipos.vue'
+import { digitosCep } from '../componentes/cep'
+import { usarConsultaCep } from '../componentes/consultaCep'
+import EntradaCep from '../componentes/EntradaCep.vue'
 import { ErroApi, mensagemDeErro } from '../erros'
 import { usarModalAberto } from '../modais'
 import { toastGestor } from '../toast'
 import { usarEnviarConvite, usarSalvarPrestador } from './dados'
 import {
-  alternarEspecialidade,
   avisoAoCredenciar,
+  camposDoCep,
+  cidadeComUf,
+  consultarCepAoAbrir,
   corpoDoFormulario,
   erroDoFormulario,
   ERROS_DO_FORMULARIO,
@@ -40,6 +46,33 @@ const form = reactive<FormularioPrestador>({
   ...props.inicial,
   especialidades: [...props.inicial.especialidades],
 })
+
+// Endereço (fora do protótipo, pedido do usuário em 30/09): o CEP é o primeiro campo e, com os 8
+// dígitos, rua, bairro, cidade e UF vêm da consulta (só para leitura); número e complemento são
+// digitados. O Editar abre com o endereço salvo e só consulta o CEP quando ele muda.
+const consultar = ref(consultarCepAoAbrir(props.inicial))
+/** Os dígitos consultados; null enquanto vale o endereço salvo. */
+const cepConsultado = computed(() => (consultar.value ? digitosCep(form.cep) : null))
+const {
+  endereco: enderecoDoCep,
+  inexistente,
+  semResposta,
+  livres: livresNaConsulta,
+  placeholderRua,
+  mensagem: falhaDoCep,
+} = usarConsultaCep(() => cepConsultado.value ?? '')
+function digitarCep() {
+  if (digitosCep(form.cep) !== digitosCep(props.inicial.cep)) consultar.value = true
+}
+watch([cepConsultado, enderecoDoCep], () => {
+  if (cepConsultado.value !== null) Object.assign(form, camposDoCep(enderecoDoCep.value))
+})
+watch(inexistente, (valor) => (form.cepInexistente = valor), { immediate: true })
+/** O endereço salvo fica só para leitura, como veio do CEP. */
+const livres = computed(() =>
+  cepConsultado.value === null ? { logradouro: false, bairro: false } : livresNaConsulta.value,
+)
+
 /** Erro devolvido pela API ao salvar (ex.: dígito verificador); some quando algo é editado. */
 const erroServidor = ref('')
 watch(form, () => (erroServidor.value = ''), { deep: true })
@@ -47,6 +80,14 @@ watch(form, () => (erroServidor.value = ''), { deep: true })
 const erroLocal = computed(() => erroDoFormulario(form, props.lista))
 const erro = computed(() => erroServidor.value || erroLocal.value)
 const erroVisivel = computed(() => !!erroServidor.value || mostrarErro(form, erroLocal.value))
+/**
+ * A linha de erro. Com o ViaCEP fora, sem outro erro à mostra, ela explica por que a rua não veio:
+ * é só um aviso (rua e bairro ficam para digitar) e o Salvar segue.
+ */
+const linhaDeErro = computed(() => {
+  if (erroVisivel.value) return erro.value
+  return semResposta.value ? falhaDoCep.value : ''
+})
 const titulo = computed(() => (form.id ? 'Editar prestador' : 'Novo prestador'))
 
 async function enviar() {
@@ -115,71 +156,105 @@ onUnmounted(() => focoAnterior?.focus())
           <RussoIcone nome="cancel" :tamanho="18" class="icone" />
         </button>
       </div>
-      <label class="campo"
-        >Nome completo ou razão social
-        <input v-model="form.nome" class="entrada" placeholder="Nome" />
-      </label>
-      <div class="linha">
-        <label class="campo documento"
-          >CPF ou CNPJ
-          <input v-model="form.documento" class="entrada" placeholder="000.000.000-00" />
-        </label>
-        <label class="campo telefone"
-          >Telefone
-          <input v-model="form.telefone" class="entrada" placeholder="(11) 90000-0000" />
-        </label>
-      </div>
       <!--
-        Fora do protótipo (pedido do usuário, 30/09): o CEP entra na linha do e-mail e da região, e
-        o botão de convite fica na linha do rótulo do e-mail. A altura do modal não muda.
+        Fora do protótipo (pedido do usuário, 30/09): o endereço vem primeiro, com o CEP, e o botão
+        de convite fica na linha do rótulo do e-mail. No computador o corpo tem a altura do
+        protótipo e rola por dentro: o cabeçalho e os botões ficam no lugar.
       -->
-      <div class="linha contato">
-        <div class="campo email">
-          <div class="rotulo-linha">
-            <label for="prestador-email">E-mail</label>
-            <button
-              v-if="rotuloConvite"
-              type="button"
-              class="convite"
-              :aria-disabled="convidando"
-              @click="convidar"
-            >
-              {{ rotuloConvite }}
-            </button>
+      <div class="corpo">
+        <div class="linha">
+          <label class="campo cep"
+            >CEP
+            <EntradaCep
+              id="prestador-cep"
+              v-model="form.cep"
+              class="entrada"
+              :aria-invalid="form.cepInexistente || undefined"
+              @digitar="digitarCep"
+            />
+          </label>
+          <label class="campo rua"
+            >Rua
+            <input
+              v-model="form.logradouro"
+              class="entrada"
+              :readonly="!livres.logradouro"
+              :placeholder="placeholderRua"
+            />
+          </label>
+        </div>
+        <div class="linha">
+          <label class="campo casa"
+            >Número
+            <input v-model="form.numero" class="entrada" placeholder="Ex.: 410" />
+          </label>
+          <label class="campo complemento"
+            >Complemento
+            <input v-model="form.complemento" class="entrada" placeholder="Opcional" />
+          </label>
+        </div>
+        <div class="linha">
+          <label class="campo bairro"
+            >Bairro
+            <input v-model="form.bairro" class="entrada" :readonly="!livres.bairro" />
+          </label>
+          <label class="campo cidade"
+            >Cidade
+            <input class="entrada" readonly :value="cidadeComUf(form.cidade, form.uf)" />
+          </label>
+        </div>
+        <label class="campo"
+          >Nome completo ou razão social
+          <input v-model="form.nome" class="entrada" placeholder="Nome" />
+        </label>
+        <div class="linha">
+          <label class="campo documento"
+            >CPF ou CNPJ
+            <input v-model="form.documento" class="entrada" placeholder="000.000.000-00" />
+          </label>
+          <label class="campo telefone"
+            >Telefone
+            <input v-model="form.telefone" class="entrada" placeholder="(11) 90000-0000" />
+          </label>
+        </div>
+        <div class="linha">
+          <div class="campo email">
+            <div class="rotulo-linha">
+              <label for="prestador-email">E-mail</label>
+              <button
+                v-if="rotuloConvite"
+                type="button"
+                class="convite"
+                :aria-disabled="convidando"
+                @click="convidar"
+              >
+                {{ rotuloConvite }}
+              </button>
+            </div>
+            <input
+              id="prestador-email"
+              v-model="form.email"
+              class="entrada"
+              placeholder="email@exemplo.com"
+            />
           </div>
-          <input
-            id="prestador-email"
-            v-model="form.email"
-            class="entrada"
-            placeholder="email@exemplo.com"
+          <label class="campo regiao"
+            >Região de atendimento
+            <input v-model="form.regiao" class="entrada" placeholder="Zona Oeste" />
+          </label>
+        </div>
+        <!-- A mesma busca de tipos do Novo acionamento (pedido do usuário, 30/09). -->
+        <div class="grupo">
+          <label for="prestador-especialidades" class="rotulo">Especialidades</label>
+          <BuscaTipos
+            id="prestador-especialidades"
+            v-model="form.especialidades"
+            :tipos="tipos"
+            para-cima
           />
         </div>
-        <label class="campo regiao"
-          >Região de atendimento
-          <input v-model="form.regiao" class="entrada" placeholder="Zona Oeste" />
-        </label>
-        <label class="campo cep"
-          >CEP
-          <input v-model="form.cep" class="entrada" inputmode="numeric" placeholder="00000-000" />
-        </label>
       </div>
-      <div class="grupo">
-        <div id="prestador-especialidades" class="rotulo">Especialidades</div>
-        <div class="especialidades" role="group" aria-labelledby="prestador-especialidades">
-          <button
-            v-for="t in tipos"
-            :key="t.id"
-            type="button"
-            class="especialidade"
-            :class="{ escolhida: form.especialidades.includes(t.id) }"
-            :aria-pressed="form.especialidades.includes(t.id)"
-            @click="form.especialidades = alternarEspecialidade(form.especialidades, t.id)"
-          >
-            <span class="bolinha" :style="{ background: t.cor }" />{{ t.nome }}
-          </button>
-        </div>
-      </div>
-      <div v-if="erroVisivel" class="erro" role="alert">{{ erro }}</div>
+      <div v-if="linhaDeErro" class="erro" role="alert">{{ linhaDeErro }}</div>
       <div class="acoes">
         <button type="button" class="cancelar" @click="emit('fechar')">Cancelar</button>
         <button
@@ -272,10 +347,53 @@ onUnmounted(() => focoAnterior?.focus())
 .entrada:focus {
   border-color: var(--kgb-tinta);
 }
+.entrada[readonly] {
+  background: var(--kgb-superficie1);
+  color: var(--kgb-secundario);
+}
+.entrada[readonly]:focus {
+  border-color: var(--kgb-divisor);
+}
+.corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+/*
+ * No computador, o corpo tem a altura do corpo do protótipo (do nome às especialidades, 406px a
+ * 1440px) e rola por dentro: o modal não muda de altura e os botões ficam no lugar.
+ */
+.sobreposicao:not(.compacto) .corpo {
+  height: 406px;
+  overflow-y: auto;
+}
 .linha {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+.linha .campo {
+  min-width: 0;
+}
+.linha .entrada {
+  width: 100%;
+  min-width: 0;
+}
+.cep {
+  flex: 1 1 120px;
+}
+.rua {
+  flex: 3 1 200px;
+}
+.casa {
+  flex: 1 1 100px;
+}
+.complemento {
+  flex: 2 1 160px;
+}
+.bairro,
+.cidade {
+  flex: 1 1 160px;
 }
 .documento,
 .telefone {
@@ -286,16 +404,6 @@ onUnmounted(() => focoAnterior?.focus())
 }
 .regiao {
   flex: 1 1 160px;
-}
-.cep {
-  flex: 0.8 1 120px;
-}
-.contato .campo {
-  min-width: 0;
-}
-.contato .entrada {
-  width: 100%;
-  min-width: 0;
 }
 .rotulo-linha {
   display: flex;
@@ -320,34 +428,6 @@ onUnmounted(() => focoAnterior?.focus())
   font-size: 13px;
   font-weight: 600;
   color: var(--kgb-texto);
-}
-.especialidades {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.especialidade {
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--kgb-divisor);
-  border-radius: 999px;
-  background: var(--kgb-branco);
-  color: var(--kgb-texto);
-  font-size: 13px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.especialidade.escolhida {
-  border-color: var(--kgb-primaria);
-  background: var(--kgb-primaria-tint);
-  color: var(--kgb-primaria-escura);
-}
-.bolinha {
-  width: 8px;
-  height: 8px;
-  border-radius: 4px;
 }
 .erro {
   font-size: 13px;

@@ -10,6 +10,7 @@ export const EnderecoCepSchema = z
     logradouro: z.string().openapi({ description: 'Vazio nos CEPs gerais de cidade' }),
     bairro: z.string(),
     cidade: z.string(),
+    uf: z.string().openapi({ description: 'Sigla do estado, como "SP"' }),
   })
   .openapi('EnderecoCep')
 
@@ -17,7 +18,8 @@ const rotaConsultar = createRoute({
   method: 'get',
   path: '/api/cep/{cep}',
   tags: ['Assinantes'],
-  summary: 'Endereço de um CEP (ViaCEP), para atendimento em outro endereço',
+  summary:
+    'Endereço de um CEP (ViaCEP), para atendimento em outro endereço e para o cadastro de prestadores',
   security: [{ Bearer: [] }],
   middleware: [exigePapel('gestor')] as const,
   request: {
@@ -41,7 +43,7 @@ const rotaConsultar = createRoute({
   },
 })
 
-/** Consulta de CEP do modal Novo acionamento. */
+/** Consulta de CEP dos modais Novo acionamento e Novo/Editar prestador. */
 export const rotasCep = new OpenAPIHono<Ambiente>().openapi(rotaConsultar, async (c) => {
   try {
     return c.json(await consultarCep(c.req.valid('param').cep), 200)

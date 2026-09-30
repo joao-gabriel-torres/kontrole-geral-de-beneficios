@@ -435,7 +435,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Endereço de um CEP (ViaCEP), para atendimento em outro endereço */
+        /** Endereço de um CEP (ViaCEP), para atendimento em outro endereço e para o cadastro de prestadores */
         get: {
             parameters: {
                 query?: never;
@@ -2646,6 +2646,8 @@ export interface components {
             logradouro: string;
             bairro: string;
             cidade: string;
+            /** @description Sigla do estado, como "SP" */
+            uf: string;
         };
         Localizacao: {
             /** @description Graus decimais, 6 casas */
@@ -2811,6 +2813,13 @@ export interface components {
             regiao: string | null;
             /** @description Só os 8 dígitos */
             cep: string | null;
+            logradouro: string | null;
+            numero: string | null;
+            complemento: string | null;
+            bairro: string | null;
+            cidade: string | null;
+            /** @description 2 letras maiúsculas */
+            uf: string | null;
             /** @enum {string} */
             status: "ativo" | "inativo";
             cor: string;
@@ -2846,8 +2855,15 @@ export interface components {
             telefone: string;
             email?: string | null;
             regiao?: string | null;
-            /** @description 8 dígitos, com ou sem hífen */
+            /** @description 8 dígitos, com ou sem hífen (422 cep_invalido) */
             cep?: string | null;
+            logradouro?: string | null;
+            numero?: string | null;
+            complemento?: string | null;
+            bairro?: string | null;
+            cidade?: string | null;
+            /** @description 2 letras; gravada em maiúsculas (422 uf_invalida) */
+            uf?: string | null;
             /** @description Ids dos tipos, na ordem escolhida */
             especialidades: string[];
         };

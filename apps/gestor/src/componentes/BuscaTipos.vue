@@ -1,28 +1,53 @@
 <script setup lang="ts">
 import type { TipoDemanda } from '@kgb/api-client'
 import { RussoIcone } from '@kgb/ui'
-import { computed, nextTick, ref } from 'vue'
-import { alternarTipo, gruposDeTipos, tipoDoEnter } from './formulario'
+import { computed, nextTick, ref, watch } from 'vue'
+import { alternarTipo, gruposDeTipos, tipoDoEnter } from './buscaTipos'
 
 /**
  * Busca de tipos de demanda, de escolha múltipla: o campo é um combobox cuja lista suspensa
  * (agrupada por categoria) tem um botão liga/desliga por tipo. ↓/↑ levam o foco pela lista, Enter
  * liga ou desliga o tipo em foco e Esc fecha a lista. Os escolhidos viram chips removíveis, na
- * ordem da escolha (a mesma da prévia do checklist).
+ * ordem da escolha (a mesma da prévia do checklist, no Novo acionamento, e a gravada, nas
+ * especialidades do prestador).
+ *
+ * `paraCima` abre a lista acima do campo e põe os chips acima dele, para quando a busca fica no fim
+ * de uma área que rola (o corpo do modal de prestador): a lista não fica cortada embaixo e os chips
+ * escolhidos continuam à vista quando ela fecha.
  */
-const props = defineProps<{ id: string; tipos: readonly TipoDemanda[] }>()
+const props = withDefaults(
+  defineProps<{ id: string; tipos: readonly TipoDemanda[]; paraCima?: boolean }>(),
+  { paraCima: false },
+)
 const escolhidos = defineModel<string[]>({ required: true })
 
 const termo = ref('')
 const aberto = ref(false)
 const raiz = ref<HTMLElement>()
 const entrada = ref<HTMLInputElement>()
+const suspensa = ref<HTMLElement>()
 const idLista = computed(() => `${props.id}-lista`)
 const grupos = computed(() => gruposDeTipos(props.tipos, termo.value))
 const selecionados = computed(() =>
   escolhidos.value.flatMap((id) => props.tipos.filter((t) => t.id === id)),
 )
 const escolhido = (id: string) => escolhidos.value.includes(id)
+
+// Para cima, a lista aberta rola para dentro da área visível (o campo pode estar no fim dela), e o
+// campo não sai de vista quando um chip novo entra acima dele.
+watch(aberto, async (valor) => {
+  if (!valor || !props.paraCima) return
+  await nextTick()
+  suspensa.value?.scrollIntoView?.({ block: 'nearest' })
+})
+watch(
+  () => escolhidos.value.length,
+  async () => {
+    if (!props.paraCima) return
+    await nextTick()
+    entrada.value?.scrollIntoView?.({ block: 'nearest' })
+  },
+)
 
 function alternar(id: string) {
   escolhidos.value = alternarTipo(escolhidos.value, id)
@@ -116,7 +141,7 @@ function aoSairFoco(evento: FocusEvent) {
 </script>
 
 <template>
-  <div ref="raiz" class="busca-tipos" @focusout="aoSairFoco">
+  <div ref="raiz" class="busca-tipos" :class="{ 'para-cima': paraCima }" @focusout="aoSairFoco">
     <div class="caixa">
       <RussoIcone nome="search" :tamanho="18" class="lupa" />
       <input
@@ -138,6 +163,7 @@ function aoSairFoco(evento: FocusEvent) {
       <div
         v-show="aberto"
         :id="idLista"
+        ref="suspensa"
         class="lista"
         role="dialog"
         aria-label="Tipos de demanda"
@@ -226,6 +252,13 @@ function aoSairFoco(evento: FocusEvent) {
   border: 1px solid var(--kgb-divisor);
   border-radius: 16px;
   box-shadow: 0 12px 32px rgba(28, 18, 67, 0.12);
+}
+.para-cima {
+  flex-direction: column-reverse;
+}
+.para-cima .lista {
+  top: auto;
+  bottom: calc(100% + 6px);
 }
 /* Cabeçalho da categoria no estilo do rótulo "Checklist · N itens". */
 .grupo {

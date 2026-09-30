@@ -137,6 +137,13 @@ model Prestador {
   email            String?
   regiao           String?
   cep              String? // 8 dígitos; base da ordenação por proximidade
+  /// Endereço do prestador, todo opcional; o modal preenche rua, bairro e cidade pelo CEP.
+  logradouro       String?
+  numero           String?
+  complemento      String?
+  bairro           String?
+  cidade           String?
+  uf               String? // 2 letras maiúsculas
   status           StatusPrestador          @default(ativo)
   credenciadoDesde DateTime                 @db.Date
   excluidoEm       DateTime?
