@@ -183,6 +183,10 @@ model Assinante {
   complemento  String?
   bairro       String
   cidade       String
+  /// Posição conferida no mapa do Novo acionamento (graus decimais, 6 casas); o mapa abre nela da
+  /// próxima vez. Latitude e longitude são gravadas juntas.
+  latitude     Float?
+  longitude    Float?
   status       StatusAssinante @default(ativo)
   excluidoEm   DateTime?
   criadoEm     DateTime        @default(now())
@@ -202,6 +206,10 @@ model Acionamento {
   assinanteId             String?
   assinante               Assinante?          @relation(fields: [assinanteId], references: [id], onDelete: SetNull)
   cep                     String? // 8 dígitos; o atendimento pode ser noutro endereço que o do assinante
+  /// Posição conferida no mapa pelo gestor (graus decimais, 6 casas); a rota do prestador usa ela
+  /// quando existe. Latitude e longitude são gravadas juntas.
+  latitude                Float?
+  longitude               Float?
   data                    DateTime            @db.Date
   inicio                  String // HH:MM, fuso America/Sao_Paulo
   fim                     String // HH:MM, maior que inicio
