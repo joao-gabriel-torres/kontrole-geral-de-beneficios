@@ -1,12 +1,20 @@
 import type { ResumoAcionamento } from '@kgb/api-client'
-import { opcoesVuetify } from '@kgb/ui'
-import { VueQueryPlugin, type QueryClient } from '@tanstack/vue-query'
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Router } from 'vue-router'
-import { createVuetify } from 'vuetify'
+import type { QueryClient } from '@tanstack/vue-query'
+import { flushPromises, type VueWrapper } from '@vue/test-utils'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { montar } from '../../test/montar'
 import { CHAVES, MENSAGEM_SEM_CONEXAO } from '../consultas'
+
+/**
+ * O aparelho do prestador pode estar em qualquer fuso: este arquivo roda em Manaus (UTC-4), trocado
+ * antes dos imports para os formatadores criados no import não herdarem São Paulo por acaso. As
+ * datas da tela devem continuar saindo no fuso de São Paulo.
+ */
+const TZ_ANTERIOR = vi.hoisted(() => {
+  const anterior = process.env.TZ
+  process.env.TZ = 'America/Manaus'
+  return anterior
+})
 
 type UsuarioDoTeste = { id: string; prestador: { id: string } | null }
 const CARLOS: UsuarioDoTeste = { id: 'u-carlos', prestador: { id: 'p1' } }
@@ -87,20 +95,10 @@ async function abrirAgenda() {
   return r
 }
 
-/** Monta a Agenda de novo no mesmo app (mesmo cache e router), como a troca de conta sem recarregar. */
-async function remontar(cliente: QueryClient, router: Router) {
-  const wrapper = mount(PaginaAgenda, {
-    attachTo: document.body,
-    global: {
-      plugins: [
-        createVuetify(opcoesVuetify({ fundo: '#FFFFFF' })),
-        router,
-        [VueQueryPlugin, { queryClient: cliente }],
-      ],
-    },
-  })
+/** Monta a Agenda de novo no mesmo app (mesmo cache), como a troca de conta sem recarregar. */
+async function remontar(cliente: QueryClient) {
+  const { wrapper } = await montar(PaginaAgenda, { rotaInicial: '/agenda', cliente })
   montados.push(wrapper)
-  await flushPromises()
   return wrapper
 }
 
@@ -122,6 +120,9 @@ describe('PaginaAgenda', () => {
   afterEach(() => {
     montados.splice(0).forEach((w) => w.unmount())
     vi.useRealTimers()
+  })
+  afterAll(() => {
+    process.env.TZ = TZ_ANTERIOR
   })
 
   it('mostra o título e a faixa de 7 dias a partir de hoje, com hoje escolhido', async () => {
@@ -199,6 +200,14 @@ describe('PaginaAgenda', () => {
     sessao.usuario = OUTRO
     const { wrapper } = await abrirAgenda()
     expect(rotulo(wrapper)).toBe('Hoje, 29/09')
+  })
+
+  it('o "hoje" da faixa sai do fuso de São Paulo, não do aparelho', async () => {
+    // 00:30 de 30/09 em São Paulo ainda são 23:30 de 29/09 em Manaus (o fuso deste arquivo).
+    vi.setSystemTime(new Date('2026-09-30T00:30:00-03:00'))
+    const { wrapper } = await abrirAgenda()
+    expect(nomes(wrapper)[0]).toBe('Qua 30')
+    expect(rotulo(wrapper)).toBe('Hoje, 30/09')
   })
 
   it('na virada do dia, a faixa anda sozinha e o dia que saiu dela volta para hoje', async () => {
@@ -310,18 +319,18 @@ describe('PaginaAgenda', () => {
   describe('troca de conta no mesmo aparelho (sair não limpa o cache)', () => {
     /** Carlos abre a Agenda e sai; a lista dele fica no cache, que não depende do usuário. */
     async function carlosSaiEOutroEntra() {
-      const { wrapper, cliente, router } = await abrirAgenda()
+      const { wrapper, cliente } = await abrirAgenda()
       expect(horas(wrapper)).toEqual(['07:30', '10:30', '15:00'])
       wrapper.unmount()
       sessao.usuario = OUTRO
-      return { cliente, router }
+      return { cliente }
     }
 
     it('com a rede lenta, não mostra os cartões nem os pontos do anterior; depois, os dele', async () => {
-      const { cliente, router } = await carlosSaiEOutroEntra()
+      const { cliente } = await carlosSaiEOutroEntra()
       let responder!: (r: unknown) => void
       api.GET.mockReturnValue(new Promise((r) => (responder = r)))
-      const wrapper = await remontar(cliente, router)
+      const wrapper = await remontar(cliente)
       expect(wrapper.findAll('.cartao')).toHaveLength(0)
       expect(wrapper.findAll('.com-atendimento')).toHaveLength(0)
       expect(wrapper.text()).not.toContain('Dia livre.')
@@ -343,9 +352,9 @@ describe('PaginaAgenda', () => {
     })
 
     it('sem rede, mostra só o aviso de conexão, sem a lista do anterior', async () => {
-      const { cliente, router } = await carlosSaiEOutroEntra()
+      const { cliente } = await carlosSaiEOutroEntra()
       api.GET.mockRejectedValue(new TypeError('Failed to fetch'))
-      const wrapper = await remontar(cliente, router)
+      const wrapper = await remontar(cliente)
       await vi.waitFor(() => expect(wrapper.find('.aviso').exists()).toBe(true))
       expect(wrapper.find('.aviso').text()).toBe(MENSAGEM_SEM_CONEXAO)
       expect(wrapper.findAll('.cartao')).toHaveLength(0)
@@ -353,18 +362,18 @@ describe('PaginaAgenda', () => {
     })
 
     it('o novo prestador sem nenhum acionamento vê "Dia livre."', async () => {
-      const { cliente, router } = await carlosSaiEOutroEntra()
+      const { cliente } = await carlosSaiEOutroEntra()
       api.GET.mockResolvedValue(ok([]))
-      const wrapper = await remontar(cliente, router)
+      const wrapper = await remontar(cliente)
       expect(wrapper.findAll('.cartao')).toHaveLength(0)
       expect(wrapper.find('.livre').text()).toBe('Dia livre.')
     })
 
     it('o mesmo prestador voltando à tela vê a lista em cache na hora, enquanto atualiza', async () => {
-      const { wrapper: primeira, cliente, router } = await abrirAgenda()
+      const { wrapper: primeira, cliente } = await abrirAgenda()
       primeira.unmount()
       api.GET.mockReturnValue(new Promise(() => {}))
-      const wrapper = await remontar(cliente, router)
+      const wrapper = await remontar(cliente)
       expect(horas(wrapper)).toEqual(['07:30', '10:30', '15:00'])
     })
   })

@@ -4,15 +4,17 @@ import { flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { montar } from '../../test/montar'
 
-const { sair, api } = vi.hoisted(() => ({
+const { sair, api, reiniciarAgenda } = vi.hoisted(() => ({
   sair: vi.fn(async () => {}),
   api: { GET: vi.fn() },
+  reiniciarAgenda: vi.fn(),
 }))
 vi.mock('../sessao', () => ({
   sessao: { usuario: { nome: 'Carlos Mendes' }, carregada: true, indisponivel: false },
   sair,
 }))
 vi.mock('../api', () => ({ api, baseApi: 'http://api' }))
+vi.mock('../agenda/usarAgenda', () => ({ reiniciarAgenda }))
 const { default: PaginaInicio } = await import('./PaginaInicio.vue')
 
 const hoje = dataISO(new Date())
@@ -72,14 +74,14 @@ describe('PaginaInicio', () => {
     expect(router.currentRoute.value.name).toBe('login')
   })
 
-  it('sair limpa o cache: nada do prestador anterior sobra para a próxima conta', async () => {
+  it('sair não deixa o cache nem a escolha da Agenda para o próximo login', async () => {
     const { wrapper, cliente } = await montar(PaginaInicio)
-    cliente.setQueryData(['acionamentos'], [{ id: 'x' }])
+    cliente.setQueryData(['acionamentos'], ['lista da conta anterior'])
     await wrapper.find('.gatilho').trigger('click')
     await wrapper.find('[role="menuitem"]').trigger('click')
     await flushPromises()
     expect(cliente.getQueryData(['acionamentos'])).toBeUndefined()
-    expect(cliente.getQueryData(['inicio'])).toBeUndefined()
+    expect(reiniciarAgenda).toHaveBeenCalled()
   })
 
   it('mostra o próximo atendimento com rota e atalho para o checklist', async () => {
@@ -102,7 +104,7 @@ describe('PaginaInicio', () => {
   })
 
   it('sem próximo atendimento, avisa que a agenda está livre', async () => {
-    api.GET.mockResolvedValue(ok(inicio({ proximo: null as never })))
+    api.GET.mockResolvedValue(ok(inicio({ proximo: null })))
     const { wrapper } = await montar(PaginaInicio)
     expect(wrapper.find('.proximo').exists()).toBe(false)
     expect(wrapper.find('.sem-proximo').text()).toBe('Nenhum atendimento pendente na sua agenda.')
