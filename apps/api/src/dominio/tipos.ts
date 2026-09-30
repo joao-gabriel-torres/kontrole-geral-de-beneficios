@@ -19,9 +19,12 @@ export function corDoNovoTipo(quantidadeAtivos: number): string {
   return PALETA_TIPOS[quantidadeAtivos % PALETA_TIPOS.length]!
 }
 
-/** O nome como é gravado: sem espaços nas pontas, obrigatório e com até 60 caracteres. */
+/**
+ * O nome como é gravado: sem espaços nas pontas, espaços internos repetidos viram um só
+ * (a tela não distingue "Ponto  de luz" de "Ponto de luz"), obrigatório e com até 60 caracteres.
+ */
 export function normalizarNomeTipo(nome: string): string {
-  const aparado = nome.trim()
+  const aparado = nome.trim().replace(/\s+/g, ' ')
   if (!aparado) throw new ErroDominio('nome_obrigatorio', 'Informe o nome do tipo')
   if (aparado.length > LIMITE_NOME_TIPO) {
     throw new ErroDominio('texto_longo', `O nome pode ter até ${LIMITE_NOME_TIPO} caracteres`)
@@ -38,13 +41,14 @@ export function normalizarChecklist(etapas: readonly string[]): string[] {
   return limpas
 }
 
-/** Chave para comparar nomes: sem acentos, sem maiúsculas e sem espaços nas pontas. */
+/** Chave para comparar nomes: sem acentos, sem maiúsculas, sem espaços repetidos nem nas pontas. */
 export function chaveDoNome(nome: string): string {
   return nome
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
     .trim()
+    .replace(/\s+/g, ' ')
 }
 
 /** Recusa (409) um nome igual ao de outro tipo não excluído, sem acentos e sem maiúsculas. */
