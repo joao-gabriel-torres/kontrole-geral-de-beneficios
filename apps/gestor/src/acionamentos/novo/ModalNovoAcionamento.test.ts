@@ -1,3 +1,4 @@
+import { ErroTempoEsgotado } from '@kgb/api-client'
 import { dataISO, urlMapa } from '@kgb/ui'
 import type { VueWrapper } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -524,9 +525,14 @@ describe('ModalNovoAcionamento', () => {
       })
     })
 
-    it('CEP incompleto pede os 8 dígitos; CEP não encontrado deixa digitar rua e bairro', async () => {
+    it('CEP incompleto pede os 8 dígitos; CEP não encontrado bloqueia o envio', async () => {
       const { tela } = await abrir()
+      await preencher(tela)
       await outroEndereco(tela)
+      const rua = tela.get<HTMLInputElement>('.rua input')
+      const bairro = tela.get<HTMLInputElement>('.bairro input')
+      // Sem CEP, rua e bairro esperam a consulta.
+      expect([rua.element.readOnly, bairro.element.readOnly]).toEqual([true, true])
       const cep = tela.get('#novo-cep')
       await cep.setValue('0131')
       expect(tela.find('.outro .falha').exists()).toBe(false)
@@ -538,12 +544,49 @@ describe('ModalNovoAcionamento', () => {
       await cep.setValue('99999-999')
       await aguardar()
       expect(tela.get('.outro .falha').text()).toBe('CEP não encontrado')
-      const rua = tela.get<HTMLInputElement>('.rua input')
-      expect(rua.element.readOnly).toBe(false)
-      expect(tela.get<HTMLInputElement>('.bairro input').element.readOnly).toBe(false)
-      await rua.setValue('Rua Nova')
+      expect([rua.element.readOnly, bairro.element.readOnly]).toEqual([true, true])
       await tela.get('.casa input').setValue('10')
-      expect(tela.get('a.mapa').attributes('href')).toBe(urlMapa('Rua Nova, 10'))
+      const enviar = tela.get('button.enviar')
+      expect(enviar.attributes('aria-disabled')).toBe('true')
+      await enviar.trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('POST', '/api/acionamentos')).toHaveLength(0)
+    })
+
+    it.each([
+      [
+        'o ViaCEP fora do ar (502)',
+        () => erroApi(502, 'cep_indisponivel', 'O serviço de CEP não respondeu, tente de novo'),
+      ],
+      [
+        'o tempo esgotado',
+        (): RespostaFalsa => {
+          throw new ErroTempoEsgotado()
+        },
+      ],
+    ])('com %s, rua e bairro são digitados e o envio segue', async (_, falha) => {
+      simulada = simularApi(api, { ...rotas(), 'GET /api/cep/{cep}': falha })
+      const { tela } = await abrir()
+      await preencher(tela)
+      await outroEndereco(tela)
+      await tela.get('#novo-cep').setValue('01310200')
+      await aguardar()
+      expect(tela.get('.outro .falha').exists()).toBe(true)
+      const rua = tela.get<HTMLInputElement>('.rua input')
+      const bairro = tela.get<HTMLInputElement>('.bairro input')
+      expect([rua.element.readOnly, bairro.element.readOnly]).toEqual([false, false])
+      await rua.setValue('Rua Nova')
+      await bairro.setValue('Bela Vista')
+      await tela.get('.casa input').setValue('10')
+      expect(tela.get('a.mapa').attributes('href')).toBe(urlMapa('Rua Nova, 10 · Bela Vista'))
+      const enviar = tela.get('button.enviar')
+      expect(enviar.attributes('aria-disabled')).toBe('false')
+      await enviar.trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('POST', '/api/acionamentos')[0]!.body).toMatchObject({
+        endereco: 'Rua Nova, 10 · Bela Vista',
+        cep: '01310200',
+      })
     })
 
     it('desmarcar volta ao endereço do assinante', async () => {

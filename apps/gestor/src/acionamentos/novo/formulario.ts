@@ -12,6 +12,8 @@ export interface FormularioAcionamento {
   /** Atendimento fora do endereço do assinante: CEP consultado, número e complemento digitados. */
   outroEndereco: boolean
   cep: string
+  /** A consulta disse que o CEP não existe (404): o envio fica bloqueado até corrigir. */
+  cepInexistente: boolean
   logradouro: string
   numero: string
   complemento: string
@@ -47,6 +49,7 @@ export function formularioInicial(
     assinante: null,
     outroEndereco: false,
     cep: '',
+    cepInexistente: false,
     logradouro: '',
     numero: '',
     complemento: '',
@@ -181,11 +184,14 @@ export function cepDeReferencia(f: FormularioAcionamento): string {
 
 /**
  * Título, ≥ 1 tipo, cliente escolhido na busca, data, início < fim (HH:MM) e prestador. Em outro
- * endereço, também CEP com 8 dígitos, rua e número.
+ * endereço, também CEP com 8 dígitos que exista, rua e número.
  */
 export function formularioValido(f: FormularioAcionamento): boolean {
   const endereco = f.outroEndereco
-    ? digitosCep(f.cep).length === 8 && !!f.logradouro.trim() && !!f.numero.trim()
+    ? digitosCep(f.cep).length === 8 &&
+      !f.cepInexistente &&
+      !!f.logradouro.trim() &&
+      !!f.numero.trim()
     : true
   return Boolean(
     f.titulo.trim() &&

@@ -54,6 +54,7 @@ describe('formulário do Novo acionamento', () => {
       assinante: null,
       outroEndereco: false,
       cep: '',
+      cepInexistente: false,
       logradouro: '',
       numero: '',
       complemento: '',
@@ -97,8 +98,12 @@ describe('formulário do Novo acionamento', () => {
       ['sem CEP', { cep: '' }],
       ['sem rua', { logradouro: ' ' }],
       ['sem número', { numero: '  ' }],
+      ['CEP que não existe (404 da consulta)', { cepInexistente: true }],
     ])('é inválido com %s', (_, dados) => {
       expect(formularioValido(outroEndereco(dados))).toBe(false)
+    })
+    it('o CEP inexistente só conta em outro endereço', () => {
+      expect(formularioValido(valido({ cepInexistente: true }))).toBe(true)
     })
   })
 
