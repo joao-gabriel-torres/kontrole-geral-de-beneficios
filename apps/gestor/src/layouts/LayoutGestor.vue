@@ -38,7 +38,9 @@ const ORIGEM_DO_DETALHE: Record<string, string> = {
 const TELAS_DE_ORIGEM = new Set(Object.values(ORIGEM_DO_DETALHE))
 /** Rolagem de cada tela de origem na última vez em que a gestora saiu dela. */
 const rolagens = new Map<string, number>()
-const telaAtual = () => [rota.path, String(rota.name ?? '')] as const
+// Fontes primitivas: só um caminho ou nome novo dispara os watchers. (Uma função que devolvesse a
+// tupla dispararia em toda navegação, inclusive nas que só mudam a query, ex.: filtro na URL.)
+const telaAtual = [() => rota.path, () => String(rota.name ?? '')] as const
 
 // A área de conteúdo é a mesma entre as telas: cada tela nova começa no topo. Antes de desenhar a
 // tela nova (flush 'pre'), a rolagem ainda é a da anterior: a da lista fica guardada.

@@ -79,6 +79,12 @@ describe('LayoutGestor', () => {
       expect(conteudo.scrollTop).toBe(900)
     })
 
+    it('mudar só a query (ex.: filtro na URL) não mexe na rolagem', async () => {
+      const { conteudo, ir } = await naLista('/acionamentos', 500)
+      await ir('/acionamentos?busca=vidro')
+      expect(conteudo.scrollTop).toBe(500)
+    })
+
     it('nas outras trocas, a tela abre no topo', async () => {
       const { conteudo, ir } = await naLista('/acionamentos', 500)
       await ir('/acionamentos/a1059')
