@@ -17,7 +17,7 @@ const LIMITE = Number(process.env.LIMITE_DIFERENCA ?? '0.002')
 /** Fração máxima de pixels diferentes em relação aos pixels de conteúdo (não-fundo) do protótipo. */
 const LIMITE_CONTEUDO = Number(process.env.LIMITE_CONTEUDO ?? '0.02')
 /** Sensibilidade por pixel do pixelmatch (0 a 1): menor detecta divergências mais sutis de cor. */
-const LIMIAR_PIXEL = Number(process.env.LIMIAR_PIXEL ?? '0.1')
+const LIMIAR_PIXEL = Number(process.env.LIMIAR_PIXEL ?? '0.05')
 const URL_APP = {
   gestor: process.env.URL_GESTOR ?? 'http://localhost:5173',
   prestador: process.env.URL_PRESTADOR ?? 'http://localhost:5174',
