@@ -43,4 +43,13 @@ describe('links de mapa', () => {
       `https://www.google.com/maps/dir/${alvo('Rua A, 1, Centro')}/${alvo('Rua B, 2, Sé')}`,
     )
   })
+  it('endereço de outra cidade (termina com " - UF") não ganha ", São Paulo"', () => {
+    const osasco = encodeURIComponent('Rua X, 12, Centro, Osasco - SP')
+    expect(urlMapa('Rua X, 12 · Centro · Osasco - SP')).toBe(
+      `https://www.google.com/maps/search/?api=1&query=${osasco}`,
+    )
+    expect(urlRota(['Rua A, 1 · Centro', 'Rua X, 12 · Centro · Osasco - SP'])).toBe(
+      `https://www.google.com/maps/dir/${alvo('Rua A, 1, Centro')}/${osasco}`,
+    )
+  })
 })
