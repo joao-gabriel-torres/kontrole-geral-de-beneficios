@@ -129,25 +129,40 @@ onUnmounted(() => focoAnterior?.focus())
           <input v-model="form.telefone" class="entrada" placeholder="(11) 90000-0000" />
         </label>
       </div>
-      <div class="linha">
-        <label class="campo email"
-          >E-mail
-          <input v-model="form.email" class="entrada" placeholder="email@exemplo.com" />
-        </label>
+      <!--
+        Fora do protótipo (pedido do usuário, 30/09): o CEP entra na linha do e-mail e da região, e
+        o botão de convite fica na linha do rótulo do e-mail. A altura do modal não muda.
+      -->
+      <div class="linha contato">
+        <div class="campo email">
+          <div class="rotulo-linha">
+            <label for="prestador-email">E-mail</label>
+            <button
+              v-if="rotuloConvite"
+              type="button"
+              class="convite"
+              :aria-disabled="convidando"
+              @click="convidar"
+            >
+              {{ rotuloConvite }}
+            </button>
+          </div>
+          <input
+            id="prestador-email"
+            v-model="form.email"
+            class="entrada"
+            placeholder="email@exemplo.com"
+          />
+        </div>
         <label class="campo regiao"
           >Região de atendimento
           <input v-model="form.regiao" class="entrada" placeholder="Zona Oeste" />
         </label>
+        <label class="campo cep"
+          >CEP
+          <input v-model="form.cep" class="entrada" inputmode="numeric" placeholder="00000-000" />
+        </label>
       </div>
-      <button
-        v-if="rotuloConvite"
-        type="button"
-        class="convite"
-        :aria-disabled="convidando"
-        @click="convidar"
-      >
-        {{ rotuloConvite }}
-      </button>
       <div class="grupo">
         <div id="prestador-especialidades" class="rotulo">Especialidades</div>
         <div class="especialidades" role="group" aria-labelledby="prestador-especialidades">
@@ -272,8 +287,23 @@ onUnmounted(() => focoAnterior?.focus())
 .regiao {
   flex: 1 1 160px;
 }
+.cep {
+  flex: 0.8 1 120px;
+}
+.contato .campo {
+  min-width: 0;
+}
+.contato .entrada {
+  width: 100%;
+  min-width: 0;
+}
+.rotulo-linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 .convite {
-  align-self: flex-start;
   padding: 0;
   border: 0;
   background: none;

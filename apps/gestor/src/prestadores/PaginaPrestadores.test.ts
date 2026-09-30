@@ -300,6 +300,18 @@ describe('PaginaPrestadores', () => {
       ).toEqual(TIPOS_SEED.map((t) => t.nome))
     })
 
+    it('CEP com menos de 8 dígitos vira erro na linha do formulário', async () => {
+      const { tela } = await abrirNovo()
+      await campo(tela, 'Nome').setValue('Pedro Lima')
+      await campo(tela, '000.000.000-00').setValue('529.982.247-25')
+      await campo(tela, '(11) 90000-0000').setValue('(11) 91234-5678')
+      await campo(tela, '00000-000').setValue('0100')
+      expect(modal(tela).find('.erro').text()).toBe('Informe um CEP com 8 dígitos')
+      expect(salvarBotao(tela).classes()).toContain('inativo')
+      await campo(tela, '00000-000').setValue('01001000')
+      expect(modal(tela).find('.erro').exists()).toBe(false)
+    })
+
     it('o erro aparece ao digitar, na ordem do protótipo', async () => {
       const { tela } = await abrirNovo()
       await campo(tela, 'Nome').setValue('Ana')
@@ -316,6 +328,7 @@ describe('PaginaPrestadores', () => {
       await campo(tela, '000.000.000-00').setValue('529.982.247-25')
       await campo(tela, '(11) 90000-0000').setValue('(11) 91234-5678')
       await campo(tela, 'Zona Oeste').setValue('Centro')
+      await campo(tela, '00000-000').setValue('01001-000')
       await botao(modal(tela), 'Pintura').trigger('click')
       await botao(modal(tela), 'Vazamento').trigger('click')
       expect(salvarBotao(tela).classes()).not.toContain('inativo')
@@ -329,6 +342,7 @@ describe('PaginaPrestadores', () => {
         telefone: '(11) 91234-5678',
         email: '',
         regiao: 'Centro',
+        cep: '01001-000',
         especialidades: ['t5', 't1'],
       })
       expect(toastGestor.mensagem.value).toBe('Prestador credenciado')
@@ -415,6 +429,7 @@ describe('PaginaPrestadores', () => {
       expect((campo(tela, '(11) 90000-0000').element as HTMLInputElement).value).toBe(
         '(11) 98734-2210',
       )
+      expect((campo(tela, '00000-000').element as HTMLInputElement).value).toBe('05422-001')
       expect(
         m
           .findAll('.especialidade')
@@ -426,7 +441,11 @@ describe('PaginaPrestadores', () => {
       await aguardar()
       expect(simulada.chamadas('PATCH', '/api/prestadores/{id}')[0]).toMatchObject({
         params: { path: { id: 'p1' } },
-        body: { documento: '318.402.117-50', especialidades: ['t1', 't2', 't3', 't4'] },
+        body: {
+          documento: '318.402.117-50',
+          cep: '05422-001',
+          especialidades: ['t1', 't2', 't3', 't4'],
+        },
       })
       expect(toastGestor.mensagem.value).toBe('Cadastro atualizado')
     })
@@ -458,10 +477,10 @@ describe('PaginaPrestadores', () => {
   })
 
   describe('convite de acesso no Editar', () => {
-    const botaoConvite = (tela: Tela) =>
-      modal(tela)
-        .findAll('button')
-        .find((b) => /convite/i.test(b.text()))
+    const botaoConvite = (tela: Tela) => {
+      const b = modal(tela).find('button.convite')
+      return b.exists() ? b : undefined
+    }
     async function editar(nome: string, acesso: PrestadorCadastro['acesso']) {
       cadastro = () => ({
         data: SEED_PRESTADORES.map((p) => (p.nome === nome ? { ...p, acesso } : p)),
@@ -472,9 +491,18 @@ describe('PaginaPrestadores', () => {
       return r
     }
 
-    it('quem já tem senha não vê o botão (o Carlos do seed)', async () => {
+    it('quem já tem senha vê "Redefinir acesso", que manda o convite de novo (o Carlos do seed)', async () => {
+      convidar = () => ({
+        data: { email: 'carlos.mendes@email.com', expiraEm: '2026-10-07T12:00:00.000Z' },
+      })
       const { tela } = await editar('Carlos Mendes', 'ativo')
-      expect(botaoConvite(tela)).toBeUndefined()
+      expect(botaoConvite(tela)!.text()).toBe('Redefinir acesso')
+      await botaoConvite(tela)!.trigger('click')
+      await aguardar()
+      expect(simulada.chamadas('POST', '/api/prestadores/{id}/convite')).toEqual([
+        { params: { path: { id: 'p1' } } },
+      ])
+      expect(toastGestor.mensagem.value).toBe('Convite enviado para carlos.mendes@email.com')
     })
 
     it('sem e-mail não há o que enviar', async () => {
