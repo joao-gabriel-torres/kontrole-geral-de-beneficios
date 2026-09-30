@@ -22,6 +22,7 @@ import {
   acessosDosPrestadores,
   convitesDoUsuario,
   enviarConvite,
+  sincronizarLogin,
   type AcessoPrestador,
 } from './convites'
 
@@ -193,7 +194,10 @@ async function exigirNaoExcluido(id: string) {
   return atual
 }
 
-/** Edita os dados do cadastro. Status, cor e data de credenciamento ficam como estão. */
+/**
+ * Edita os dados do cadastro. Status, cor e data de credenciamento ficam como estão. Trocar o
+ * e-mail troca também o login do usuário vinculado (`sincronizarLogin`).
+ */
 export async function atualizarPrestador(
   id: string,
   dados: DadosPrestador,
@@ -206,6 +210,10 @@ export async function atualizarPrestador(
   })
   await comDocumentoUnico(p, () =>
     prisma.$transaction(async (tx) => {
+      // A trava põe a edição em fila com a exclusão e com o convite, que também mexem no login.
+      const [anterior] = await tx.$queryRaw<{ email: string | null }[]>`
+        SELECT email FROM prestador WHERE id = ${id} AND "excluidoEm" IS NULL FOR UPDATE`
+      if (!anterior) throw naoEncontrado('Prestador')
       await exigirTipos(tx, p.especialidades)
       await tx.prestador.update({
         where: { id },
@@ -222,6 +230,7 @@ export async function atualizarPrestador(
       await tx.prestadorEspecialidade.createMany({
         data: vinculos(p.especialidades).map((v) => ({ ...v, prestadorId: id })),
       })
+      await sincronizarLogin(tx, id, anterior.email, p.email)
     }),
   )
   return cadastroDe(id)

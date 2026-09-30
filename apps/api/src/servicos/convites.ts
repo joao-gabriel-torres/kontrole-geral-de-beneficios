@@ -43,6 +43,46 @@ export function convitesDoUsuario(userId: string): Prisma.VerificationWhereInput
   return { value: userId, identifier: { startsWith: PREFIXO_CONVITE } }
 }
 
+/** Outra conta pegou o e-mail entre a conferência e a gravação: o índice único responde. */
+function recusarEmailDuplicado(erro: unknown): never {
+  if (erro instanceof Prisma.PrismaClientKnownRequestError && erro.code === 'P2002') {
+    throw new ErroDominio('email_em_uso', MENSAGENS_CONVITE.emailEmUso, 409)
+  }
+  throw erro
+}
+
+/** A conta que já usa o e-mail (sem diferenciar maiúsculas), se houver. */
+const contaDoEmail = (tx: Prisma.TransactionClient, email: string) =>
+  tx.user.findFirst({
+    where: { email: { equals: email, mode: 'insensitive' } },
+    select: { prestadorId: true },
+  })
+
+/**
+ * Leva a troca do e-mail do cadastro ao login do usuário vinculado, com a mesma checagem de
+ * conflito do convite. Os convites pendentes caem, porque o link foi para o endereço antigo. Sem
+ * usuário vinculado, sem e-mail novo ou com o mesmo e-mail, o login fica como está.
+ * Roda na transação da edição, com a linha do prestador travada.
+ */
+export async function sincronizarLogin(
+  tx: Prisma.TransactionClient,
+  prestadorId: string,
+  emailAnterior: string | null,
+  emailNovo: string | null,
+): Promise<void> {
+  const novo = normalizarEmail(emailNovo)
+  if (!novo || novo === normalizarEmail(emailAnterior)) return
+  const usuario = await tx.user.findUnique({ where: { prestadorId }, select: { id: true } })
+  if (!usuario) return
+  const email = verificarConvite({
+    prestadorId,
+    email: novo,
+    contaDoEmail: await contaDoEmail(tx, novo),
+  })
+  await tx.user.update({ where: { id: usuario.id }, data: { email } }).catch(recusarEmailDuplicado)
+  await tx.verification.deleteMany({ where: convitesDoUsuario(usuario.id) })
+}
+
 interface PrestadorTravado {
   nome: string
   email: string | null
@@ -73,13 +113,11 @@ export async function enviarConvite(
         SELECT nome, email, "excluidoEm" FROM prestador WHERE id = ${prestadorId} FOR UPDATE`
       if (!prestador || prestador.excluidoEm) throw naoEncontrado('Prestador')
       const normalizado = normalizarEmail(prestador.email)
-      const contaDoEmail = normalizado
-        ? await tx.user.findFirst({
-            where: { email: { equals: normalizado, mode: 'insensitive' } },
-            select: { prestadorId: true },
-          })
-        : null
-      const email = verificarConvite({ prestadorId, email: prestador.email, contaDoEmail })
+      const email = verificarConvite({
+        prestadorId,
+        email: prestador.email,
+        contaDoEmail: normalizado ? await contaDoEmail(tx, normalizado) : null,
+      })
 
       const existente = await tx.user.findUnique({ where: { prestadorId }, select: { id: true } })
       const usuario = existente
@@ -107,13 +145,7 @@ export async function enviarConvite(
       })
       return { nome: prestador.nome, email }
     })
-    .catch((erro: unknown) => {
-      // Outra conta pegou o e-mail entre a conferência e a gravação.
-      if (erro instanceof Prisma.PrismaClientKnownRequestError && erro.code === 'P2002') {
-        throw new ErroDominio('email_em_uso', MENSAGENS_CONVITE.emailEmUso, 409)
-      }
-      throw erro
-    })
+    .catch(recusarEmailDuplicado)
 
   const mensagem = emailDoConvite({
     nome,
