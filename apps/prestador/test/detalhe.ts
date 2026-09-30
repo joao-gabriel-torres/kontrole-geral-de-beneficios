@@ -20,6 +20,8 @@ export function detalheExemplo(extra: Partial<DetalheAcionamento> = {}): Detalhe
     ],
     etapas: { feitas: 1, total: 3 },
     ultimoEnvioEm: null,
+    latitude: null,
+    longitude: null,
     criadoEm: '2026-09-26T19:20:00.000Z',
     iniciadoEm: null,
     comentarioConclusao: null,

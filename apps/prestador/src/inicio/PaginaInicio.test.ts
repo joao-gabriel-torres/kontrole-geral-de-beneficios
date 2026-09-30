@@ -33,6 +33,8 @@ const resumo = (id: string, extra: Partial<ResumoAcionamento> = {}): ResumoAcion
   tipos: [{ nome: 'Vazamento', cor: '#0069BD' }],
   etapas: { feitas: 0, total: 9 },
   ultimoEnvioEm: null,
+  latitude: null,
+  longitude: null,
   ...extra,
 })
 const inicio = (extra: Partial<InicioPrestador> = {}): InicioPrestador => ({

@@ -48,6 +48,8 @@ const resumo = (id: string, extra: Partial<ResumoAcionamento> = {}): ResumoAcion
   ],
   etapas: { feitas: 0, total: 9 },
   ultimoEnvioEm: null,
+  latitude: null,
+  longitude: null,
   ...extra,
 })
 

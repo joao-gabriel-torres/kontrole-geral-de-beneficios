@@ -29,6 +29,8 @@ const resumo = (
   ],
   etapas: { feitas: 3, total: 9 },
   ultimoEnvioEm: null,
+  latitude: null,
+  longitude: null,
   ...extra,
 })
 const ok = (data: unknown) => ({ data, response: new Response(null, { status: 200 }) })
